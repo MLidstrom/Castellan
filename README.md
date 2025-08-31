@@ -279,9 +279,9 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## 🆘 Support
 
-- **Community Support**: [GitHub Discussions](https://github.com/MLidstrom/castellan/discussions)
-- **Bug Reports**: [GitHub Issues](https://github.com/MLidstrom/castellan/issues)
-- **Feature Requests**: [GitHub Issues](https://github.com/MLidstrom/castellan/issues)
+- **Community Support**: [GitHub Discussions](https://github.com/MLidstrom/Castellan/discussions)
+- **Bug Reports**: [GitHub Issues](https://github.com/MLidstrom/Castellan/issues)
+- **Feature Requests**: [GitHub Issues](https://github.com/MLidstrom/Castellan/issues)
 
 ## 🙏 Acknowledgments
 
