@@ -1,0 +1,44 @@
+{
+  "Logging": {
+    "LogLevel": {
+      "Default": "Information",
+      "Microsoft": "Warning",
+      "Castellan.Worker": "Debug"
+    }
+  },
+  "Ingest": {
+    "Evtx": {
+      "Channels": [ "Security", "System", "Application" ],
+      "XPath": "*[System[TimeCreated[timediff(@SystemTime) <= 600000]]]",
+      "PollSeconds": 30
+    }
+  },
+  "Qdrant": {
+    "UseCloud": false,
+    "Host": "localhost",
+    "Port": 6333,
+    "Https": false,
+    "ApiKey": "",
+    "Collection": "test_log_events",
+    "VectorSize": 768,
+    "Distance": "Cosine"
+  },
+  "Embeddings": {
+    "Provider": "Ollama",
+    "Model": "nomic-embed-text",
+    "Endpoint": "http://localhost:11434",
+    "OpenAIKey": ""
+  },
+  "LLM": {
+    "Provider": "Ollama",
+    "Model": "llama3.1:8b-instruct-q8_0",
+    "Endpoint": "http://localhost:11434",
+    "OpenAIModel": "gpt-4o-mini",
+    "OpenAIKey": ""
+  },
+  "Alerts": {
+    "MinRiskLevel": "low",
+    "EnableConsoleAlerts": false,
+    "EnableFileLogging": false
+  }
+}

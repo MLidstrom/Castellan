@@ -1,0 +1,52 @@
+[
+  {
+    "Time": "2024-01-15T10:30:00Z",
+    "Host": "TEST-HOST",
+    "Channel": "Security",
+    "EventId": 4624,
+    "Level": "Information",
+    "User": "testuser",
+    "Message": "An account was successfully logged on. Subject: Security ID: S-1-5-18 Account Name: SYSTEM Account Domain: NT AUTHORITY Logon ID: 0x3E7 Logon Type: 5 New Logon: Security ID: S-1-5-21-1234567890-1234567890-1234567890-1000 Account Name: testuser Account Domain: TEST-HOST Logon ID: 0x123456 Process ID: 0x1234 Process Name: C:\\Windows\\System32\\winlogon.exe Workstation Name: TEST-HOST Source Network Address: 192.168.1.100 Source Port: 12345",
+    "RawJson": "{\"EventID\":4624,\"Level\":\"Information\",\"Message\":\"An account was successfully logged on.\"}"
+  },
+  {
+    "Time": "2024-01-15T10:31:00Z",
+    "Host": "TEST-HOST",
+    "Channel": "Security",
+    "EventId": 4625,
+    "Level": "Warning",
+    "User": "unknown",
+    "Message": "An account failed to log on. Subject: Security ID: S-1-5-18 Account Name: SYSTEM Account Domain: NT AUTHORITY Logon ID: 0x3E7 Logon Type: 3 New Logon: Security ID: S-1-0-0 Account Name: unknown Account Domain: TEST-HOST Logon ID: 0x0 Process ID: 0x1234 Process Name: C:\\Windows\\System32\\winlogon.exe Workstation Name: TEST-HOST Source Network Address: 192.168.1.101 Source Port: 12346",
+    "RawJson": "{\"EventID\":4625,\"Level\":\"Warning\",\"Message\":\"An account failed to log on.\"}"
+  },
+  {
+    "Time": "2024-01-15T10:32:00Z",
+    "Host": "TEST-HOST",
+    "Channel": "Security",
+    "EventId": 4672,
+    "Level": "Information",
+    "User": "admin",
+    "Message": "Special privileges assigned to new logon. Subject: Security ID: S-1-5-18 Account Name: SYSTEM Account Domain: NT AUTHORITY Logon ID: 0x3E7 Privileges: SeSecurityPrivilege SeBackupPrivilege SeRestorePrivilege SeSystemtimePrivilege SeShutdownPrivilege SeRemoteShutdownPrivilege SeTakeOwnershipPrivilege SeDebugPrivilege SeAuditPrivilege SeSystemEnvironmentPrivilege SeChangeNotifyPrivilege SeUndockPrivilege SeManageVolumePrivilege SeImpersonatePrivilege SeCreateGlobalPrivilege SeIncreaseWorkingSetPrivilege SeTimeZonePrivilege SeCreateSymbolicLinkPrivilege",
+    "RawJson": "{\"EventID\":4672,\"Level\":\"Information\",\"Message\":\"Special privileges assigned to new logon.\"}"
+  },
+  {
+    "Time": "2024-01-15T10:33:00Z",
+    "Host": "TEST-HOST",
+    "Channel": "System",
+    "EventId": 7045,
+    "Level": "Information",
+    "User": "SYSTEM",
+    "Message": "A service was installed in the system. Service Name: TestService Service File Name: C:\\Windows\\System32\\testservice.exe Service Type: user mode service Service Start Type: auto start Service Account: LocalSystem",
+    "RawJson": "{\"EventID\":7045,\"Level\":\"Information\",\"Message\":\"A service was installed in the system.\"}"
+  },
+  {
+    "Time": "2024-01-15T10:34:00Z",
+    "Host": "TEST-HOST",
+    "Channel": "Application",
+    "EventId": 1000,
+    "Level": "Error",
+    "User": "N/A",
+    "Message": "Application error: The application failed to start properly (0xc0000142).",
+    "RawJson": "{\"EventID\":1000,\"Level\":\"Error\",\"Message\":\"Application error.\"}"
+  }
+]

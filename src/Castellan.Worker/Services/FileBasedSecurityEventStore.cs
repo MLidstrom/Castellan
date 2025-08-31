@@ -1,0 +1,326 @@
+using System.Text.Json;
+using System.Text.Json.Serialization;
+using System.Collections.Concurrent;
+using Castellan.Worker.Abstractions;
+using Castellan.Worker.Models;
+
+namespace Castellan.Worker.Services;
+
+public class FileBasedSecurityEventStore : ISecurityEventStore, IDisposable
+{
+    private readonly ConcurrentQueue<SecurityEvent> _events = new();
+    private readonly ILogger<FileBasedSecurityEventStore> _logger;
+    private readonly string _dataFilePath;
+    private readonly System.Threading.Timer _saveTimer;
+    private int _idCounter = 1;
+    private static readonly TimeSpan RetentionPeriod = TimeSpan.FromHours(24); // 24-hour rolling window only
+    private volatile bool _isDirty = false;
+    private readonly SemaphoreSlim _saveLock = new(1, 1);
+
+    private static readonly JsonSerializerOptions JsonOptions = new()
+    {
+        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+        WriteIndented = false,
+        DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
+        Converters = { new JsonStringEnumConverter() }
+    };
+
+    public FileBasedSecurityEventStore(ILogger<FileBasedSecurityEventStore> logger)
+    {
+        _logger = logger;
+        
+        // Store data in AppData\Local\Castellan
+        var appDataPath = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+        var castellanDataPath = Path.Combine(appDataPath, "Castellan");
+        Directory.CreateDirectory(castellanDataPath);
+        
+        _dataFilePath = Path.Combine(castellanDataPath, "security_events.json");
+        
+        // Load existing data on startup
+        LoadFromFile();
+        
+        // Auto-save every 30 seconds if data has changed
+        _saveTimer = new System.Threading.Timer(AutoSave, null, TimeSpan.FromSeconds(30), TimeSpan.FromSeconds(30));
+        
+        _logger.LogInformation("FileBasedSecurityEventStore initialized with data file: {DataFilePath}", _dataFilePath);
+    }
+
+    public void AddSecurityEvent(SecurityEvent securityEvent)
+    {
+        // Assign a unique ID if not already set
+        if (string.IsNullOrEmpty(securityEvent.Id))
+        {
+            securityEvent.Id = Interlocked.Increment(ref _idCounter).ToString();
+        }
+
+        _events.Enqueue(securityEvent);
+        _isDirty = true;
+        
+        // Cleanup old events: enforce time-based retention
+        CleanupOldEvents();
+
+        _logger.LogDebug("Added security event {Id}: {EventType} ({RiskLevel})", 
+            securityEvent.Id, securityEvent.EventType, securityEvent.RiskLevel);
+    }
+
+    public IEnumerable<SecurityEvent> GetSecurityEvents(int page = 1, int pageSize = 10)
+    {
+        var allEvents = _events.ToArray().Reverse(); // Most recent first
+        var skip = (page - 1) * pageSize;
+        return allEvents.Skip(skip).Take(pageSize);
+    }
+
+    public SecurityEvent? GetSecurityEvent(string id)
+    {
+        return _events.FirstOrDefault(e => e.Id == id);
+    }
+
+    public IEnumerable<SecurityEvent> GetSecurityEvents(int page, int pageSize, Dictionary<string, object> filters)
+    {
+        var allEvents = _events.ToArray().Reverse(); // Most recent first
+        
+        // Apply filters
+        var filteredEvents = ApplyFilters(allEvents, filters);
+        
+        var skip = (page - 1) * pageSize;
+        return filteredEvents.Skip(skip).Take(pageSize);
+    }
+
+    public int GetTotalCount()
+    {
+        return _events.Count;
+    }
+
+    public int GetTotalCount(Dictionary<string, object> filters)
+    {
+        if (filters == null || filters.Count == 0)
+            return _events.Count;
+
+        var allEvents = _events.ToArray();
+        var filteredEvents = ApplyFilters(allEvents, filters);
+        return filteredEvents.Count();
+    }
+
+    private IEnumerable<SecurityEvent> ApplyFilters(IEnumerable<SecurityEvent> events, Dictionary<string, object> filters)
+    {
+        if (filters == null || filters.Count == 0)
+            return events;
+
+        var filtered = events.AsQueryable();
+
+        foreach (var filter in filters)
+        {
+            switch (filter.Key.ToLower())
+            {
+                case "risklevel":
+                    var riskLevel = filter.Value.ToString()?.ToLower();
+                    if (!string.IsNullOrEmpty(riskLevel))
+                        filtered = filtered.Where(e => e.RiskLevel.ToLower() == riskLevel);
+                    break;
+
+                case "eventtype":
+                    var eventType = filter.Value.ToString();
+                    if (!string.IsNullOrEmpty(eventType))
+                        filtered = filtered.Where(e => e.EventType.ToString().Contains(eventType, StringComparison.OrdinalIgnoreCase));
+                    break;
+
+                case "machine":
+                    var machine = filter.Value.ToString();
+                    if (!string.IsNullOrEmpty(machine))
+                        filtered = filtered.Where(e => e.OriginalEvent.Host != null && e.OriginalEvent.Host.Contains(machine, StringComparison.OrdinalIgnoreCase));
+                    break;
+
+                case "user":
+                    var user = filter.Value.ToString();
+                    if (!string.IsNullOrEmpty(user))
+                        filtered = filtered.Where(e => e.OriginalEvent.User != null && e.OriginalEvent.User.Contains(user, StringComparison.OrdinalIgnoreCase));
+                    break;
+
+                case "source":
+                    var source = filter.Value.ToString();
+                    if (!string.IsNullOrEmpty(source))
+                        filtered = filtered.Where(e => e.OriginalEvent.Channel != null && e.OriginalEvent.Channel.Contains(source, StringComparison.OrdinalIgnoreCase));
+                    break;
+            }
+        }
+
+        return filtered.ToList();
+    }
+
+    public void Clear()
+    {
+        while (_events.TryDequeue(out _)) { }
+        _isDirty = true;
+        _logger.LogInformation("Cleared all security events from store");
+        
+        // Save immediately when cleared
+        _ = Task.Run(SaveToFile);
+    }
+
+    private void CleanupOldEvents()
+    {
+        var cutoffTime = DateTimeOffset.UtcNow - RetentionPeriod;
+        var removedByTime = 0;
+
+        // Remove events older than 24-hour retention period
+        var eventsArray = _events.ToArray();
+        var eventsToKeep = new List<SecurityEvent>();
+
+        foreach (var evt in eventsArray)
+        {
+            if (evt.OriginalEvent.Time > cutoffTime)
+            {
+                eventsToKeep.Add(evt);
+            }
+            else
+            {
+                removedByTime++;
+            }
+        }
+
+        if (removedByTime > 0)
+        {
+            // Clear and rebuild queue with events from last 24 hours
+            while (_events.TryDequeue(out _)) { }
+            
+            foreach (var evt in eventsToKeep.OrderBy(e => e.OriginalEvent.Time))
+            {
+                _events.Enqueue(evt);
+            }
+            
+            _isDirty = true;
+            _logger.LogDebug("Cleaned up {RemovedByTime} security events older than 24 hours", removedByTime);
+        }
+    }
+
+    private void LoadFromFile()
+    {
+        try
+        {
+            if (!File.Exists(_dataFilePath))
+            {
+                _logger.LogInformation("No existing security events file found. Starting with empty store.");
+                return;
+            }
+
+            var json = File.ReadAllText(_dataFilePath);
+            if (string.IsNullOrWhiteSpace(json))
+            {
+                _logger.LogInformation("Security events file is empty. Starting with empty store.");
+                return;
+            }
+
+            var data = JsonSerializer.Deserialize<SecurityEventFileData>(json, JsonOptions);
+            if (data?.Events != null)
+            {
+                var loadedCount = 0;
+                var cutoffTime = DateTimeOffset.UtcNow - RetentionPeriod;
+                
+                // Load events that are still within the retention period
+                foreach (var evt in data.Events)
+                {
+                    if (evt.OriginalEvent.Time > cutoffTime)
+                    {
+                        _events.Enqueue(evt);
+                        loadedCount++;
+                        
+                        // Update ID counter to prevent conflicts
+                        if (int.TryParse(evt.Id, out var eventId) && eventId >= _idCounter)
+                        {
+                            _idCounter = eventId + 1;
+                        }
+                    }
+                }
+
+                _logger.LogInformation("Loaded {LoadedCount} security events from persistent storage (excluded {ExcludedCount} expired events)", 
+                    loadedCount, data.Events.Count - loadedCount);
+                    
+                // If we excluded any events, mark as dirty to save the cleaned version
+                if (data.Events.Count != loadedCount)
+                {
+                    _isDirty = true;
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error loading security events from file: {FilePath}", _dataFilePath);
+        }
+    }
+
+    private async void AutoSave(object? state)
+    {
+        if (_isDirty)
+        {
+            await SaveToFile();
+        }
+    }
+
+    private async Task SaveToFile()
+    {
+        await _saveLock.WaitAsync();
+        try
+        {
+            if (!_isDirty) return;
+
+            var eventsArray = _events.ToArray();
+            var data = new SecurityEventFileData
+            {
+                SavedAt = DateTimeOffset.UtcNow,
+                EventCount = eventsArray.Length,
+                Events = eventsArray.ToList()
+            };
+
+            var json = JsonSerializer.Serialize(data, JsonOptions);
+            
+            // Write to temp file first, then rename for atomic operation
+            var tempFilePath = _dataFilePath + ".tmp";
+            await File.WriteAllTextAsync(tempFilePath, json);
+            
+            if (File.Exists(_dataFilePath))
+            {
+                File.Delete(_dataFilePath);
+            }
+            File.Move(tempFilePath, _dataFilePath);
+            
+            _isDirty = false;
+            _logger.LogDebug("Saved {EventCount} security events to persistent storage", eventsArray.Length);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error saving security events to file: {FilePath}", _dataFilePath);
+        }
+        finally
+        {
+            _saveLock.Release();
+        }
+    }
+
+    public void Dispose()
+    {
+        _saveTimer?.Dispose();
+        
+        // Save final state on disposal
+        if (_isDirty)
+        {
+            try
+            {
+                SaveToFile().GetAwaiter().GetResult();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error saving security events during disposal");
+            }
+        }
+        
+        _saveLock?.Dispose();
+        GC.SuppressFinalize(this);
+    }
+
+    private class SecurityEventFileData
+    {
+        public DateTimeOffset SavedAt { get; set; }
+        public int EventCount { get; set; }
+        public List<SecurityEvent> Events { get; set; } = new();
+    }
+}
