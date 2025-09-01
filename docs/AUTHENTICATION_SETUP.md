@@ -1,8 +1,8 @@
-# Authentication Setup Guide - CastellanPro Free Edition
+# Authentication Setup Guide - Castellan
 
 ## Overview
 
-The hardcoded credentials have been removed from CastellanPro Free Edition and replaced with a secure configuration system. Authentication credentials and JWT secrets must now be configured via environment variables or configuration files.
+The hardcoded credentials have been removed from Castellan and replaced with a secure configuration system. Authentication credentials and JWT secrets must now be configured via environment variables or configuration files.
 
 ## ⚠️ Critical Security Changes
 
@@ -59,7 +59,7 @@ Update `appsettings.json`:
 
 1. **Copy the example configuration:**
    ```powershell
-   copy src\CastellanPro.Worker\appsettings.example.json src\CastellanPro.Worker\appsettings.Development.json
+   copy src\Castellan.Worker\appsettings.template.json src\Castellan.Worker\appsettings.json
    ```
 
 2. **Edit the development configuration** and set secure values:
@@ -68,7 +68,7 @@ Update `appsettings.json`:
 
 3. **Start the service:**
    ```powershell
-   cd src\CastellanPro.Worker
+   cd src\Castellan.Worker
    dotnet run
    ```
 

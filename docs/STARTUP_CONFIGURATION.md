@@ -199,7 +199,7 @@ If automatic startup fails, you can start services manually:
 ```powershell
 # Start services individually
 .\scripts\run-qdrant-local.ps1        # Start Qdrant
-cd src\CastellanPro.Worker && dotnet run  # Start Worker
+cd src\Castellan.Worker && dotnet run  # Start Worker
 cd castellan-admin && npm start        # Start React Admin
 .\scripts\start-tray.ps1               # Start System Tray
 ```
@@ -229,7 +229,7 @@ For development:
 
 ### C# Architecture
 
-All startup orchestration logic is implemented in `src\CastellanPro.Worker\Services\StartupOrchestratorService.cs`:
+All startup orchestration logic is implemented in `src\Castellan.Worker\Services\StartupOrchestratorService.cs`:
 
 ```csharp
 public class StartupOrchestratorService : BackgroundService
@@ -294,7 +294,7 @@ $env:AUTHENTICATION__ADMINUSER__PASSWORD = "secure-password"
 ## Support
 
 For issues or questions:
-- Check logs in `src\CastellanPro.Worker\run.log`
+- Check logs in `src\Castellan.Worker\run.log`
 - Review service-specific logs
 - Consult [TROUBLESHOOTING.md](TROUBLESHOOTING.md)
 - Open an issue on GitHub

@@ -198,7 +198,7 @@ npm install
 npm start
 ```
 
-Note: Set `"Startup:AutoStart:Enabled": false` in appsettings.json for manual control.
+Note: Set `"Startup:AutoStart:Enabled": false` in `src/Castellan.Worker/appsettings.json` for manual control.
 </details>
 
 ### 7. Access Web Interface

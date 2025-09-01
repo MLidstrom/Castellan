@@ -15,7 +15,7 @@ This is the free edition of CastellanPro, focused on core security monitoring ca
 
 ```powershell
 # Copy template configuration file
-cd src\CastellanPro.Worker
+cd src\Castellan.Worker
 Copy-Item appsettings.template.json appsettings.json
 
 # Edit appsettings.json with your secure credentials
@@ -95,7 +95,7 @@ If services fail to start automatically:
 
 ### 1. Disable Auto-Start
 
-Edit `src\CastellanPro.Worker\appsettings.json`:
+Edit `src\Castellan.Worker\appsettings.json`:
 ```json
 "Startup": {
   "AutoStart": {
@@ -111,8 +111,8 @@ Edit `src\CastellanPro.Worker\appsettings.json`:
 docker run -d --name qdrant -p 6333:6333 qdrant/qdrant
 
 # Build and run Worker
-dotnet build src\CastellanPro.Worker\CastellanPro.Worker.csproj -c Release
-cd src\CastellanPro.Worker
+dotnet build src\Castellan.Worker\Castellan.Worker.csproj -c Release
+cd src\Castellan.Worker
 dotnet run
 
 # Start React Admin (new terminal)

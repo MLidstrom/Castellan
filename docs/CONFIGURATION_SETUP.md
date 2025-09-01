@@ -12,7 +12,7 @@ Copy the template configuration to create your actual configuration file:
 
 ```powershell
 # Navigate to the Worker directory
-cd src\CastellanPro.Worker
+cd src\Castellan.Worker
 
 # Copy the template to create your configuration
 Copy-Item appsettings.template.json appsettings.json
@@ -20,7 +20,7 @@ Copy-Item appsettings.template.json appsettings.json
 
 ### 2. Configure Authentication (REQUIRED)
 
-Edit `src\CastellanPro.Worker\appsettings.json` and update the authentication section:
+Edit `src\Castellan.Worker\appsettings.json` and update the authentication section:
 
 ```json
 "Authentication": {
@@ -112,8 +112,8 @@ $env:QDRANT__APIKEY = "your-api-key"
 
 ## Configuration File Locations
 
-- **Template**: `src\CastellanPro.Worker\appsettings.template.json` (tracked in git)
-- **Actual Config**: `src\CastellanPro.Worker\appsettings.json` (gitignored)
+- **Template**: `src\Castellan.Worker\appsettings.template.json` (tracked in git)
+- **Actual Config**: `src\Castellan.Worker\appsettings.json` (gitignored)
 - **Environment-Specific**: 
   - `appsettings.Development.json` (gitignored)
   - `appsettings.Production.json` (gitignored)
@@ -127,7 +127,7 @@ $env:QDRANT__APIKEY = "your-api-key"
 
 ### "Cannot find appsettings.json"
 - Make sure you copied `appsettings.template.json` to `appsettings.json`
-- Verify you're in the correct directory (`src\CastellanPro.Worker`)
+- Verify you're in the correct directory (`src\Castellan.Worker`)
 
 ### OpenAI Connection Issues
 - Verify your API key is valid

@@ -141,13 +141,13 @@ If the system tray application doesn't start automatically:
 Get-Process | Where-Object {$_.ProcessName -like "*CastellanPro*"}
 
 # Check specific services
-Get-Process -Name "CastellanPro.Worker" -ErrorAction SilentlyContinue
+Get-Process -Name "Castellan.Worker" -ErrorAction SilentlyContinue
 Get-Process -Name "CastellanPro.Tray" -ErrorAction SilentlyContinue
 ```
 
 ### Log Analysis
 Check log files for detailed error information:
-- **Worker Service**: `src/CastellanPro.Worker/run*.log`
+- **Worker Service**: `src/Castellan.Worker/run*.log`
 - **System Events**: Windows Event Viewer > Application logs
 - **Browser Console**: F12 Developer Tools for React interface issues
 
