@@ -495,18 +495,6 @@ export const Dashboard = () => {
             <CardContent>
               <Box sx={{ marginBottom: 3 }}>
                 <Box sx={{ display: 'flex', justifyContent: 'space-between', marginBottom: 1 }}>
-                  <Typography variant="body2">CPU Usage</Typography>
-                  <Typography variant="body2" fontWeight="bold">{avgCpuUsage.toFixed(1)}%</Typography>
-                </Box>
-                <LinearProgress 
-                  variant="determinate" 
-                  value={avgCpuUsage} 
-                  color={avgCpuUsage > 80 ? 'error' : avgCpuUsage > 60 ? 'warning' : 'primary'}
-                  sx={{ height: 12, borderRadius: 6, marginBottom: 2 }}
-                />
-              </Box>
-              <Box sx={{ marginBottom: 3 }}>
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', marginBottom: 1 }}>
                   <Typography variant="body2">Memory Usage</Typography>
                   <Typography variant="body2" fontWeight="bold">{avgMemoryUsage.toFixed(1)}%</Typography>
                 </Box>
