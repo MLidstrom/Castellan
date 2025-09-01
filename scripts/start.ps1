@@ -13,12 +13,15 @@ function Test-DotNetInstalled {
     try {
         $dotnetVersion = & dotnet --version 2>$null
         if ($LASTEXITCODE -eq 0) {
-            Write-Host "✓ .NET SDK found: $dotnetVersion" -ForegroundColor Green
+            Write-Host "OK: .NET SDK found: $dotnetVersion" -ForegroundColor Green
             return $true
         }
-    } catch {}
+    }
+    catch {
+        # Ignore error and fall through
+    }
     
-    Write-Host "✗ .NET SDK not found. Please install .NET 8.0 or later from https://dotnet.microsoft.com/download" -ForegroundColor Red
+    Write-Host "ERROR: .NET SDK not found. Please install .NET 8.0 or later from https://dotnet.microsoft.com/download" -ForegroundColor Red
     return $false
 }
 
@@ -26,11 +29,11 @@ function Test-DotNetInstalled {
 function Test-ProjectExists {
     $projectPath = Join-Path $PSScriptRoot "..\src\Castellan.Worker\Castellan.Worker.csproj"
     if (Test-Path $projectPath) {
-        Write-Host "✓ Worker project found" -ForegroundColor Green
+        Write-Host "OK: Worker project found" -ForegroundColor Green
         return $true
     }
     
-    Write-Host "✗ Worker project not found at: $projectPath" -ForegroundColor Red
+    Write-Host "ERROR: Worker project not found at: $projectPath" -ForegroundColor Red
     return $false
 }
 
@@ -44,14 +47,16 @@ function Build-Project {
         Pop-Location
         
         if ($buildSuccess) {
-            Write-Host "✓ Build successful" -ForegroundColor Green
+            Write-Host "OK: Build successful" -ForegroundColor Green
             return $true
-        } else {
-            Write-Host "✗ Build failed" -ForegroundColor Red
+        }
+        else {
+            Write-Host "ERROR: Build failed" -ForegroundColor Red
             return $false
         }
-    } catch {
-        Write-Host "✗ Build error: $_" -ForegroundColor Red
+    }
+    catch {
+        Write-Host "ERROR: Build error: $_" -ForegroundColor Red
         Pop-Location
         return $false
     }
@@ -76,15 +81,17 @@ function Start-Worker {
             $process = [System.Diagnostics.Process]::Start($startInfo)
             
             if ($process) {
-                Write-Host "✓ Worker started in background (PID: $($process.Id))" -ForegroundColor Green
+                Write-Host "OK: Worker started in background (PID: $($process.Id))" -ForegroundColor Green
                 Write-Host "  Use '.\scripts\stop.ps1' to stop all services" -ForegroundColor Gray
                 Write-Host "  Use '.\scripts\status.ps1' to check service status" -ForegroundColor Gray
                 return $true
-            } else {
-                Write-Host "✗ Failed to start Worker in background" -ForegroundColor Red
+            }
+            else {
+                Write-Host "ERROR: Failed to start Worker in background" -ForegroundColor Red
                 return $false
             }
-        } else {
+        }
+        else {
             Write-Host "`nStarting Worker in foreground..." -ForegroundColor Yellow
             Write-Host "Press Ctrl+C to stop" -ForegroundColor Gray
             Push-Location $workerPath
@@ -93,13 +100,14 @@ function Start-Worker {
             Pop-Location
             
             if ($exitCode -ne 0) {
-                Write-Host "✗ Worker exited with code: $exitCode" -ForegroundColor Red
+                Write-Host "ERROR: Worker exited with code: $exitCode" -ForegroundColor Red
                 return $false
             }
             return $true
         }
-    } catch {
-        Write-Host "✗ Failed to start Worker: $_" -ForegroundColor Red
+    }
+    catch {
+        Write-Host "ERROR: Failed to start Worker: $_" -ForegroundColor Red
         return $false
     }
 }
@@ -123,8 +131,9 @@ if (-not $NoBuild) {
         Write-Host "`nStartup failed due to build errors" -ForegroundColor Red
         exit 1
     }
-} else {
-    Write-Host "⚠ Skipping build (--NoBuild specified)" -ForegroundColor Yellow
+}
+else {
+    Write-Host "WARNING: Skipping build (--NoBuild specified)" -ForegroundColor Yellow
 }
 
 # Step 4: Start the Worker service
@@ -133,7 +142,8 @@ if (Start-Worker -RunInBackground:$Background) {
         Write-Host "`nWorker service stopped" -ForegroundColor Cyan
     }
     exit 0
-} else {
+}
+else {
     Write-Host "`nFailed to start Castellan Worker" -ForegroundColor Red
     Write-Host "Check the error messages above for details" -ForegroundColor Yellow
     exit 1

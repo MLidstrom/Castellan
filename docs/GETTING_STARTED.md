@@ -34,10 +34,10 @@ $env:AUTHENTICATION__ADMINUSER__PASSWORD = "your-secure-password"
 .\scripts\start.ps1
 
 # This will automatically:
-# ✓ Start Qdrant vector database in Docker
-# ✓ Start the Worker service (main API)
-# ✓ Install and start React Admin interface
-# ✓ Start System Tray application
+# - Start Qdrant vector database in Docker
+# - Start the Worker service (main API)
+# - Install and start React Admin interface
+# - Start System Tray application
 ```
 
 ### 3. Access Web Interface

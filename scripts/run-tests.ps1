@@ -56,10 +56,14 @@ function Invoke-Tests {
         Write-Host "Command: dotnet $($testArgs -join ' ')" -ForegroundColor Gray
         Write-Host ""
         
-        # Run the tests
-        & dotnet @testArgs
+        # Run the tests and capture output
+        $output = & dotnet @testArgs 2>&1
+        $exitCode = $LASTEXITCODE
         
-        return $LASTEXITCODE
+        # Display the output
+        $output | ForEach-Object { Write-Host $_ }
+        
+        return $exitCode
     } catch {
         Write-Host "ERROR: Exception occurred during test execution - $($_.Exception.Message)" -ForegroundColor Red
         return 1
@@ -80,10 +84,10 @@ $testExitCode = Invoke-Tests -ProjectPath $TestProject -Config $Configuration -S
 # Analyze results
 Write-Host "`nTest Results:" -ForegroundColor Cyan
 if ($testExitCode -eq 0) {
-    Write-Host "SUCCESS: All tests passed" -ForegroundColor Green
+    Write-Host "SUCCESS: All tests passed!" -ForegroundColor Green
     Write-Host "`nTest execution completed successfully!" -ForegroundColor Green
 } else {
-    Write-Host "FAILED: Some tests failed (exit code $testExitCode)" -ForegroundColor Red
+    Write-Host "FAILED: Some tests failed (exit code: $testExitCode)" -ForegroundColor Red
     Write-Host "`nTroubleshooting:" -ForegroundColor Yellow
     Write-Host "   1. Check the test output above for specific failures" -ForegroundColor White
     Write-Host "   2. Ensure all dependencies are properly installed" -ForegroundColor White

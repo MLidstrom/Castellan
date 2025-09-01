@@ -175,10 +175,10 @@ ollama pull llama3.1:8b-instruct-q8_0    # LLM model: https://ollama.com/library
 ```
 
 **What gets started automatically:**
-- ✓ Qdrant vector database (Docker container)
-- ✓ Castellan Worker service (main API on port 5000)
-- ✓ React Admin interface (port 8080)
-- ✓ System Tray application
+- Qdrant vector database (Docker container)
+- Castellan Worker service (main API on port 5000)
+- React Admin interface (port 8080)
+- System Tray application
 
 **Alternative: Manual Start (Advanced Users)**
 <details>

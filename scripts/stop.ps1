@@ -29,20 +29,20 @@ function Stop-SafeProcess {
                     } else {
                         $proc | Stop-Process -ErrorAction Stop
                     }
-                    Write-Host "✓ Stopped $DisplayName (PID: $($proc.Id))" -ForegroundColor Green
+                    Write-Host "OK: Stopped $DisplayName (PID: $($proc.Id))" -ForegroundColor Green
                     $script:stoppedComponents += $DisplayName
                 } catch {
-                    Write-Host "✗ Failed to stop $DisplayName (PID: $($proc.Id)): $_" -ForegroundColor Red
+                    Write-Host "ERROR: Failed to stop $DisplayName (PID: $($proc.Id)): $_" -ForegroundColor Red
                     $script:failedComponents += $DisplayName
                 }
             }
             return $true
         } else {
-            Write-Host "⚠ $DisplayName was not running" -ForegroundColor Yellow
+            Write-Host "WARNING: $DisplayName was not running" -ForegroundColor Yellow
             return $false
         }
     } catch {
-        Write-Host "⚠ $DisplayName was not running" -ForegroundColor Yellow
+        Write-Host "WARNING: $DisplayName was not running" -ForegroundColor Yellow
         return $false
     }
 }
@@ -53,7 +53,7 @@ try {
     # Try graceful shutdown via API first
     $shutdownResponse = Invoke-WebRequest -Uri "http://localhost:5000/shutdown" -Method POST -UseBasicParsing -ErrorAction SilentlyContinue -TimeoutSec 2
     if ($shutdownResponse.StatusCode -eq 200) {
-        Write-Host "✓ Sent graceful shutdown signal to Worker API" -ForegroundColor Green
+        Write-Host "OK: Sent graceful shutdown signal to Worker API" -ForegroundColor Green
         Start-Sleep -Seconds 2
     }
 } catch {
@@ -77,12 +77,12 @@ try {
                     } else {
                         Stop-Process -Id $proc.ProcessId -ErrorAction Stop
                     }
-                    Write-Host "✓ Stopped Worker Service (PID: $($proc.ProcessId))" -ForegroundColor Green
+                    Write-Host "OK: Stopped Worker Service (PID: $($proc.ProcessId))" -ForegroundColor Green
                     $stoppedComponents += "Worker Service"
                     $workerStopped = $true
                 }
             } catch {
-                Write-Host "✗ Failed to stop Worker (PID: $($proc.ProcessId)): $_" -ForegroundColor Red
+                Write-Host "ERROR: Failed to stop Worker (PID: $($proc.ProcessId)): $_" -ForegroundColor Red
                 $failedComponents += "Worker Service"
             }
         }
@@ -92,25 +92,25 @@ try {
         # Fallback: Stop any dotnet process (be careful)
         $dotnetProcesses = Get-Process -Name "dotnet" -ErrorAction SilentlyContinue
         if ($dotnetProcesses -and $Force) {
-            Write-Host "⚠ Force stopping all dotnet processes..." -ForegroundColor Yellow
+            Write-Host "WARNING: Force stopping all dotnet processes..." -ForegroundColor Yellow
             foreach ($proc in $dotnetProcesses) {
                 try {
                     $proc | Stop-Process -Force -ErrorAction Stop
-                    Write-Host "✓ Stopped dotnet process (PID: $($proc.Id))" -ForegroundColor Green
+                    Write-Host "OK: Stopped dotnet process (PID: $($proc.Id))" -ForegroundColor Green
                     $stoppedComponents += "dotnet process"
                 } catch {
-                    Write-Host "✗ Failed to stop dotnet (PID: $($proc.Id))" -ForegroundColor Red
+                    Write-Host "ERROR: Failed to stop dotnet (PID: $($proc.Id))" -ForegroundColor Red
                 }
             }
         } elseif ($dotnetProcesses) {
-            Write-Host "⚠ dotnet processes found but cannot confirm if they're Castellan" -ForegroundColor Yellow
+            Write-Host "WARNING: dotnet processes found but cannot confirm if they're Castellan" -ForegroundColor Yellow
             Write-Host "  Use -Force flag to stop all dotnet processes" -ForegroundColor Gray
         } else {
-            Write-Host "⚠ Worker Service was not running" -ForegroundColor Yellow
+            Write-Host "WARNING: Worker Service was not running" -ForegroundColor Yellow
         }
     }
 } catch {
-    Write-Host "⚠ Could not check for Worker processes" -ForegroundColor Yellow
+    Write-Host "WARNING: Could not check for Worker processes" -ForegroundColor Yellow
 }
 
 # Stop System Tray
@@ -127,15 +127,15 @@ if ($nodeProcesses) {
     foreach ($proc in $nodeProcesses) {
         try {
             Stop-Process -Id $proc.ProcessId -Force -ErrorAction Stop
-            Write-Host "✓ Stopped React Admin (PID: $($proc.ProcessId))" -ForegroundColor Green
+            Write-Host "OK: Stopped React Admin (PID: $($proc.ProcessId))" -ForegroundColor Green
             $stoppedComponents += "React Admin"
         } catch {
-            Write-Host "✗ Failed to stop React Admin (PID: $($proc.ProcessId))" -ForegroundColor Red
+            Write-Host "ERROR: Failed to stop React Admin (PID: $($proc.ProcessId))" -ForegroundColor Red
             $failedComponents += "React Admin"
         }
     }
 } else {
-    Write-Host "⚠ React Admin was not running" -ForegroundColor Yellow
+    Write-Host "WARNING: React Admin was not running" -ForegroundColor Yellow
 }
 
 # Stop Qdrant Docker container (unless -KeepQdrant is specified)
@@ -146,20 +146,20 @@ if (-not $KeepQdrant) {
         if ($qdrantRunning -eq "qdrant") {
             $stopResult = & docker stop qdrant --time 10 2>&1
             if ($LASTEXITCODE -eq 0) {
-                Write-Host "✓ Stopped Qdrant container" -ForegroundColor Green
+                Write-Host "OK: Stopped Qdrant container" -ForegroundColor Green
                 $stoppedComponents += "Qdrant"
             } else {
-                Write-Host "✗ Failed to stop Qdrant container" -ForegroundColor Red
+                Write-Host "ERROR: Failed to stop Qdrant container" -ForegroundColor Red
                 $failedComponents += "Qdrant"
             }
         } else {
-            Write-Host "⚠ Qdrant container was not running" -ForegroundColor Yellow
+            Write-Host "WARNING: Qdrant container was not running" -ForegroundColor Yellow
         }
     } catch {
-        Write-Host "⚠ Docker not available or Qdrant not running" -ForegroundColor Yellow
+        Write-Host "WARNING: Docker not available or Qdrant not running" -ForegroundColor Yellow
     }
 } else {
-    Write-Host "`n⚠ Keeping Qdrant running (-KeepQdrant specified)" -ForegroundColor Yellow
+    Write-Host "`nWARNING: Keeping Qdrant running (-KeepQdrant specified)" -ForegroundColor Yellow
 }
 
 # Kill any orphaned cmd windows running npm
@@ -173,7 +173,7 @@ if ($Force) {
         foreach ($proc in $cmdProcesses) {
             try {
                 Stop-Process -Id $proc.ProcessId -Force -ErrorAction Stop
-                Write-Host "✓ Stopped orphaned cmd process (PID: $($proc.ProcessId))" -ForegroundColor Green
+                Write-Host "OK: Stopped orphaned cmd process (PID: $($proc.ProcessId))" -ForegroundColor Green
             } catch {
                 # Ignore errors for orphaned processes
             }
@@ -187,14 +187,14 @@ Write-Host "Shutdown Summary:" -ForegroundColor Cyan
 Write-Host "==============================" -ForegroundColor Cyan
 
 if ($stoppedComponents.Count -gt 0) {
-    Write-Host "✓ Successfully stopped:" -ForegroundColor Green
+    Write-Host "OK: Successfully stopped:" -ForegroundColor Green
     foreach ($component in $stoppedComponents | Select-Object -Unique) {
         Write-Host "  - $component" -ForegroundColor Green
     }
 }
 
 if ($failedComponents.Count -gt 0) {
-    Write-Host "`n✗ Failed to stop:" -ForegroundColor Red
+    Write-Host "`nERROR: Failed to stop:" -ForegroundColor Red
     foreach ($component in $failedComponents | Select-Object -Unique) {
         Write-Host "  - $component" -ForegroundColor Red
     }

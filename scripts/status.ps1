@@ -22,7 +22,7 @@ Write-Host "Checking Castellan Worker API..." -ForegroundColor Yellow
 try {
     $workerResponse = Invoke-WebRequest -Uri "http://localhost:5000/health" -UseBasicParsing -ErrorAction Stop -TimeoutSec 2
     if ($workerResponse.StatusCode -eq 200) {
-        Write-Host "✓ Worker API is running on localhost:5000" -ForegroundColor Green
+        Write-Host "OK: Worker API is running on localhost:5000" -ForegroundColor Green
         $statusSummary.Worker = $true
         
         if ($Detailed) {
@@ -37,7 +37,7 @@ try {
         }
     }
 } catch {
-    Write-Host "✗ Worker API is not accessible (port 5000)" -ForegroundColor Red
+    Write-Host "ERROR: Worker API is not accessible (port 5000)" -ForegroundColor Red
     Write-Host "  Run: .\scripts\start.ps1" -ForegroundColor Yellow
 }
 
@@ -46,7 +46,7 @@ Write-Host "`nChecking Qdrant Vector Database..." -ForegroundColor Yellow
 try {
     $qdrantResponse = Invoke-WebRequest -Uri "http://localhost:6333/collections" -UseBasicParsing -ErrorAction Stop -TimeoutSec 2
     if ($qdrantResponse.StatusCode -eq 200) {
-        Write-Host "✓ Qdrant is running on localhost:6333" -ForegroundColor Green
+        Write-Host "OK: Qdrant is running on localhost:6333" -ForegroundColor Green
         $statusSummary.Qdrant = $true
         
         $collections = $qdrantResponse.Content | ConvertFrom-Json
@@ -60,7 +60,7 @@ try {
         }
     }
 } catch {
-    Write-Host "✗ Qdrant is not accessible (port 6333)" -ForegroundColor Red
+    Write-Host "ERROR: Qdrant is not accessible (port 6333)" -ForegroundColor Red
     Write-Host "  Run: docker run -d --name qdrant -p 6333:6333 qdrant/qdrant" -ForegroundColor Yellow
 }
 
@@ -69,7 +69,7 @@ Write-Host "`nChecking Ollama LLM Service..." -ForegroundColor Yellow
 try {
     $ollamaResponse = Invoke-WebRequest -Uri "http://localhost:11434/api/tags" -UseBasicParsing -ErrorAction Stop -TimeoutSec 2
     if ($ollamaResponse.StatusCode -eq 200) {
-        Write-Host "✓ Ollama is running on localhost:11434" -ForegroundColor Green
+        Write-Host "OK: Ollama is running on localhost:11434" -ForegroundColor Green
         $statusSummary.Ollama = $true
         
         $models = $ollamaResponse.Content | ConvertFrom-Json
@@ -82,7 +82,7 @@ try {
         }
     }
 } catch {
-    Write-Host "✗ Ollama is not accessible (port 11434)" -ForegroundColor Red
+    Write-Host "ERROR: Ollama is not accessible (port 11434)" -ForegroundColor Red
     Write-Host "  Install from: https://ollama.ai" -ForegroundColor Yellow
 }
 
@@ -91,11 +91,11 @@ Write-Host "`nChecking React Admin Interface..." -ForegroundColor Yellow
 try {
     $adminResponse = Invoke-WebRequest -Uri "http://localhost:8080" -UseBasicParsing -ErrorAction Stop -TimeoutSec 2
     if ($adminResponse.StatusCode -eq 200) {
-        Write-Host "✓ React Admin is running on localhost:8080" -ForegroundColor Green
+        Write-Host "OK: React Admin is running on localhost:8080" -ForegroundColor Green
         $statusSummary.ReactAdmin = $true
     }
 } catch {
-    Write-Host "✗ React Admin is not accessible (port 8080)" -ForegroundColor Red
+    Write-Host "ERROR: React Admin is not accessible (port 8080)" -ForegroundColor Red
     Write-Host "  Run: cd castellan-admin && npm start" -ForegroundColor Yellow
 }
 
@@ -103,10 +103,10 @@ try {
 Write-Host "`nChecking System Tray Application..." -ForegroundColor Yellow
 $trayProcess = Get-Process "Castellan.Tray" -ErrorAction SilentlyContinue
 if ($trayProcess) {
-    Write-Host "✓ System Tray is running (PID: $($trayProcess.Id))" -ForegroundColor Green
+    Write-Host "OK: System Tray is running (PID: $($trayProcess.Id))" -ForegroundColor Green
     $statusSummary.SystemTray = $true
 } else {
-    Write-Host "✗ System Tray is not running" -ForegroundColor Red
+    Write-Host "ERROR: System Tray is not running" -ForegroundColor Red
     Write-Host "  Worker auto-starts it if configured in appsettings.json" -ForegroundColor Yellow
 }
 
@@ -119,20 +119,20 @@ $workerProcesses = Get-Process | Where-Object {
 
 if ($workerProcesses) {
     foreach ($proc in $workerProcesses) {
-        Write-Host "✓ Worker Process (PID: $($proc.Id), Memory: $([math]::Round($proc.WorkingSet64/1MB))MB)" -ForegroundColor Green
+        Write-Host "OK: Worker Process (PID: $($proc.Id), Memory: $([math]::Round($proc.WorkingSet64/1MB))MB)" -ForegroundColor Green
     }
 } else {
     # Fallback to checking any dotnet process
     $dotnetProcesses = Get-Process "dotnet" -ErrorAction SilentlyContinue
     if ($dotnetProcesses) {
-        Write-Host "⚠ .NET processes found but Worker not confirmed" -ForegroundColor Yellow
+        Write-Host "WARNING: .NET processes found but Worker not confirmed" -ForegroundColor Yellow
         if ($Detailed) {
             foreach ($proc in $dotnetProcesses) {
                 Write-Host "  PID: $($proc.Id), Memory: $([math]::Round($proc.WorkingSet64/1MB))MB" -ForegroundColor Gray
             }
         }
     } else {
-        Write-Host "✗ No Worker process detected" -ForegroundColor Red
+        Write-Host "ERROR: No Worker process detected" -ForegroundColor Red
     }
 }
 
@@ -141,18 +141,18 @@ Write-Host "`nChecking Docker..." -ForegroundColor Yellow
 try {
     $dockerVersion = & docker --version 2>&1
     if ($LASTEXITCODE -eq 0) {
-        Write-Host "✓ Docker is installed: $dockerVersion" -ForegroundColor Green
+        Write-Host "OK: Docker is installed: $dockerVersion" -ForegroundColor Green
         
         # Check Qdrant container
         $qdrantContainer = & docker ps --filter "name=qdrant" --format "{{.Names}}" 2>&1
         if ($qdrantContainer -eq "qdrant") {
-            Write-Host "  ✓ Qdrant container is running" -ForegroundColor Green
+            Write-Host "  OK: Qdrant container is running" -ForegroundColor Green
         } else {
-            Write-Host "  ⚠ Qdrant container not running" -ForegroundColor Yellow
+            Write-Host "  WARNING: Qdrant container not running" -ForegroundColor Yellow
         }
     }
 } catch {
-    Write-Host "✗ Docker is not installed or not running" -ForegroundColor Red
+    Write-Host "ERROR: Docker is not installed or not running" -ForegroundColor Red
 }
 
 # Check Log Files
@@ -172,7 +172,7 @@ foreach ($logPath in $logPaths) {
         
         if ($logFiles) {
             $foundLogs = $true
-            Write-Host "✓ Found logs in: $logPath" -ForegroundColor Green
+            Write-Host "OK: Found logs in: $logPath" -ForegroundColor Green
             
             if ($Detailed) {
                 $recentLog = $logFiles[0]
@@ -182,9 +182,9 @@ foreach ($logPath in $logPaths) {
                 $tail = Get-Content $recentLog.FullName -Tail 3 -ErrorAction SilentlyContinue
                 foreach ($line in $tail) {
                     if ($line -match "ERROR|FATAL") {
-                        Write-Host "    ✗ $line" -ForegroundColor Red
+                        Write-Host "    ERROR: $line" -ForegroundColor Red
                     } elseif ($line -match "WARN") {
-                        Write-Host "    ⚠ $line" -ForegroundColor Yellow
+                        Write-Host "    WARNING: $line" -ForegroundColor Yellow
                     } else {
                         Write-Host "    $($line.Substring(0, [Math]::Min(80, $line.Length)))" -ForegroundColor Gray
                     }
@@ -196,7 +196,7 @@ foreach ($logPath in $logPaths) {
 }
 
 if (-not $foundLogs) {
-    Write-Host "⚠ No log files found" -ForegroundColor Yellow
+    Write-Host "WARNING: No log files found" -ForegroundColor Yellow
 }
 
 # Status Summary
@@ -208,19 +208,19 @@ $runningCount = ($statusSummary.Values | Where-Object { $_ -eq $true }).Count
 $totalCount = $statusSummary.Count
 
 if ($runningCount -eq $totalCount) {
-    Write-Host "✓ All components are running ($runningCount/$totalCount)" -ForegroundColor Green
+    Write-Host "OK: All components are running ($runningCount/$totalCount)" -ForegroundColor Green
 } elseif ($runningCount -gt 0) {
-    Write-Host "⚠ Partial system running ($runningCount/$totalCount)" -ForegroundColor Yellow
+    Write-Host "WARNING: Partial system running ($runningCount/$totalCount)" -ForegroundColor Yellow
 } else {
-    Write-Host "✗ No components are running" -ForegroundColor Red
+    Write-Host "ERROR: No components are running" -ForegroundColor Red
 }
 
 Write-Host ""
 foreach ($component in $statusSummary.GetEnumerator()) {
     if ($component.Value) {
-        Write-Host "  ✓ $($component.Key)" -ForegroundColor Green
+        Write-Host "  OK: $($component.Key)" -ForegroundColor Green
     } else {
-        Write-Host "  ✗ $($component.Key)" -ForegroundColor Red
+        Write-Host "  ERROR: $($component.Key)" -ForegroundColor Red
     }
 }
 
