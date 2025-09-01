@@ -32,6 +32,7 @@
 - **Performance Monitoring** - System health and security service status
 - **Event Timeline** - Chronological security event tracking
 - **Persistent Storage** - 24-hour rolling window with automatic restart recovery
+- **Application Data Management** - SQLite database for applications, MITRE ATT&CK techniques, and security event persistence
 
 ### 🔔 **Notifications & Interface**
 - **Desktop Notifications** - Real-time security alerts
@@ -45,20 +46,23 @@
 
 ## 🏗️ Architecture
 
-Castellan processes Windows security events through AI/ML analysis, stores enriched data in a vector database for correlation, and provides desktop and web interfaces for monitoring and response.
+Castellan processes Windows security events through AI/ML analysis, stores enriched data in a vector database for correlation, maintains application and security data in SQLite, and provides desktop and web interfaces for monitoring and response.
 
 ```mermaid
 flowchart LR
     A[Windows Event Logs] --> B[Castellan Worker Service]
     B --> C[AI/ML Processing]
     C --> D[Qdrant Vector Database]
+    B --> K[SQLite Database]
     B --> E[Notification Services]
     E --> F[Desktop Notifications]
     E --> G[Web Admin Interface]
     D --> H[Vector Search & Correlation]
+    K --> L[Application & MITRE Data]
     H --> I[Threat Detection Engine]
     I --> J[Security Alerts]
     J --> E
+    L --> I
     
     subgraph "Data Collection"
         A
@@ -67,11 +71,16 @@ flowchart LR
     subgraph "Core Processing"
         B
         C
+    end
+    
+    subgraph "Data Storage"
         D
+        K
     end
     
     subgraph "Intelligence & Analysis"
         H
+        L
         I
         J
     end
@@ -85,10 +94,12 @@ flowchart LR
     style B fill:#f3e5f5,color:#000
     style C fill:#fff3e0,color:#000
     style D fill:#e8f5e8,color:#000
+    style K fill:#e8f5e8,color:#000
     style E fill:#fce4ec,color:#000
     style F fill:#f1f8e9,color:#000
     style G fill:#f1f8e9,color:#000
     style H fill:#fff8e1,color:#000
+    style L fill:#fff8e1,color:#000
     style I fill:#ffebee,color:#000
     style J fill:#ffebee,color:#000
 ```
@@ -174,6 +185,8 @@ ollama pull llama3.1:8b-instruct-q8_0    # LLM model: https://ollama.com/library
 .\scripts\run-tests.ps1 -Verbosity detailed  # Verbose output
 ```
 
+**🛡️ Automatic MITRE ATT&CK Import**: On first startup, Castellan automatically downloads and imports 800+ official MITRE ATT&CK techniques from GitHub. This provides rich intelligence for security event analysis and tooltip descriptions. The import runs in the background and requires internet connectivity.
+
 **What gets started automatically:**
 - Qdrant vector database (Docker container)
 - Castellan Worker service (main API on port 5000)
@@ -205,6 +218,21 @@ Note: Set `"Startup:AutoStart:Enabled": false` in `src/Castellan.Worker/appsetti
 Open your browser to `http://localhost:8080` to access the React admin interface.
 
 **Note:** Use the credentials you configured in step 3 for authentication.
+
+## 🗄️ Data Storage
+
+Castellan uses a hybrid data storage approach for optimal performance and functionality:
+
+### **Qdrant Vector Database**
+- **Purpose**: AI/ML embeddings and vector similarity search
+- **Data**: Event embeddings, semantic search, correlation analysis
+- **Location**: Docker container (localhost:6333)
+
+### **SQLite Database** 
+- **Purpose**: Application metadata and MITRE ATT&CK techniques
+- **Data**: Application inventory, security configurations, MITRE techniques, security event persistence
+- **Location**: `src/Castellan.Worker/data/castellan.db` (automatically created)
+- **Schema**: Applications, MITRE techniques, security events, system configuration
 
 ## 📦 License & Deployment
 
@@ -287,7 +315,6 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 - **Qdrant** for the vector database
 - **OpenAI** and **Ollama** for AI capabilities
-- **Microsoft** for Windows Event Log integration
 - **MITRE** for ATT&CK framework
 
 ---

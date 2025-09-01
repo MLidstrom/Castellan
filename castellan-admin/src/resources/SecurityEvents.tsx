@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   List,
   Datagrid,
@@ -18,56 +18,76 @@ import {
   // ChipField, // Removed - using custom component
   Filter,
   useRecordContext,
+  useDataProvider,
   // ReferenceField, // Not used
 } from 'react-admin';
-import { Chip, Box, Typography, Tooltip } from '@mui/material';
+import { Chip, Box, Typography, Tooltip, CircularProgress } from '@mui/material';
 import { Security as SecurityIcon } from '@mui/icons-material';
 
-// MITRE ATT&CK technique descriptions mapping
-const MITRE_TECHNIQUE_DESCRIPTIONS: { [key: string]: string } = {
-  'T1003': 'OS Credential Dumping - Adversaries attempt to dump credentials to obtain account login and credential material',
-  'T1005': 'Data from Local System - Adversaries may search local system sources to find files of interest',
-  'T1012': 'Query Registry - Adversaries may interact with the Windows Registry to gather information about the system',
-  'T1016': 'System Network Configuration Discovery - Adversaries may look for details about the network configuration and settings',
-  'T1018': 'Remote System Discovery - Adversaries may attempt to get a listing of other systems by IP address, hostname, or other logical identifier',
-  'T1033': 'System Owner/User Discovery - Adversaries may attempt to identify the primary user, currently logged in user, set of users',
-  'T1041': 'Exfiltration Over C2 Channel - Adversaries may steal data by exfiltrating it over an existing command and control channel',
-  'T1047': 'Windows Management Instrumentation - Adversaries may abuse Windows Management Instrumentation (WMI) to execute malicious commands',
-  'T1049': 'System Network Connections Discovery - Adversaries may attempt to get a listing of network connections to or from the compromised system',
-  'T1053': 'Scheduled Task/Job - Adversaries may abuse task scheduling functionality to facilitate initial or recurring execution of malicious code',
-  'T1055': 'Process Injection - Adversaries may inject code into processes to evade process-based defenses',
-  'T1057': 'Process Discovery - Adversaries may attempt to get information about running processes on a system',
-  'T1059': 'Command and Scripting Interpreter - Adversaries may abuse command and script interpreters to execute commands',
-  'T1068': 'Exploitation for Privilege Escalation - Adversaries may exploit software vulnerabilities in an attempt to elevate privileges',
-  'T1070': 'Indicator Removal on Host - Adversaries may delete or modify artifacts generated within systems to remove evidence',
-  'T1071': 'Application Layer Protocol - Adversaries may communicate using application layer protocols to avoid detection',
-  'T1078': 'Valid Accounts - Adversaries may obtain and abuse credentials of existing accounts as a means of gaining Initial Access',
-  'T1082': 'System Information Discovery - Adversaries may attempt to get detailed information about the operating system and hardware',
-  'T1083': 'File and Directory Discovery - Adversaries may enumerate files and directories or may search in specific locations',
-  'T1087': 'Account Discovery - Adversaries may attempt to get a listing of accounts on a system or within an environment',
-  'T1090': 'Proxy - Adversaries may use a connection proxy to direct network traffic between systems or act as an intermediary',
-  'T1105': 'Ingress Tool Transfer - Adversaries may transfer tools or other files from an external system into a compromised environment',
-  'T1112': 'Modify Registry - Adversaries may interact with the Windows Registry to hide configuration information within Registry keys',
-  'T1134': 'Access Token Manipulation - Adversaries may modify access tokens to operate under a different user or system security context',
-  'T1135': 'Network Share Discovery - Adversaries may look for folders and drives shared on remote systems as a means of identifying sources of information',
-  'T1140': 'Deobfuscate/Decode Files or Information - Adversaries may use obfuscated files or information to hide artifacts of an intrusion',
-  'T1190': 'Exploit Public-Facing Application - Adversaries may attempt to exploit a weakness in an Internet-facing computer or program',
-  'T1482': 'Domain Trust Discovery - Adversaries may attempt to gather information on domain trust relationships',
-  'T1484': 'Domain Policy Modification - Adversaries may modify the configuration settings of a domain to evade defenses',
-  'T1518': 'Software Discovery - Adversaries may attempt to get a listing of software and software versions',
-  'T1543': 'Create or Modify System Process - Adversaries may create or modify system-level processes to repeatedly execute malicious payloads',
-  'T1547': 'Boot or Logon Autostart Execution - Adversaries may configure system settings to automatically execute a program during system boot',
-  'T1548': 'Abuse Elevation Control Mechanism - Adversaries may circumvent mechanisms designed to control elevate privileges',
-  'T1550': 'Use Alternate Authentication Material - Adversaries may use alternate authentication material, such as password hashes',
-  'T1552': 'Unsecured Credentials - Adversaries may search compromised systems to find and obtain insecurely stored credentials',
-  'T1555': 'Credentials from Password Stores - Adversaries may search for common password storage locations to obtain user credentials',
-  'T1562': 'Impair Defenses - Adversaries may maliciously modify components of a victim environment to hinder or disable defensive mechanisms',
-  'T1564': 'Hide Artifacts - Adversaries may attempt to hide artifacts associated with their behaviors to evade detection',
-  'T1566': 'Phishing - Adversaries may send phishing messages to gain access to victim systems',
-  'T1569': 'System Services - Adversaries may abuse system services or daemons to execute commands or programs',
-  'T1574': 'Hijack Execution Flow - Adversaries may execute their own malicious payloads by hijacking the way operating systems run programs',
-  'T1588': 'Obtain Capabilities - Adversaries may buy and/or steal capabilities that can be used during targeting',
-  'T1595': 'Active Scanning - Adversaries may execute active reconnaissance scans to gather information that can be used during targeting'
+// Interface for MITRE technique data from the database
+interface MitreTechnique {
+  id: number;
+  techniqueId: string;
+  name: string;
+  description: string;
+  tactic: string;
+  platform: string;
+  createdAt: string;
+}
+
+// Hook to fetch MITRE technique data from the database
+const useMitreTechniques = () => {
+  const [techniques, setTechniques] = useState<{ [key: string]: MitreTechnique }>({});
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const dataProvider = useDataProvider();
+
+  const fetchTechniques = async (techniqueIds: string[]) => {
+    if (techniqueIds.length === 0) return;
+    
+    // Filter out techniques we already have
+    const missingTechniques = techniqueIds.filter(id => !techniques[id]);
+    if (missingTechniques.length === 0) return;
+
+    setLoading(true);
+    setError(null);
+
+    try {
+      // Fetch techniques from the MITRE API
+      const promises = missingTechniques.map(async (techniqueId) => {
+        try {
+          const response = await dataProvider.getOne('mitre/techniques', { id: techniqueId });
+          return { [techniqueId]: response.data };
+        } catch (err) {
+          // If technique not found in database, return a fallback
+          console.warn(`Failed to fetch MITRE technique ${techniqueId}:`, err);
+          return { 
+            [techniqueId]: {
+              id: 0,
+              techniqueId,
+              name: techniqueId,
+              description: `MITRE ATT&CK Technique: ${techniqueId} (Not found in database)`,
+              tactic: 'Not Available',
+              platform: 'Not Available',
+              createdAt: new Date().toISOString()
+            }
+          };
+        }
+      });
+
+      const results = await Promise.all(promises);
+      const newTechniques = results.reduce((acc, curr) => ({ ...acc, ...curr }), {});
+      
+      setTechniques(prev => ({ ...prev, ...newTechniques }));
+    } catch (err) {
+      console.error('Error fetching MITRE techniques:', err);
+      setError('Failed to load technique descriptions');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return { techniques, loading, error, fetchTechniques };
 };
 
 // Custom header component with shield icon
@@ -106,15 +126,83 @@ const RiskLevelField = ({ source }: any) => {
   );
 };
 
-// Custom component for MITRE ATT&CK techniques with tooltips
+// Custom component for MITRE ATT&CK techniques with database-driven tooltips
 const MitreTechniquesField = ({ source }: any) => {
   const record = useRecordContext();
   const techniques = record?.[source] || record?.mitreAttack || record?.MitreAttack || [];
+  const { techniques: mitreData, loading, error, fetchTechniques } = useMitreTechniques();
   
-  // Helper function to get description for a technique
-  const getTechniqueDescription = (technique: string): string => {
+  // Extract technique IDs and fetch data when component mounts or techniques change
+  useEffect(() => {
+    if (techniques.length > 0) {
+      const techniqueIds = techniques.map((t: string) => t.trim().toUpperCase());
+      fetchTechniques(techniqueIds);
+    }
+  }, [techniques.join(','), fetchTechniques]);
+
+  // Helper function to get description for a technique from database
+  const getTechniqueTooltip = (technique: string): React.ReactNode => {
     const cleanTechnique = technique.trim().toUpperCase();
-    return MITRE_TECHNIQUE_DESCRIPTIONS[cleanTechnique] || `MITRE ATT&CK Technique: ${cleanTechnique}`;
+    const mitreInfo = mitreData[cleanTechnique];
+    
+    if (loading) {
+      return (
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+          <CircularProgress size={16} />
+          <span>Loading technique details...</span>
+        </Box>
+      );
+    }
+    
+    if (error) {
+      return `${cleanTechnique} - Error loading details`;
+    }
+    
+    if (mitreInfo) {
+      return (
+        <Box>
+          <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }}>
+            {mitreInfo.name}
+          </Typography>
+          <Typography variant="body2" sx={{ mt: 0.5 }}>
+            {mitreInfo.description}
+          </Typography>
+          {mitreInfo.tactic && (
+            <Typography variant="caption" sx={{ mt: 0.5, display: 'block', fontStyle: 'italic' }}>
+              Tactic: {mitreInfo.tactic}
+            </Typography>
+          )}
+          {mitreInfo.platform && (
+            <Typography variant="caption" sx={{ display: 'block', fontStyle: 'italic' }}>
+              Platform: {mitreInfo.platform}
+            </Typography>
+          )}
+        </Box>
+      );
+    }
+    
+    return `MITRE ATT&CK Technique: ${cleanTechnique}`;
+  };
+
+  const getAdditionalTechniquesTooltip = (additionalTechniques: string[]): React.ReactNode => {
+    const techniquesList = additionalTechniques.map((t: string) => {
+      const cleanTechnique = t.trim().toUpperCase();
+      const mitreInfo = mitreData[cleanTechnique];
+      return mitreInfo ? `${cleanTechnique}: ${mitreInfo.name}` : cleanTechnique;
+    });
+
+    return (
+      <Box>
+        <Typography variant="subtitle2" sx={{ fontWeight: 'bold', mb: 1 }}>
+          Additional Techniques:
+        </Typography>
+        {techniquesList.map((technique, index) => (
+          <Typography key={index} variant="body2" sx={{ mb: 0.5 }}>
+            • {technique}
+          </Typography>
+        ))}
+      </Box>
+    );
   };
   
   return (
@@ -122,9 +210,14 @@ const MitreTechniquesField = ({ source }: any) => {
       {techniques.slice(0, 3).map((technique: string, index: number) => (
         <Tooltip
           key={index}
-          title={getTechniqueDescription(technique)}
+          title={getTechniqueTooltip(technique)}
           arrow
           placement="top"
+          componentsProps={{
+            tooltip: {
+              sx: { maxWidth: 400 }
+            }
+          }}
         >
           <Chip 
             label={technique.trim()}
@@ -135,9 +228,14 @@ const MitreTechniquesField = ({ source }: any) => {
       ))}
       {techniques.length > 3 && (
         <Tooltip
-          title={`Additional techniques: ${techniques.slice(3).map((t: string) => t.trim()).join(', ')}`}
+          title={getAdditionalTechniquesTooltip(techniques.slice(3))}
           arrow
           placement="top"
+          componentsProps={{
+            tooltip: {
+              sx: { maxWidth: 400 }
+            }
+          }}
         >
           <Chip 
             label={`+${techniques.length - 3} more`}

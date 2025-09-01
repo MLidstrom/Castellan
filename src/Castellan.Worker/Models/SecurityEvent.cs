@@ -2,26 +2,33 @@ using System.Text.Json;
 
 namespace Castellan.Worker.Models;
 
-public sealed class SecurityEvent
+/// <summary>
+/// Represents a security event detected by the system.
+/// This is the main business logic model for security events.
+/// </summary>
+public class SecurityEvent
 {
     public string Id { get; set; } = string.Empty;
-    public required LogEvent OriginalEvent { get; init; }
-    public required string RiskLevel { get; init; }
-    public required int Confidence { get; init; }
-    public required string Summary { get; init; }
-    public required string[] MitreTechniques { get; init; }
-    public required string[] RecommendedActions { get; init; }
-    public required SecurityEventType EventType { get; init; }
-    public required bool IsDeterministic { get; init; }
-    public string? EnrichmentData { get; init; }
-    
-    // M4: Correlation and fusion properties
+    public LogEvent OriginalEvent { get; init; } = null!;
+    public SecurityEventType EventType { get; init; }
+    public string RiskLevel { get; init; } = string.Empty;
+    public int Confidence { get; init; }
+    public string Summary { get; init; } = string.Empty;
+    public string[] MitreTechniques { get; init; } = Array.Empty<string>();
+    public string[] RecommendedActions { get; init; } = Array.Empty<string>();
+    public bool IsDeterministic { get; init; }
+    public bool IsCorrelationBased { get; init; }
+    public bool IsEnhanced { get; init; }
     public double CorrelationScore { get; init; }
     public double BurstScore { get; init; }
     public double AnomalyScore { get; init; }
-    public bool IsCorrelationBased { get; init; }
-    public bool IsEnhanced { get; init; }
+    public string? EnrichmentData { get; init; }
 
+    public SecurityEvent() { }
+
+    /// <summary>
+    /// Creates a deterministic security event from rule-based detection.
+    /// </summary>
     public static SecurityEvent CreateDeterministic(
         LogEvent originalEvent,
         SecurityEventType eventType,
@@ -29,11 +36,11 @@ public sealed class SecurityEvent
         int confidence,
         string summary,
         string[] mitreTechniques,
-        string[] recommendedActions,
-        string? enrichmentData = null)
+        string[] recommendedActions)
     {
         return new SecurityEvent
         {
+            Id = Guid.NewGuid().ToString(),
             OriginalEvent = originalEvent,
             EventType = eventType,
             RiskLevel = riskLevel,
@@ -42,74 +49,20 @@ public sealed class SecurityEvent
             MitreTechniques = mitreTechniques,
             RecommendedActions = recommendedActions,
             IsDeterministic = true,
-            EnrichmentData = enrichmentData,
+            IsCorrelationBased = false,
+            IsEnhanced = false,
             CorrelationScore = 0.0,
             BurstScore = 0.0,
-            AnomalyScore = 0.0,
-            IsCorrelationBased = false,
-            IsEnhanced = false
+            AnomalyScore = 0.0
         };
     }
 
-    public static SecurityEvent CreateFromLlmResponse(
-        LogEvent originalEvent,
-        string llmResponse,
-        SecurityEventType eventType = SecurityEventType.Unknown)
-    {
-        try
-        {
-            var jsonDoc = JsonDocument.Parse(llmResponse);
-            var root = jsonDoc.RootElement;
-
-            return new SecurityEvent
-            {
-                OriginalEvent = originalEvent,
-                EventType = eventType,
-                RiskLevel = root.GetProperty("risk").GetString() ?? "unknown",
-                Confidence = root.GetProperty("confidence").GetInt32(),
-                Summary = root.GetProperty("summary").GetString() ?? "",
-                MitreTechniques = root.GetProperty("mitre").EnumerateArray()
-                    .Select(x => x.GetString() ?? "")
-                    .Where(x => !string.IsNullOrEmpty(x))
-                    .ToArray(),
-                RecommendedActions = root.GetProperty("recommended_actions").EnumerateArray()
-                    .Select(x => x.GetString() ?? "")
-                    .Where(x => !string.IsNullOrEmpty(x))
-                    .ToArray(),
-                IsDeterministic = false,
-                CorrelationScore = 0.0,
-                BurstScore = 0.0,
-                AnomalyScore = 0.0,
-                IsCorrelationBased = false,
-                IsEnhanced = false
-            };
-        }
-        catch (JsonException)
-        {
-            // Fallback for malformed JSON
-            return new SecurityEvent
-            {
-                OriginalEvent = originalEvent,
-                EventType = SecurityEventType.Unknown,
-                RiskLevel = "unknown",
-                Confidence = 0,
-                Summary = "Failed to parse LLM response",
-                MitreTechniques = Array.Empty<string>(),
-                RecommendedActions = Array.Empty<string>(),
-                IsDeterministic = false,
-                CorrelationScore = 0.0,
-                BurstScore = 0.0,
-                AnomalyScore = 0.0,
-                IsCorrelationBased = false,
-                IsEnhanced = false
-            };
-        }
-    }
-
-    // M4: New factory methods for correlation-based and enhanced events
+    /// <summary>
+    /// Creates a correlation-based security event.
+    /// </summary>
     public static SecurityEvent CreateCorrelationBased(
         LogEvent originalEvent,
-        string eventType,
+        SecurityEventType eventType,
         string riskLevel,
         int confidence,
         string summary,
@@ -121,22 +74,26 @@ public sealed class SecurityEvent
     {
         return new SecurityEvent
         {
+            Id = Guid.NewGuid().ToString(),
             OriginalEvent = originalEvent,
-            EventType = ParseEventType(eventType),
+            EventType = eventType,
             RiskLevel = riskLevel,
             Confidence = confidence,
             Summary = summary,
             MitreTechniques = mitreTechniques,
             RecommendedActions = recommendedActions,
             IsDeterministic = false,
+            IsCorrelationBased = true,
+            IsEnhanced = false,
             CorrelationScore = correlationScore,
             BurstScore = burstScore,
-            AnomalyScore = anomalyScore,
-            IsCorrelationBased = true,
-            IsEnhanced = false
+            AnomalyScore = anomalyScore
         };
     }
 
+    /// <summary>
+    /// Creates an enhanced security event with additional correlation data.
+    /// </summary>
     public static SecurityEvent CreateEnhanced(
         LogEvent originalEvent,
         SecurityEventType eventType,
@@ -152,6 +109,7 @@ public sealed class SecurityEvent
     {
         return new SecurityEvent
         {
+            Id = Guid.NewGuid().ToString(),
             OriginalEvent = originalEvent,
             EventType = eventType,
             RiskLevel = riskLevel,
@@ -160,49 +118,110 @@ public sealed class SecurityEvent
             MitreTechniques = mitreTechniques,
             RecommendedActions = recommendedActions,
             IsDeterministic = isDeterministic,
+            IsCorrelationBased = correlationScore > 0 || burstScore > 0 || anomalyScore > 0,
+            IsEnhanced = true,
             CorrelationScore = correlationScore,
             BurstScore = burstScore,
-            AnomalyScore = anomalyScore,
-            IsCorrelationBased = false,
-            IsEnhanced = true
+            AnomalyScore = anomalyScore
         };
     }
 
-    private static SecurityEventType ParseEventType(string eventType)
+    /// <summary>
+    /// Creates a security event from LLM response JSON.
+    /// </summary>
+    public static SecurityEvent CreateFromLlmResponse(
+        LogEvent originalEvent,
+        string llmResponseJson)
     {
-        return eventType.ToLowerInvariant() switch
+        try
         {
-            "burstactivity" => SecurityEventType.BurstActivity,
-            "correlatedactivity" => SecurityEventType.CorrelatedActivity,
-            "anomalousactivity" => SecurityEventType.AnomalousActivity,
-            "suspiciousactivity" => SecurityEventType.SuspiciousActivity,
-            _ => SecurityEventType.Unknown
+            var response = JsonSerializer.Deserialize<LlmSecurityEventResponse>(llmResponseJson);
+            if (response == null)
+            {
+                throw new ArgumentException("Invalid LLM response JSON", nameof(llmResponseJson));
+            }
+
+            // Parse event type
+            var eventType = Enum.TryParse<SecurityEventType>(response.EventType, true, out var parsedType) 
+                ? parsedType 
+                : SecurityEventType.Unknown;
+
+            return new SecurityEvent
+            {
+                Id = Guid.NewGuid().ToString(),
+                OriginalEvent = originalEvent,
+                EventType = eventType,
+                RiskLevel = response.RiskLevel ?? "low",
+                Confidence = response.Confidence ?? 50,
+                Summary = response.Summary ?? "Security event detected by LLM",
+                MitreTechniques = response.MitreTechniques ?? Array.Empty<string>(),
+                RecommendedActions = response.RecommendedActions ?? Array.Empty<string>(),
+                IsDeterministic = false,
+                IsCorrelationBased = false,
+                IsEnhanced = false,
+                CorrelationScore = 0.0,
+                BurstScore = 0.0,
+                AnomalyScore = 0.0
+            };
+        }
+        catch (JsonException ex)
+        {
+            throw new ArgumentException($"Failed to parse LLM response JSON: {ex.Message}", nameof(llmResponseJson), ex);
+        }
+    }
+
+    /// <summary>
+    /// Converts this SecurityEvent to a SecurityEventEntity for database storage.
+    /// </summary>
+    public SecurityEventEntity ToEntity()
+    {
+        return new SecurityEventEntity
+        {
+            EventId = Id,
+            EventType = EventType.ToString(),
+            Severity = RiskLevel switch
+            {
+                "critical" => "Critical",
+                "high" => "High",
+                "medium" => "Medium",
+                "low" => "Low",
+                _ => "Unknown"
+            },
+            RiskLevel = RiskLevel,
+            Source = OriginalEvent.Channel,
+            Message = OriginalEvent.Message,
+            Summary = Summary,
+            EventData = JsonSerializer.Serialize(new
+            {
+                OriginalEvent.RawJson,
+                OriginalEvent.UniqueId,
+                OriginalEvent.Level
+            }),
+            Timestamp = OriginalEvent.Time.DateTime,
+            MitreTechniques = JsonSerializer.Serialize(MitreTechniques),
+            RecommendedActions = JsonSerializer.Serialize(RecommendedActions),
+            Confidence = Confidence,
+            CorrelationScore = CorrelationScore,
+            BurstScore = BurstScore,
+            AnomalyScore = AnomalyScore,
+            IsDeterministic = IsDeterministic,
+            IsCorrelationBased = IsCorrelationBased,
+            IsEnhanced = IsEnhanced,
+            EnrichmentData = EnrichmentData,
+            CreatedAt = DateTime.UtcNow
         };
     }
 }
 
-public enum SecurityEventType
+/// <summary>
+/// Represents the structure of an LLM response for security event detection.
+/// </summary>
+public class LlmSecurityEventResponse
 {
-    Unknown,
-    AuthenticationSuccess,
-    AuthenticationFailure,
-    PrivilegeEscalation,
-    AccountManagement,
-    ProcessCreation,
-    ServiceInstallation,
-    RegistryModification,
-    NetworkConnection,
-    FileAccess,
-    ScheduledTask,
-    PowerShellExecution,
-    DefenderAlert,
-    SystemStartup,
-    SystemShutdown,
-    SecurityPolicyChange,
-    // M4: New event types for correlation-based detection
-    BurstActivity,
-    CorrelatedActivity,
-    AnomalousActivity,
-    SuspiciousActivity
+    public string? EventType { get; set; }
+    public string? RiskLevel { get; set; }
+    public int? Confidence { get; set; }
+    public string? Summary { get; set; }
+    public string[]? MitreTechniques { get; set; }
+    public string[]? RecommendedActions { get; set; }
 }
-

@@ -20,6 +20,16 @@ const mockDataProvider: DataProvider = {
   getList: async (resource, params) => {
     console.log('DataProvider getList called:', resource, params);
     
+    // Handle MITRE data from real API
+    if (resource.startsWith('mitre/')) {
+      try {
+        return await realDataProvider.getList(resource, params);
+      } catch (error) {
+        console.error('Failed to fetch MITRE data:', error);
+        return { data: [], total: 0 };
+      }
+    }
+    
     let data: any[] = [];
     let total = 0;
     
@@ -80,6 +90,16 @@ const mockDataProvider: DataProvider = {
   
   getOne: async (resource, params) => {
     console.log('DataProvider getOne called:', resource, params);
+    
+    // Handle MITRE data from real API
+    if (resource.startsWith('mitre/')) {
+      try {
+        return await realDataProvider.getOne(resource, params);
+      } catch (error) {
+        console.error('Failed to fetch MITRE data:', error);
+        throw error;
+      }
+    }
     
     let data: any[] = [];
     

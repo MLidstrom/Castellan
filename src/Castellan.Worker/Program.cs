@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
+using Microsoft.EntityFrameworkCore;
 using System.Text;
 using Castellan.Worker; // for Pipeline
 using Castellan.Worker.Abstractions;
@@ -16,6 +17,7 @@ using Castellan.Worker.Llms;
 using Castellan.Worker.Models;
 using Castellan.Worker.Services;
 using Castellan.Worker.Configuration;
+using Castellan.Worker.Data;
 using Serilog;
 
 // Enable HTTP/2 over cleartext (h2c) for local gRPC (Qdrant 6334)
@@ -61,6 +63,19 @@ builder.Services.AddSingleton<INotificationService, NotificationService>();
 
 builder.Services.AddHttpClient();
 builder.Services.AddMemoryCache(); // For IP enrichment caching
+
+// Add SQLite Database
+var dbPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "data", "castellan.db");
+Directory.CreateDirectory(Path.GetDirectoryName(dbPath)!);
+builder.Services.AddDbContext<CastellanDbContext>(options =>
+    options.UseSqlite($"Data Source={dbPath}"));
+
+// Add database services
+builder.Services.AddScoped<ApplicationService>();
+builder.Services.AddScoped<MitreService>();
+builder.Services.AddScoped<SecurityEventService>();
+builder.Services.AddScoped<SystemConfigurationService>();
+builder.Services.AddScoped<MitreAttackImportService>();
 
 // Register performance monitoring service
 builder.Services.Configure<PerformanceMonitorOptions>(builder.Configuration.GetSection("PerformanceMonitoring"));
@@ -109,6 +124,7 @@ builder.Services.AddSingleton<ISecurityEventStore, FileBasedSecurityEventStore>(
 builder.Services.AddSingleton<IAutomatedResponseService, AutomatedResponseService>(); // Automated threat response
 builder.Services.AddHostedService<Pipeline>();
 builder.Services.AddHostedService<StartupOrchestratorService>(); // Automatically start all required services
+builder.Services.AddHostedService<MitreImportStartupService>(); // Auto-import MITRE data if needed
 
 // Add Web API services
 builder.Services.AddControllers();
@@ -149,6 +165,22 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     });
 
 var app = builder.Build();
+
+// Initialize database
+using (var scope = app.Services.CreateScope())
+{
+    try
+    {
+        var context = scope.ServiceProvider.GetRequiredService<CastellanDbContext>();
+        await context.Database.EnsureCreatedAsync();
+        Console.WriteLine("Database initialized successfully");
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine($"Database initialization failed: {ex.Message}");
+        throw;
+    }
+}
 
 // Configure the HTTP request pipeline
 

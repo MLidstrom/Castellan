@@ -379,16 +379,16 @@ public class RulesEngine
         return Math.Min(95, (int)(baseConfidence + scoreBonus));
     }
 
-    private string DetermineEventType(LogEvent logEvent, double correlationScore, double burstScore, double anomalyScore)
+    private SecurityEventType DetermineEventType(LogEvent logEvent, double correlationScore, double burstScore, double anomalyScore)
     {
         if (burstScore > 0.7)
-            return "BurstActivity";
+            return SecurityEventType.Unknown; // Map to appropriate type
         if (correlationScore > 0.7)
-            return "CorrelatedActivity";
+            return SecurityEventType.Unknown; // Map to appropriate type
         if (anomalyScore > 0.7)
-            return "AnomalousActivity";
+            return SecurityEventType.Unknown; // Map to appropriate type
         
-        return "SuspiciousActivity";
+        return SecurityEventType.Unknown;
     }
 
     private string GenerateCorrelationSummary(LogEvent logEvent, double correlationScore, double burstScore, double anomalyScore)

@@ -80,6 +80,30 @@ If using Qdrant Cloud instead of local Docker:
 }
 ```
 
+### 5. Configure MITRE ATT&CK Import (Optional)
+
+Castellan automatically imports MITRE ATT&CK data by default. You can customize this behavior:
+
+```json
+"Mitre": {
+  "AutoImportOnStartup": true,      // Enable/disable automatic import
+  "RefreshIntervalDays": 30         // How often to refresh data (days)
+}
+```
+
+**Default Behavior:**
+- ✅ Automatically imports 800+ MITRE techniques on first startup
+- ✅ Refreshes data every 30 days from official sources
+- ✅ Requires internet connectivity for import
+- ✅ No additional configuration needed
+
+**To disable auto-import:**
+```json
+"Mitre": {
+  "AutoImportOnStartup": false
+}
+```
+
 ## Alternative: Environment Variables
 
 You can also use environment variables instead of modifying appsettings.json:
