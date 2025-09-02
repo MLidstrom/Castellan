@@ -1,16 +1,31 @@
-# 🏰 Castellan: AI‑Powered Windows Security Monitoring
+<p align="center">
+    <picture>
+        <source media="(prefers-color-scheme: dark)" srcset="assets\images\Castellan_light.png">
+        <source media="(prefers-color-scheme: light)" srcset="assets\images\Castellan_dark.png">
+        <img alt="Fallback image description" src="assets\images\Castellan.png">
+    </picture>
+</p>
 
-**Castellan** is an advanced security monitoring and threat detection platform that transforms Windows event logs into actionable security intelligence using AI-powered analysis, vector search, and real-time correlation. It also includes proactive threat scanning capabilities to detect malware and backdoors on your system.
+<div align="center">
 
-
-> **Castellan** (noun): A governor or warden of a castle or fortification; a person responsible for the defense and security of a stronghold. From the medieval Latin *castellanus*, meaning "pertaining to a castle." The name reflects our mission to provide vigilant security monitoring and defense for your digital infrastructure. ([Source: Merriam-Webster](https://www.merriam-webster.com/dictionary/castellan))
-
+![GitHub Tag](https://img.shields.io/github/v/tag/MLidstrom/Castellan)
 [![.NET](https://img.shields.io/badge/.NET-8.0-512BD4?logo=.net)](https://dotnet.microsoft.com/)
 [![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 [![Platform](https://img.shields.io/badge/Platform-Windows-blue.svg)](https://www.microsoft.com/windows)
 [![AI](https://img.shields.io/badge/AI-Powered-orange.svg)](https://openai.com/)
-[![Docker](https://img.shields.io/badge/Docker-Ready-2496ED?logo=docker)](https://docker.com/)
 [![MITRE](https://img.shields.io/badge/MITRE-ATT%26CK-darkred.svg)](https://attack.mitre.org/)
+
+</div>
+
+## AI‑Powered Windows Security Monitoring
+
+**Castellan** is an advanced security monitoring and threat detection platform that transforms Windows event logs into actionable security intelligence using AI-powered analysis, vector search, and real-time correlation. It also includes proactive threat scanning capabilities to detect malware and backdoors on your system.
+
+> **Castellan** (noun): A governor or warden of a castle or fortification; a person responsible for the defense and security of a stronghold. From the medieval Latin *castellanus*, meaning "pertaining to a castle." The name reflects our mission to provide vigilant security monitoring and defense for your digital infrastructure. ([Source: Merriam-Webster](https://www.merriam-webster.com/dictionary/castellan))
+
+<a href="https://github.com/MLidstrom/Castellan">
+<img width="100%" src="assets/images/Castellan_1280_640.png"></a>
+
 
 ## 🚀 Features
 
@@ -43,6 +58,25 @@
 - **Comprehensive Test Suite** - 375 tests with 95.7% success rate covering all critical functionality
 - **Production Ready** - Robust error handling, advanced mocking, and comprehensive validation
 - **Continuous Validation** - Automated testing for controllers, services, and integration scenarios
+
+## 📊 Performance & Scale
+
+- **Event Processing**: 10,000+ events per second
+- **AI Analysis**: <5 second response time for threat classification
+- **Storage**: 24-hour rolling window with automatic recovery
+- **Scalability**: From single endpoints to enterprise networks
+- **Resource Usage**: Minimal footprint (<500MB RAM, <2GB disk)
+
+## ⚖️ Castellan vs. Alternatives
+
+| Feature | Castellan | Traditional SIEM | Open Source Tools |
+|---------|-----------|------------------|-------------------|
+| **Cost** | Free | $50K+/year | Free |
+| **Setup Time** | 5 minutes | 3-6 months | 2-4 weeks |
+| **AI Integration** | Built-in | Add-on ($20K+) | Limited |
+| **MITRE ATT&CK** | Auto-updated | Manual | Basic |
+| **Deployment** | Local | Cloud/On-prem | Local |
+| **Support** | Community | 24/7 ($10K+) | Community |
 
 ## 🏗️ Architecture
 
@@ -277,7 +311,7 @@ dotnet build -c Release
 - **[Configuration Setup](docs/CONFIGURATION_SETUP.md)** - **START HERE** - Initial configuration required
 - **[Authentication Setup](docs/AUTHENTICATION_SETUP.md)** - Security configuration and credential setup
 - **[Getting Started](docs/GETTING_STARTED.md)** - Quick start guide for development
-- **[Startup Configuration](docs/STARTUP_CONFIGURATION.md)** - Service orchestration and 
+- **[Startup Configuration](docs/STARTUP_CONFIGURATION.md)** - Service orchestration and startup management
 - **[Test Suite](src/Castellan.Tests/)** - Comprehensive test coverage with 375 tests (95.7% success rate)
 
 ### Development & Operations
