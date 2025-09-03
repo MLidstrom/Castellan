@@ -3,6 +3,7 @@ using Microsoft.Extensions.Options;
 using Xunit;
 using Moq;
 using Castellan.Worker.Services;
+using Castellan.Worker.Services.NotificationChannels;
 using Castellan.Worker.Configuration;
 using Castellan.Worker.Models;
 using FluentAssertions;
@@ -14,6 +15,7 @@ public class NotificationServiceTests : IDisposable
 {
     private readonly Mock<ILogger<NotificationService>> _mockLogger;
     private readonly Mock<IOptions<NotificationOptions>> _mockOptions;
+    private readonly Mock<INotificationManager> _mockNotificationManager;
     private readonly NotificationOptions _notificationOptions;
     private readonly NotificationService _service;
 
@@ -21,6 +23,7 @@ public class NotificationServiceTests : IDisposable
     {
         _mockLogger = new Mock<ILogger<NotificationService>>();
         _mockOptions = new Mock<IOptions<NotificationOptions>>();
+        _mockNotificationManager = new Mock<INotificationManager>();
         
         _notificationOptions = new NotificationOptions
         {
@@ -31,7 +34,7 @@ public class NotificationServiceTests : IDisposable
         };
 
         _mockOptions.Setup(x => x.Value).Returns(_notificationOptions);
-        _service = new NotificationService(_mockLogger.Object, _mockOptions.Object);
+        _service = new NotificationService(_mockLogger.Object, _mockOptions.Object, _mockNotificationManager.Object);
     }
 
     public void Dispose()
@@ -43,7 +46,7 @@ public class NotificationServiceTests : IDisposable
     public void Constructor_ValidParameters_CreatesService()
     {
         // Arrange & Act
-        var service = new NotificationService(_mockLogger.Object, _mockOptions.Object);
+        var service = new NotificationService(_mockLogger.Object, _mockOptions.Object, _mockNotificationManager.Object);
 
         // Assert
         service.Should().NotBeNull();
@@ -54,7 +57,7 @@ public class NotificationServiceTests : IDisposable
     public void Constructor_NullLogger_ThrowsArgumentNullException()
     {
         // Arrange, Act & Assert - The actual service throws ArgumentNullException when logger is null
-        Action act = () => new NotificationService(null, _mockOptions.Object);
+        Action act = () => new NotificationService(null, _mockOptions.Object, _mockNotificationManager.Object);
         act.Should().Throw<ArgumentNullException>().WithParameterName("logger");
     }
 
@@ -62,7 +65,7 @@ public class NotificationServiceTests : IDisposable
     public void Constructor_NullOptions_ThrowsNullReferenceException()
     {
         // Arrange, Act & Assert - The actual service throws NullReferenceException when accessing options.Value
-        Action act = () => new NotificationService(_mockLogger.Object, null);
+        Action act = () => new NotificationService(_mockLogger.Object, null, _mockNotificationManager.Object);
         act.Should().Throw<NullReferenceException>();
     }
 

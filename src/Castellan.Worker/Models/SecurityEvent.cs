@@ -1,4 +1,5 @@
 using System.Text.Json;
+using System.Text.Json.Serialization;
 
 namespace Castellan.Worker.Models;
 
@@ -218,10 +219,21 @@ public class SecurityEvent
 /// </summary>
 public class LlmSecurityEventResponse
 {
+    [JsonPropertyName("event_type")]
     public string? EventType { get; set; }
+    
+    [JsonPropertyName("risk")]
     public string? RiskLevel { get; set; }
+    
+    [JsonPropertyName("confidence")]
     public int? Confidence { get; set; }
+    
+    [JsonPropertyName("summary")]
     public string? Summary { get; set; }
+    
+    [JsonPropertyName("mitre")]
     public string[]? MitreTechniques { get; set; }
+    
+    [JsonPropertyName("recommended_actions")]
     public string[]? RecommendedActions { get; set; }
 }
