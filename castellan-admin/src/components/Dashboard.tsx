@@ -46,6 +46,9 @@ import {
   Scanner as ScannerIcon
 } from '@mui/icons-material';
 
+// Import notification quick setup component
+import { NotificationQuickSetup } from '../resources/NotificationSettings';
+
 export const Dashboard = () => {
   const [timeRange, setTimeRange] = useState('24h');
   const [refreshing, setRefreshing] = useState(false);
@@ -324,6 +327,58 @@ export const Dashboard = () => {
               <Typography variant="body2" color="textSecondary">
                 {healthyComponents}/{totalComponents} components healthy
               </Typography>
+            </CardContent>
+          </Card>
+        </Box>
+      </Box>
+
+      {/* Quick Setup and Configuration Row */}
+      <Box sx={{ 
+        display: 'flex', 
+        flexWrap: 'wrap', 
+        gap: 3,
+        marginBottom: '30px'
+      }}>
+        <Box sx={{ flex: '1 1 400px', minWidth: '400px' }}>
+          <NotificationQuickSetup />
+        </Box>
+        
+        {/* Add more quick setup cards here in the future */}
+        <Box sx={{ flex: '2 1 600px', minWidth: '600px' }}>
+          <Card>
+            <CardContent>
+              <Box display="flex" alignItems="center" mb={2}>
+                <SecurityIcon sx={{ mr: 1 }} />
+                <Typography variant="h6">Quick Actions</Typography>
+              </Box>
+              
+              <Typography variant="body2" color="text.secondary" gutterBottom>
+                Common security management tasks and configurations
+              </Typography>
+              
+              <Box display="flex" gap={1} mt={2} flexWrap="wrap">
+                <Button
+                  variant="outlined"
+                  size="small"
+                  onClick={() => window.location.href = '#/security-events'}
+                >
+                  View All Events
+                </Button>
+                <Button
+                  variant="outlined"
+                  size="small"
+                  onClick={() => window.location.href = '#/system-status'}
+                >
+                  System Status
+                </Button>
+                <Button
+                  variant="outlined"
+                  size="small"
+                  onClick={() => window.location.href = '#/notification-settings/create'}
+                >
+                  Configure Notifications
+                </Button>
+              </Box>
             </CardContent>
           </Card>
         </Box>

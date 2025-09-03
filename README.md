@@ -50,6 +50,7 @@
 - **Application Data Management** - SQLite database for applications, MITRE ATT&CK techniques, and security event persistence
 
 ### 🔔 **Notifications & Interface**
+- **🆕 Teams/Slack Integration** - Real-time security alerts in Microsoft Teams and Slack channels
 - **Desktop Notifications** - Real-time security alerts
 - **Web Admin Interface** - React-based management dashboard
 - **Local Deployment** - No cloud dependencies, runs entirely on your local infrastructure
@@ -91,6 +92,7 @@ flowchart LR
     B --> E[Notification Services]
     E --> F[Desktop Notifications]
     E --> G[Web Admin Interface]
+    E --> M[Teams/Slack Channels]
     D --> H[Vector Search & Correlation]
     K --> L[Application & MITRE Data]
     H --> I[Threat Detection Engine]

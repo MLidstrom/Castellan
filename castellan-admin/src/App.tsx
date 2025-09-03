@@ -23,6 +23,13 @@ import {
   DisabledThreatScanner,
 } from './resources/DisabledProResource';
 
+// Import notification settings resource
+import {
+  NotificationSettingsList,
+  NotificationSettingsCreate,
+  NotificationSettingsEdit,
+} from './resources/NotificationSettings';
+
 // CastellanProFree - No edition detection needed
 
 // Import Material-UI icons for resources
@@ -31,6 +38,7 @@ import {
   Assessment as ComplianceIcon,
   Computer as SystemIcon,
   BugReport as ThreatScannerIcon,
+  Notifications as NotificationsIcon,
 } from '@mui/icons-material';
 
 const App = () => (
@@ -77,6 +85,16 @@ const App = () => (
       show={DisabledThreatScanner}
       icon={ThreatScannerIcon}
       recordRepresentation={() => 'Threat Scanner - Premium Feature'}
+    />
+    
+    {/* Notification Settings Resource - Available in CastellanProFree */}
+    <Resource
+      name="notification-settings"
+      list={NotificationSettingsList}
+      create={NotificationSettingsCreate}
+      edit={NotificationSettingsEdit}
+      icon={NotificationsIcon}
+      recordRepresentation={(record) => `${record.name || 'Notification Config'}`}
     />
   </Admin>
 );

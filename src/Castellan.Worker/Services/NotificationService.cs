@@ -3,6 +3,7 @@ using System.Text.Json;
 using Castellan.Worker.Abstractions;
 using Castellan.Worker.Configuration;
 using Castellan.Worker.Models;
+using Castellan.Worker.Services.NotificationChannels;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
@@ -19,13 +20,16 @@ public class NotificationService : INotificationService
 {
     private readonly ILogger<NotificationService> _logger;
     private readonly NotificationOptions _options;
+    private readonly INotificationManager _notificationManager;
 
     public NotificationService(
         ILogger<NotificationService> logger, 
-        IOptions<NotificationOptions> options)
+        IOptions<NotificationOptions> options,
+        INotificationManager notificationManager)
     {
         _logger = logger;
         _options = options.Value;
+        _notificationManager = notificationManager;
         
         // DEBUG: Log notification service initialization
         _logger.LogInformation("🔔 NotificationService initialized with settings:");
@@ -88,18 +92,19 @@ public class NotificationService : INotificationService
     }
 
     /// <summary>
-    /// Send security notification to configured desktop channel
+    /// Send security notification to all configured channels (desktop, Teams, Slack)
     /// </summary>
     public async Task SendSecurityNotificationAsync(SecurityEvent securityEvent)
     {
         _logger.LogInformation("🔔 Sending security notification for event {EventId} with risk level {RiskLevel}", 
             securityEvent.OriginalEvent.EventId, securityEvent.RiskLevel);
 
-        // Create desktop notification message
+        // Send to all notification channels (Teams, Slack, etc.)
+        await _notificationManager.SendSecurityAlertAsync(securityEvent);
+
+        // Also send desktop notification
         var title = $"🚨 Castellan Security Alert - {securityEvent.RiskLevel.ToUpperInvariant()}";
         var message = CreateSecurityNotificationMessage(securityEvent);
-
-        // Send desktop notification
         await ShowNotificationAsync(title, message, securityEvent.RiskLevel);
     }
 

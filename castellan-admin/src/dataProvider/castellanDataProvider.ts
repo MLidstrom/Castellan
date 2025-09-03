@@ -45,6 +45,7 @@ const RESOURCE_MAP: Record<string, string> = {
     'compliance-reports': 'compliance-reports',
     'system-status': 'system-status',
     'threat-scanner': 'threat-scanner',
+    'notification-settings': 'notifications/config',
     'users': 'users',
     'settings': 'settings',
     'analytics': 'analytics',
@@ -484,6 +485,39 @@ export const enhancedCastellanDataProvider = {
                 status: 'unhealthy',
                 error: error instanceof Error ? error.message : 'Unknown error'
             };
+        }
+    },
+
+    // Test notification channel connections
+    testNotificationConnection: async (channel: 'teams' | 'slack', webhookUrl: string) => {
+        const url = `${API_URL}/notifications/${channel}/test`;
+        try {
+            const { json } = await httpClient(url, {
+                method: 'POST',
+                body: JSON.stringify({ webhookUrl }),
+            });
+            return {
+                success: true,
+                data: json
+            };
+        } catch (error) {
+            console.error(`Error testing ${channel} connection:`, error);
+            return {
+                success: false,
+                error: error instanceof Error ? error.message : 'Unknown error'
+            };
+        }
+    },
+
+    // Get notification channel health status
+    getNotificationHealth: async () => {
+        const url = `${API_URL}/notifications/health`;
+        try {
+            const { json } = await httpClient(url);
+            return json;
+        } catch (error) {
+            console.error('Error fetching notification health:', error);
+            throw error;
         }
     }
 };

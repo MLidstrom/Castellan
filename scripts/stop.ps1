@@ -1,7 +1,9 @@
 # Stop Castellan Components
 param(
     [switch]$Force = $false,
-    [switch]$KeepQdrant = $false
+    [switch]$KeepQdrant = $true,  # Changed default to true - Qdrant stays running by default
+    [switch]$StopQdrant = $false, # New flag to explicitly stop Qdrant
+    [switch]$StopOllama = $false  # New flag to explicitly stop Ollama
 )
 
 Write-Host "Stopping Castellan Components" -ForegroundColor Cyan
@@ -51,7 +53,7 @@ function Stop-SafeProcess {
 Write-Host "Stopping Worker API..." -ForegroundColor Yellow
 try {
     # Try graceful shutdown via API first
-    $shutdownResponse = Invoke-WebRequest -Uri "http://localhost:5000/shutdown" -Method POST -UseBasicParsing -ErrorAction SilentlyContinue -TimeoutSec 2
+    $shutdownResponse = Invoke-WebRequest -Uri "http://localhost:5000/shutdown" -Method POST -UseBasicParsing -ErrorAction SilentlyContinue
     if ($shutdownResponse.StatusCode -eq 200) {
         Write-Host "OK: Sent graceful shutdown signal to Worker API" -ForegroundColor Green
         Start-Sleep -Seconds 2
@@ -60,39 +62,93 @@ try {
     # API not responding or endpoint doesn't exist
 }
 
-# Stop Worker process (using WMI to check command line)
+# Stop Worker process (using multiple detection methods)
 $workerStopped = $false
 try {
-    $workerProcesses = Get-WmiObject Win32_Process -Filter "Name='dotnet.exe'" | Where-Object {
-        $_.CommandLine -like "*Castellan.Worker*"
+    # Method 1: Check for processes listening on Worker API port (5000)
+    $workerPort = 5000
+    $portProcesses = @()
+    
+    try {
+        $netstatOutput = & netstat -ano | Select-String ":$workerPort "
+        foreach ($line in $netstatOutput) {
+            if ($line -match ":$workerPort\s+.*LISTENING\s+(\d+)") {
+                $pid = $matches[1]
+                $process = Get-Process -Id $pid -ErrorAction SilentlyContinue
+                if ($process -and $process.ProcessName -eq "dotnet") {
+                    $portProcesses += $process
+                }
+            }
+        }
+    } catch {
+        # Port detection failed, continue to other methods
     }
     
-    if ($workerProcesses) {
-        foreach ($proc in $workerProcesses) {
+    # Method 2: WMI command line detection (original method)
+    $wmiProcesses = @()
+    try {
+        $wmiResults = Get-WmiObject Win32_Process -Filter "Name='dotnet.exe'" | Where-Object {
+            $_.CommandLine -like "*Castellan.Worker*"
+        }
+        foreach ($wmiProc in $wmiResults) {
+            $process = Get-Process -Id $wmiProc.ProcessId -ErrorAction SilentlyContinue
+            if ($process) {
+                $wmiProcesses += $process
+            }
+        }
+    } catch {
+        # WMI detection failed, continue
+    }
+    
+    # Method 3: Check working directory for dotnet processes
+    $workDirProcesses = @()
+    try {
+        $dotnetProcesses = Get-Process -Name "dotnet" -ErrorAction SilentlyContinue
+        foreach ($proc in $dotnetProcesses) {
             try {
-                $process = Get-Process -Id $proc.ProcessId -ErrorAction SilentlyContinue
-                if ($process) {
-                    if ($Force) {
-                        Stop-Process -Id $proc.ProcessId -Force -ErrorAction Stop
-                    } else {
-                        Stop-Process -Id $proc.ProcessId -ErrorAction Stop
-                    }
-                    Write-Host "OK: Stopped Worker Service (PID: $($proc.ProcessId))" -ForegroundColor Green
-                    $stoppedComponents += "Worker Service"
-                    $workerStopped = $true
+                $procWmi = Get-WmiObject Win32_Process -Filter "ProcessId=$($proc.Id)" -ErrorAction SilentlyContinue
+                if ($procWmi -and $procWmi.ExecutablePath -and (Split-Path $procWmi.ExecutablePath -Parent) -like "*Castellan.Worker*") {
+                    $workDirProcesses += $proc
                 }
             } catch {
-                Write-Host "ERROR: Failed to stop Worker (PID: $($proc.ProcessId)): $_" -ForegroundColor Red
+                # Continue checking other processes
+            }
+        }
+    } catch {
+        # Working directory detection failed
+    }
+    
+    # Combine all detected processes and remove duplicates
+    $allWorkerProcesses = @()
+    $allWorkerProcesses += $portProcesses
+    $allWorkerProcesses += $wmiProcesses  
+    $allWorkerProcesses += $workDirProcesses
+    $uniqueWorkerProcesses = $allWorkerProcesses | Sort-Object Id | Get-Unique -AsString
+    
+    if ($uniqueWorkerProcesses) {
+        Write-Host "Found $($uniqueWorkerProcesses.Count) Worker process(es)" -ForegroundColor Yellow
+        foreach ($proc in $uniqueWorkerProcesses) {
+            try {
+                if ($Force) {
+                    $proc | Stop-Process -Force -ErrorAction Stop
+                } else {
+                    $proc | Stop-Process -ErrorAction Stop
+                }
+                Write-Host "OK: Stopped Worker Service (PID: $($proc.Id))" -ForegroundColor Green
+                $stoppedComponents += "Worker Service"
+                $workerStopped = $true
+            } catch {
+                Write-Host "ERROR: Failed to stop Worker (PID: $($proc.Id)): $_" -ForegroundColor Red
                 $failedComponents += "Worker Service"
             }
         }
-    }
-    
-    if (-not $workerStopped) {
-        # Fallback: Stop any dotnet process (be careful)
+    } else {
+        Write-Host "WARNING: No Worker processes detected using smart detection" -ForegroundColor Yellow
+        
+        # Final fallback: Check all dotnet processes (only with -Force)
         $dotnetProcesses = Get-Process -Name "dotnet" -ErrorAction SilentlyContinue
         if ($dotnetProcesses -and $Force) {
-            Write-Host "WARNING: Force stopping all dotnet processes..." -ForegroundColor Yellow
+            Write-Host "WARNING: Using -Force to stop all dotnet processes..." -ForegroundColor Yellow
             foreach ($proc in $dotnetProcesses) {
                 try {
                     $proc | Stop-Process -Force -ErrorAction Stop
@@ -103,14 +159,15 @@ try {
                 }
             }
         } elseif ($dotnetProcesses) {
-            Write-Host "WARNING: dotnet processes found but cannot confirm if they're Castellan" -ForegroundColor Yellow
-            Write-Host "  Use -Force flag to stop all dotnet processes" -ForegroundColor Gray
+            Write-Host "INFO: Found $($dotnetProcesses.Count) dotnet process(es) but cannot confirm if they're Castellan Worker" -ForegroundColor Gray
+            Write-Host "  Worker may have already stopped or is running in a different way" -ForegroundColor Gray
+            Write-Host "  Use -Force flag only if you're sure you want to stop all dotnet processes" -ForegroundColor Gray
         } else {
-            Write-Host "WARNING: Worker Service was not running" -ForegroundColor Yellow
+            Write-Host "INFO: No dotnet processes found - Worker appears to be stopped" -ForegroundColor Gray
         }
     }
 } catch {
-    Write-Host "WARNING: Could not check for Worker processes" -ForegroundColor Yellow
+    Write-Host "WARNING: Error during Worker process detection: $_" -ForegroundColor Yellow
 }
 
 # Stop System Tray
@@ -138,8 +195,8 @@ if ($nodeProcesses) {
     Write-Host "WARNING: React Admin was not running" -ForegroundColor Yellow
 }
 
-# Stop Qdrant Docker container (unless -KeepQdrant is specified)
-if (-not $KeepQdrant) {
+# Stop Qdrant Docker container (only if -StopQdrant is specified)
+if ($StopQdrant -and -not $KeepQdrant) {
     Write-Host "`nStopping Qdrant container..." -ForegroundColor Yellow
     try {
         $qdrantRunning = & docker ps --filter "name=qdrant" --format "{{.Names}}" 2>$null
@@ -159,7 +216,37 @@ if (-not $KeepQdrant) {
         Write-Host "WARNING: Docker not available or Qdrant not running" -ForegroundColor Yellow
     }
 } else {
-    Write-Host "`nWARNING: Keeping Qdrant running (-KeepQdrant specified)" -ForegroundColor Yellow
+    Write-Host "`nINFO: Keeping Qdrant running (use -StopQdrant to stop it)" -ForegroundColor Gray
+}
+
+# Stop Ollama service (only if -StopOllama is specified)
+if ($StopOllama) {
+    Write-Host "`nStopping Ollama service..." -ForegroundColor Yellow
+    try {
+        $ollamaProcesses = Get-Process -Name "ollama" -ErrorAction SilentlyContinue
+        if ($ollamaProcesses) {
+            foreach ($proc in $ollamaProcesses) {
+                try {
+                    if ($Force) {
+                        $proc | Stop-Process -Force -ErrorAction Stop
+                    } else {
+                        $proc | Stop-Process -ErrorAction Stop
+                    }
+                    Write-Host "OK: Stopped Ollama service (PID: $($proc.Id))" -ForegroundColor Green
+                    $stoppedComponents += "Ollama"
+                } catch {
+                    Write-Host "ERROR: Failed to stop Ollama (PID: $($proc.Id)): $_" -ForegroundColor Red
+                    $failedComponents += "Ollama"
+                }
+            }
+        } else {
+            Write-Host "WARNING: Ollama service was not running" -ForegroundColor Yellow
+        }
+    } catch {
+        Write-Host "WARNING: Could not check for Ollama processes" -ForegroundColor Yellow
+    }
+} else {
+    Write-Host "`nINFO: Keeping Ollama running (use -StopOllama to stop it)" -ForegroundColor Gray
 }
 
 # Kill any orphaned cmd windows running npm

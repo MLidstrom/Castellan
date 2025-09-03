@@ -20,7 +20,7 @@ $statusSummary = @{
 # Check Castellan Worker API
 Write-Host "Checking Castellan Worker API..." -ForegroundColor Yellow
 try {
-    $workerResponse = Invoke-WebRequest -Uri "http://localhost:5000/health" -UseBasicParsing -ErrorAction Stop -TimeoutSec 2
+    $workerResponse = Invoke-WebRequest -Uri "http://localhost:5000/health" -UseBasicParsing -ErrorAction Stop
     if ($workerResponse.StatusCode -eq 200) {
         Write-Host "OK: Worker API is running on localhost:5000" -ForegroundColor Green
         $statusSummary.Worker = $true
@@ -44,7 +44,7 @@ try {
 # Check Qdrant Vector Database
 Write-Host "`nChecking Qdrant Vector Database..." -ForegroundColor Yellow
 try {
-    $qdrantResponse = Invoke-WebRequest -Uri "http://localhost:6333/collections" -UseBasicParsing -ErrorAction Stop -TimeoutSec 2
+    $qdrantResponse = Invoke-WebRequest -Uri "http://localhost:6333/collections" -UseBasicParsing -ErrorAction Stop
     if ($qdrantResponse.StatusCode -eq 200) {
         Write-Host "OK: Qdrant is running on localhost:6333" -ForegroundColor Green
         $statusSummary.Qdrant = $true
@@ -67,7 +67,7 @@ try {
 # Check Ollama LLM Service
 Write-Host "`nChecking Ollama LLM Service..." -ForegroundColor Yellow
 try {
-    $ollamaResponse = Invoke-WebRequest -Uri "http://localhost:11434/api/tags" -UseBasicParsing -ErrorAction Stop -TimeoutSec 2
+    $ollamaResponse = Invoke-WebRequest -Uri "http://localhost:11434/api/tags" -UseBasicParsing -ErrorAction Stop
     if ($ollamaResponse.StatusCode -eq 200) {
         Write-Host "OK: Ollama is running on localhost:11434" -ForegroundColor Green
         $statusSummary.Ollama = $true
@@ -89,7 +89,7 @@ try {
 # Check React Admin Interface
 Write-Host "`nChecking React Admin Interface..." -ForegroundColor Yellow
 try {
-    $adminResponse = Invoke-WebRequest -Uri "http://localhost:8080" -UseBasicParsing -ErrorAction Stop -TimeoutSec 2
+    $adminResponse = Invoke-WebRequest -Uri "http://localhost:8080" -UseBasicParsing -ErrorAction Stop
     if ($adminResponse.StatusCode -eq 200) {
         Write-Host "OK: React Admin is running on localhost:8080" -ForegroundColor Green
         $statusSummary.ReactAdmin = $true
@@ -112,10 +112,17 @@ if ($trayProcess) {
 
 # Check Worker Process Details
 Write-Host "`nChecking Worker Process..." -ForegroundColor Yellow
-$workerProcesses = Get-Process | Where-Object {
-    $_.ProcessName -eq "dotnet" -and 
-    $_.CommandLine -like "*Castellan.Worker*"
-} -ErrorAction SilentlyContinue
+# Use WMI for reliable command line detection on Windows PowerShell 5.1
+$workerProcesses = @()
+try {
+    $wmiResults = Get-WmiObject Win32_Process -Filter "Name='dotnet.exe'" -ErrorAction SilentlyContinue | Where-Object {
+        $_.CommandLine -like "*Castellan.Worker*"
+    }
+    foreach ($wmiProc in $wmiResults) {
+        $proc = Get-Process -Id $wmiProc.ProcessId -ErrorAction SilentlyContinue
+        if ($proc) { $workerProcesses += $proc }
+    }
+} catch { }
 
 if ($workerProcesses) {
     foreach ($proc in $workerProcesses) {

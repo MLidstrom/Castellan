@@ -8,11 +8,19 @@ param(
     [string]$Verbosity = "normal"
 )
 
+# Resolve repository root and test project path
+$RepoRoot = Split-Path -Path $PSScriptRoot -Parent
+if ([System.IO.Path]::IsPathRooted($TestProject)) {
+    $TestProjectPath = $TestProject
+} else {
+    $TestProjectPath = Join-Path $RepoRoot $TestProject
+}
+
 Write-Host "Castellan Test Runner" -ForegroundColor Cyan
 Write-Host "====================================" -ForegroundColor Cyan
 Write-Host "Configuration: $Configuration" -ForegroundColor White
-Write-Host "Test Project: $TestProject" -ForegroundColor White
-Write-Host "No Build: $NoBuild" -ForegroundColor White
+Write-Host "Test Project: $TestProjectPath" -ForegroundColor White
+Write-Host "No Build: $($NoBuild.IsPresent)" -ForegroundColor White
 Write-Host "Verbosity: $Verbosity" -ForegroundColor White
 Write-Host ""
 
@@ -72,14 +80,14 @@ function Invoke-Tests {
 
 # Main execution
 Write-Host "Step 1: Validating test project..." -ForegroundColor Yellow
-if (-not (Test-ProjectExists $TestProject)) {
+if (-not (Test-ProjectExists $TestProjectPath)) {
     Write-Host "FAILED: Cannot proceed without valid test project" -ForegroundColor Red
     exit 1
 }
 Write-Host "SUCCESS: Test project found" -ForegroundColor Green
 
 Write-Host "`nStep 2: Running unit tests..." -ForegroundColor Yellow
-$testExitCode = Invoke-Tests -ProjectPath $TestProject -Config $Configuration -SkipBuild $NoBuild -VerbosityLevel $Verbosity
+$testExitCode = Invoke-Tests -ProjectPath $TestProjectPath -Config $Configuration -SkipBuild:$($NoBuild.IsPresent) -VerbosityLevel $Verbosity
 
 # Analyze results
 Write-Host "`nTest Results:" -ForegroundColor Cyan
@@ -97,9 +105,9 @@ if ($testExitCode -eq 0) {
 }
 
 Write-Host "`nAdditional Commands:" -ForegroundColor Cyan
-Write-Host "   Run specific test:     dotnet test $TestProject --filter 'TestMethodName'" -ForegroundColor White
-Write-Host "   Run with coverage:     dotnet test $TestProject --collect:'XPlat Code Coverage'" -ForegroundColor White
-Write-Host "   Run in watch mode:     dotnet watch test $TestProject" -ForegroundColor White
-Write-Host "   List all tests:        dotnet test $TestProject --list-tests" -ForegroundColor White
+Write-Host "   Run specific test:     dotnet test $TestProjectPath --filter 'TestMethodName'" -ForegroundColor White
+Write-Host "   Run with coverage:     dotnet test $TestProjectPath --collect:'XPlat Code Coverage'" -ForegroundColor White
+Write-Host "   Run in watch mode:     dotnet watch test $TestProjectPath" -ForegroundColor White
+Write-Host "   List all tests:        dotnet test $TestProjectPath --list-tests" -ForegroundColor White
 
 exit $testExitCode

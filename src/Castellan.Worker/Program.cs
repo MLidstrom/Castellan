@@ -16,6 +16,7 @@ using Castellan.Worker.VectorStores;
 using Castellan.Worker.Llms;
 using Castellan.Worker.Models;
 using Castellan.Worker.Services;
+using Castellan.Worker.Services.NotificationChannels;
 using Castellan.Worker.Configuration;
 using Castellan.Worker.Data;
 using Serilog;
@@ -55,11 +56,21 @@ builder.Services.Configure<IPEnrichmentOptions>(builder.Configuration.GetSection
 builder.Services.Configure<AutomatedResponseOptions>(builder.Configuration.GetSection("AutomatedResponse"));
 builder.Services.Configure<ThreatScanOptions>(builder.Configuration.GetSection("ThreatScan"));
 builder.Services.Configure<AuthenticationOptions>(builder.Configuration.GetSection(AuthenticationOptions.SectionName));
+builder.Services.Configure<TeamsNotificationOptions>(builder.Configuration.GetSection("Notifications:Teams"));
+builder.Services.Configure<SlackNotificationOptions>(builder.Configuration.GetSection("Notifications:Slack"));
 
 builder.Services.AddSingleton<ILogCollector, EvtxCollector>();
 
 
 builder.Services.AddSingleton<INotificationService, NotificationService>();
+
+// Add notification channels
+builder.Services.AddSingleton<INotificationChannel, TeamsNotificationChannel>();
+builder.Services.AddSingleton<INotificationChannel, SlackNotificationChannel>();
+builder.Services.AddSingleton<INotificationManager, NotificationManager>();
+
+// Add notification configuration store
+builder.Services.AddSingleton<INotificationConfigurationStore, FileBasedNotificationConfigurationStore>();
 
 builder.Services.AddHttpClient();
 builder.Services.AddMemoryCache(); // For IP enrichment caching

@@ -115,17 +115,70 @@ function Start-Worker {
 # Main execution flow
 Write-Host "Performing startup checks..." -ForegroundColor Cyan
 
-# Step 1: Validate .NET installation
+# Step 1: Check and start prerequisites (Qdrant and Ollama)
+Write-Host "`nChecking prerequisites..." -ForegroundColor Cyan
+
+# Check Qdrant
+Write-Host "Checking Qdrant vector database..." -ForegroundColor Yellow
+try {
+    $qdrantRunning = & docker ps --filter "name=qdrant" --format "{{.Names}}" 2>$null
+    if ($qdrantRunning -eq "qdrant") {
+        Write-Host "OK: Qdrant is already running" -ForegroundColor Green
+    } else {
+        Write-Host "Starting Qdrant container..." -ForegroundColor Yellow
+        $startResult = & docker start qdrant 2>$null
+        if ($LASTEXITCODE -eq 0) {
+            Write-Host "OK: Started existing Qdrant container" -ForegroundColor Green
+        } else {
+            Write-Host "Creating new Qdrant container..." -ForegroundColor Yellow
+            $createResult = & docker run -d --name qdrant -p 6333:6333 qdrant/qdrant 2>&1
+            if ($LASTEXITCODE -eq 0) {
+                Write-Host "OK: Created and started new Qdrant container" -ForegroundColor Green
+            } else {
+                Write-Host "WARNING: Failed to start Qdrant - vector search may not work" -ForegroundColor Yellow
+            }
+        }
+    }
+} catch {
+    Write-Host "WARNING: Docker not available - Qdrant will not be started" -ForegroundColor Yellow
+}
+
+# Check Ollama
+Write-Host "Checking Ollama LLM service..." -ForegroundColor Yellow
+try {
+    $ollamaResponse = Invoke-WebRequest -Uri "http://localhost:11434/api/tags" -UseBasicParsing -ErrorAction SilentlyContinue
+    if ($ollamaResponse.StatusCode -eq 200) {
+        Write-Host "OK: Ollama is already running" -ForegroundColor Green
+    } else {
+        throw "Not responding"
+    }
+} catch {
+    Write-Host "Starting Ollama service..." -ForegroundColor Yellow
+    try {
+        $ollamaProcess = Start-Process -FilePath "ollama" -ArgumentList "serve" -WindowStyle Hidden -PassThru
+        if ($ollamaProcess) {
+            Write-Host "OK: Started Ollama service (PID: $($ollamaProcess.Id))" -ForegroundColor Green
+            # Wait a moment for Ollama to initialize
+            Start-Sleep -Seconds 3
+        } else {
+            Write-Host "WARNING: Failed to start Ollama - AI analysis may not work" -ForegroundColor Yellow
+        }
+    } catch {
+        Write-Host "WARNING: Ollama not installed or not accessible - AI analysis may not work" -ForegroundColor Yellow
+    }
+}
+
+# Step 2: Validate .NET installation
 if (-not (Test-DotNetInstalled)) {
     exit 1
 }
 
-# Step 2: Validate project exists
+# Step 3: Validate project exists
 if (-not (Test-ProjectExists)) {
     exit 1
 }
 
-# Step 3: Optionally build the project
+# Step 4: Optionally build the project
 if (-not $NoBuild) {
     if (-not (Build-Project)) {
         Write-Host "`nStartup failed due to build errors" -ForegroundColor Red
@@ -136,7 +189,7 @@ else {
     Write-Host "WARNING: Skipping build (--NoBuild specified)" -ForegroundColor Yellow
 }
 
-# Step 4: Start the Worker service
+# Step 5: Start the Worker service
 if (Start-Worker -RunInBackground:$Background) {
     if (-not $Background) {
         Write-Host "`nWorker service stopped" -ForegroundColor Cyan
