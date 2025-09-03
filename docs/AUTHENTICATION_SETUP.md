@@ -48,7 +48,7 @@ Update `appsettings.json`:
       "Username": "admin", 
       "Password": "your-secure-password-here",
       "Email": "admin@castellan.security",
-      "FirstName": "CastellanPro",
+      "FirstName": "Castellan",
       "LastName": "Administrator"
     }
   }

@@ -1,6 +1,6 @@
 # 🔧 Troubleshooting Guide
 
-This guide covers common issues you might encounter while using CastellanPro and their solutions.
+This guide covers common issues you might encounter while using Castellan and their solutions.
 
 ## React Admin Interface Issues
 
@@ -30,15 +30,15 @@ If the "Quick Scan" or "Full Scan" buttons in the React Admin interface don't wo
 ## System Tray Application Issues
 
 ### Tray Icon Not Visible
-If you can't see the CastellanPro system tray icon:
+If you can't see the Castellan system tray icon:
 
 1. **Check for Duplicate Processes**: Multiple tray applications may be running
    ```powershell
    # Check for running tray processes
-   Get-Process -Name "CastellanPro.Tray" -ErrorAction SilentlyContinue
+   Get-Process -Name "Castellan.Tray" -ErrorAction SilentlyContinue
    
    # Stop duplicate processes if found
-   Get-Process -Name "CastellanPro.Tray" -ErrorAction SilentlyContinue | Stop-Process -Force
+   Get-Process -Name "Castellan.Tray" -ErrorAction SilentlyContinue | Stop-Process -Force
    ```
 
 2. **Restart Services Cleanly**: Use the provided scripts for clean startup/shutdown
@@ -50,7 +50,7 @@ If you can't see the CastellanPro system tray icon:
    .\scripts\start.ps1
    ```
 
-3. **Process Detection Issues**: If tray app reports "CastellanPro not running" when it is:
+3. **Process Detection Issues**: If tray app reports "Castellan not running" when it is:
    - This can occur when running Worker via `dotnet run` instead of compiled executable
    - The tray app uses enhanced process detection to handle both scenarios
    - Restart the tray application if detection fails
@@ -71,10 +71,10 @@ If the system tray application doesn't start automatically:
 2. **Path Resolution Problems**: Tray executable must be built before starting
    ```powershell
    # Ensure tray app is built
-   dotnet build src\CastellanPro.Tray\CastellanPro.Tray.csproj -c Release
+   dotnet build src\Castellan.Tray\Castellan.Tray.csproj -c Release
    
    # Or build entire solution
-   dotnet build CastellanPro.sln
+   dotnet build Castellan.sln
    ```
 
 3. **Manual Tray Start**: If auto-start fails, start manually
@@ -137,12 +137,12 @@ If the system tray application doesn't start automatically:
 
 ### Service Status Check
 ```powershell
-# Check all CastellanPro processes
-Get-Process | Where-Object {$_.ProcessName -like "*CastellanPro*"}
+# Check all Castellan processes
+Get-Process | Where-Object {$_.ProcessName -like "*Castellan*"}
 
 # Check specific services
 Get-Process -Name "Castellan.Worker" -ErrorAction SilentlyContinue
-Get-Process -Name "CastellanPro.Tray" -ErrorAction SilentlyContinue
+Get-Process -Name "Castellan.Tray" -ErrorAction SilentlyContinue
 ```
 
 ### Log Analysis

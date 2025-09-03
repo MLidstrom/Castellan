@@ -1,6 +1,6 @@
-# Contributing to CastellanPro Free
+# Contributing to Castellan
 
-Thank you for your interest in contributing to CastellanPro! We welcome contributions from the community to help improve this AI-powered Windows security monitoring platform.
+Thank you for your interest in contributing to Castellan! We welcome contributions from the community to help improve this AI-powered Windows security monitoring platform.
 
 ## 🤝 How to Contribute
 
@@ -20,7 +20,7 @@ Thank you for your interest in contributing to CastellanPro! We welcome contribu
 2. Create a feature branch (`git checkout -b feature/amazing-feature`)
 3. Make your changes
 4. **Add comprehensive tests** - All new functionality must include unit tests
-5. **Ensure all tests pass** - Run `dotnet test src/CastellanPro.Tests/` (currently 375 tests, 95.7% success rate)
+5. **Ensure all tests pass** - Run `dotnet test src/Castellan.Tests/` (currently 450+ tests, 98%+ success rate)
 6. **Follow testing standards** - Use XUnit, FluentAssertions, and Moq for consistency
 7. Commit with clear messages (`git commit -m 'Add amazing feature'`)
 8. Push to your branch (`git push origin feature/amazing-feature`)
@@ -49,13 +49,13 @@ $env:AUTHENTICATION__ADMINUSER__USERNAME = "admin"
 $env:AUTHENTICATION__ADMINUSER__PASSWORD = "your-dev-password"
 
 # Build the solution
-dotnet build CastellanPro.sln
+dotnet build Castellan.sln
 
 # Run tests
-dotnet test src\CastellanPro.Tests\CastellanPro.Tests.csproj
+dotnet test src\Castellan.Tests\Castellan.Tests.csproj
 
 # Start the worker service
-cd src\CastellanPro.Worker
+cd src\Castellan.Worker
 dotnet run
 ```
 
@@ -100,16 +100,16 @@ npm start  # Runs on http://localhost:8080
 ### Running Tests
 ```powershell
 # All tests (recommended)
-dotnet test src\CastellanPro.Tests\
+dotnet test src\Castellan.Tests\
 
 # With verbose output
-dotnet test src\CastellanPro.Tests\ --verbosity normal
+dotnet test src\Castellan.Tests\ --verbosity normal
 
 # Specific test class
-dotnet test src\CastellanPro.Tests\ --filter "FullyQualifiedName~AuthControllerTests"
+dotnet test src\Castellan.Tests\ --filter "FullyQualifiedName~AuthControllerTests"
 
 # With coverage
-dotnet test src\CastellanPro.Tests\ --collect:"XPlat Code Coverage"
+dotnet test src\Castellan.Tests\ --collect:"XPlat Code Coverage"
 ```
 
 ### Writing Tests - Required Standards
@@ -182,7 +182,7 @@ public void Method_Scenario_ExpectedBehavior()
 
 ## 📄 License
 
-By contributing to CastellanPro, you agree that your contributions will be licensed under the MIT License.
+By contributing to Castellan, you agree that your contributions will be licensed under the MIT License.
 
 ## 🙏 Recognition
 
@@ -191,4 +191,4 @@ Contributors will be recognized in:
 - Release notes
 - Annual contributor reports
 
-Thank you for helping make CastellanPro better! 🏰🛡️
+Thank you for helping make Castellan better! 🏰🛡️

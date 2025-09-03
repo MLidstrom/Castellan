@@ -1,10 +1,10 @@
 # Startup Configuration Guide
 
-This guide explains how to configure and customize the automatic startup behavior of CastellanPro Free services.
+This guide explains how to configure and customize the automatic startup behavior of Castellan services.
 
 ## Overview
 
-CastellanPro Free includes an automatic startup orchestrator (`StartupOrchestratorService.cs`) built into the Worker service that manages all required services from a single entry point. The orchestration logic is implemented entirely in C# code, not in PowerShell scripts. When you start the Worker service, it automatically launches:
+Castellan includes an automatic startup orchestrator (`StartupOrchestratorService.cs`) built into the Worker service that manages all required services from a single entry point. The orchestration logic is implemented entirely in C# code, not in PowerShell scripts. When you start the Worker service, it automatically launches:
 
 - **Qdrant** - Vector database (Docker container)
 - **React Admin** - Web administration interface
@@ -93,7 +93,7 @@ npm start
 **What it does:**
 - Builds the tray application if not already built
 - Starts the Windows Forms tray application
-- Provides quick access to CastellanPro status and controls
+- Provides quick access to Castellan status and controls
 
 **Requirements:**
 - Windows operating system
@@ -169,7 +169,7 @@ When the Worker service stops:
 1. Install Docker Desktop from https://www.docker.com/products/docker-desktop
 2. Start Docker Desktop
 3. Wait for Docker to fully initialize
-4. Retry starting CastellanPro
+4. Retry starting Castellan
 
 #### Port Already in Use
 **Error:** React Admin or other services fail to start due to port conflicts

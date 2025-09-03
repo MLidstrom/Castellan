@@ -56,7 +56,7 @@
 - **Local Deployment** - No cloud dependencies, runs entirely on your local infrastructure
 
 ### 🧪 **Quality & Testing**
-- **Comprehensive Test Suite** - 375 tests with 95.7% success rate covering all critical functionality
+- **Comprehensive Test Suite** - 450+ tests with 98%+ success rate covering all critical functionality
 - **Production Ready** - Robust error handling, advanced mocking, and comprehensive validation
 - **Continuous Validation** - Automated testing for controllers, services, and integration scenarios
 
@@ -75,13 +75,14 @@
 | **Cost** | Free | $50K+/year | Free |
 | **Setup Time** | 5 minutes | 3-6 months | 2-4 weeks |
 | **AI Integration** | Built-in | Add-on ($20K+) | Limited |
+| **Teams/Slack** | Built-in | Add-on ($5K+) | Manual |
 | **MITRE ATT&CK** | Auto-updated | Manual | Basic |
 | **Deployment** | Local | Cloud/On-prem | Local |
 | **Support** | Community | 24/7 ($10K+) | Community |
 
 ## 🏗️ Architecture
 
-Castellan processes Windows security events through AI/ML analysis, stores enriched data in a vector database for correlation, maintains application and security data in SQLite, and provides desktop and web interfaces for monitoring and response.
+Castellan processes Windows security events through AI/ML analysis, stores enriched data in a vector database for correlation, maintains application and security data in SQLite, and provides multiple notification channels including desktop notifications, Teams/Slack integration, and web interfaces for monitoring and response.
 
 ```mermaid
 flowchart LR
@@ -121,9 +122,11 @@ flowchart LR
         J
     end
     
-    subgraph "User Interface"
+    subgraph "Notifications & Interface"
         F
         G
+        M
+        E
     end
     
     style A fill:#e1f5fe,color:#000
@@ -138,7 +141,32 @@ flowchart LR
     style L fill:#fff8e1,color:#000
     style I fill:#ffebee,color:#000
     style J fill:#ffebee,color:#000
+    style M fill:#e3f2fd,color:#000
 ```
+
+## 🔔 Notification Services
+
+Castellan provides multiple channels for real-time security alert delivery:
+
+### 🆕 Teams & Slack Integration
+- **Microsoft Teams**: Rich Adaptive Cards with detailed security event information
+- **Slack**: Block Kit formatted messages with user mentions and action buttons
+- **Webhook Management**: Full CRUD interface for webhook configuration
+- **Rate Limiting**: Configurable throttling per severity level (Critical: instant, High: 5min, Medium: 15min, Low: 60min)
+- **Testing**: Built-in webhook connectivity testing from admin interface
+- **Validation**: Only official Teams/Slack webhook domains accepted
+
+### Desktop & Web Notifications
+- **Desktop Alerts**: Real-time system tray notifications for critical events
+- **Web Dashboard**: React-based admin interface with live event monitoring
+- **Email Integration**: SMTP support for email alerts (configurable)
+
+### Configuration
+Access the admin interface at http://localhost:8080 → "Notification Settings" to:
+1. Add Teams/Slack webhook URLs
+2. Configure rate limiting per severity
+3. Test webhook connections
+4. Set up channel routing and user mentions
 
 ## 🚀 Quick Start
 
@@ -254,6 +282,24 @@ Note: Set `"Startup:AutoStart:Enabled": false` in `src/Castellan.Worker/appsetti
 Open your browser to `http://localhost:8080` to access the React admin interface.
 
 **Note:** Use the credentials you configured in step 3 for authentication.
+
+### 8. Configure Teams/Slack Notifications (Optional)
+Set up real-time security alerts in your team channels:
+
+1. **Get Webhook URLs**:
+   - **Teams**: Create an Incoming Webhook in your channel → Copy URL
+   - **Slack**: Create an Incoming Webhook in your workspace → Copy URL
+
+2. **Configure in Castellan**:
+   - Go to `http://localhost:8080` → "Notification Settings"
+   - Add your webhook URLs
+   - Test connections to verify setup
+   - Configure rate limiting per severity level
+
+3. **Start Receiving Alerts**:
+   - Critical alerts: Instant delivery with user mentions
+   - High alerts: 5-minute throttling
+   - Medium/Low alerts: 15/60-minute throttling
 
 ## 🗄️ Data Storage
 

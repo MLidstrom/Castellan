@@ -1,6 +1,6 @@
-# Getting Started with CastellanPro Free
+# Getting Started with Castellan
 
-This is the free edition of CastellanPro, focused on core security monitoring capabilities for local deployment only. No cloud features are available in the Free Edition.
+This is Castellan, an open source security monitoring platform focused on comprehensive security capabilities including Teams/Slack notifications, AI-powered analysis, and local deployment.
 
 ## Quick Start (Automatic)
 
@@ -62,20 +62,20 @@ If the system tray icon doesn't appear or behaves unexpectedly:
 1. **Multiple Tray Processes**: Check for and stop duplicate processes
    ```powershell
    # Check running tray processes
-   Get-Process -Name "CastellanPro.Tray" -ErrorAction SilentlyContinue
+   Get-Process -Name "Castellan.Tray" -ErrorAction SilentlyContinue
    
    # Clean restart if duplicates found
    .\scripts\stop.ps1
    .\scripts\start.ps1
    ```
 
-2. **Process Detection Problems**: If tray shows "CastellanPro not running" when it is running:
+2. **Process Detection Problems**: If tray shows "Castellan not running" when it is running:
    - This is common when using `dotnet run` instead of compiled executable
    - The tray app automatically detects both scenarios
    - Simply restart the tray app or use the start/stop scripts
 
 3. **Auto-Start Issues**: If tray doesn't start automatically:
-   - Ensure the tray app is built: `dotnet build src\CastellanPro.Tray\CastellanPro.Tray.csproj`
+   - Ensure the tray app is built: `dotnet build src\Castellan.Tray\Castellan.Tray.csproj`
    - Check auto-start is enabled in `appsettings.json`
    - Start manually: `.\scripts\start-tray.ps1`
 
@@ -123,7 +123,7 @@ npm start
 
 </details>
 
-## Key Features (Free Edition)
+## Key Features
 
 - ✅ Windows Event Log monitoring
 - ✅ AI-powered security event analysis 
@@ -131,14 +131,12 @@ npm start
 - ✅ Persistent storage with 24-hour rolling window
 - ✅ Desktop notifications
 - ✅ Web admin interface
+- ✅ Teams/Slack integration
 - ✅ Local deployment only
-- ❌ Teams/Slack integration (Pro edition only)
-- ❌ Cloud connectivity (Pro edition only)
-- ❌ Advanced compliance reporting (Pro edition only)
 
 ## Configuration
 
-The free edition uses local AI models via Ollama or OpenAI API:
+The open source edition uses local AI models via Ollama or OpenAI API:
 
 - **Embeddings**: Ollama (nomic-embed-text) or OpenAI
 - **LLM**: Ollama (llama3.1:8b-instruct-q8_0) or OpenAI GPT models
@@ -146,7 +144,7 @@ The free edition uses local AI models via Ollama or OpenAI API:
 
 ## Support
 
-This is the free community edition for local deployment only. For cloud features, enterprise support, and advanced compliance, consider the Pro edition.
+This is the open source community edition for local deployment.
 
 ## License
 
