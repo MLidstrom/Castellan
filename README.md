@@ -83,12 +83,12 @@
 
 ## 🏗️ Architecture
 
-Castellan processes Windows security events through AI/ML analysis, stores enriched data in a vector database for correlation, maintains application and security data in SQLite, and provides multiple notification channels including desktop notifications, Teams/Slack integration, and web interfaces for monitoring and response.
+Castellan processes Windows security events through AI/ML analysis with parallel processing optimizations, stores enriched data in a vector database for correlation, maintains application and security data in SQLite, and provides multiple notification channels including desktop notifications, Teams/Slack integration, and web interfaces for monitoring and response.
 
 ```mermaid
 flowchart LR
     A[Windows Event Logs] --> B[Castellan Worker Service]
-    B --> C[AI/ML Processing]
+    B --> C[Parallel AI/ML Processing]
     C --> D[Qdrant Vector Database]
     B --> K[SQLite Database]
     B --> E[Notification Services]
