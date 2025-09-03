@@ -28,6 +28,12 @@ public enum SecurityEventType
     // PowerShell & Script Execution
     PowerShellExecution,
     
+    // Behavioral Analysis Categories
+    BurstActivity,
+    CorrelatedActivity,
+    AnomalousActivity,
+    SuspiciousActivity,
+    
     // General categories
     Unknown
 }

@@ -5,8 +5,6 @@ import {
   TextField,
   DateField,
   NumberField,
-  EditButton,
-  ShowButton,
   Edit,
   Create,
   Show,
@@ -288,8 +286,6 @@ export const SecurityEventList = () => (
       <MitreTechniquesField source="mitreAttack" label="MITRE Techniques" sortable={false} />
       <TextField source="source" sortable={false} label="Source" />
       <DateField source="timestamp" showTime />
-      <ShowButton />
-      <EditButton />
     </Datagrid>
     </List>
   </Box>

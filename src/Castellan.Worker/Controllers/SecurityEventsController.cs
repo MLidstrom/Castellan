@@ -22,7 +22,7 @@ public class SecurityEventsController : ControllerBase
     }
 
     [HttpGet]
-    public async Task<IActionResult> GetList(
+    public Task<IActionResult> GetList(
         [FromQuery] int page = 1,
         [FromQuery] int? perPage = null,
         [FromQuery] int? limit = null,
@@ -64,17 +64,17 @@ public class SecurityEventsController : ControllerBase
                 perPage = pageSize
             };
 
-            return Ok(response);
+            return Task.FromResult<IActionResult>(Ok(response));
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error getting security events list");
-            return StatusCode(500, new { message = "Internal server error" });
+            return Task.FromResult<IActionResult>(StatusCode(500, new { message = "Internal server error" }));
         }
     }
 
     [HttpGet("{id}")]
-    public async Task<IActionResult> GetOne(string id)
+    public Task<IActionResult> GetOne(string id)
     {
         try
         {
@@ -84,20 +84,20 @@ public class SecurityEventsController : ControllerBase
 
             if (securityEvent == null)
             {
-                return NotFound(new { message = "Security event not found" });
+                return Task.FromResult<IActionResult>(NotFound(new { message = "Security event not found" }));
             }
 
-            return Ok(new { data = ConvertToDto(securityEvent) });
+            return Task.FromResult<IActionResult>(Ok(new { data = ConvertToDto(securityEvent) }));
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error getting security event: {Id}", id);
-            return StatusCode(500, new { message = "Internal server error" });
+            return Task.FromResult<IActionResult>(StatusCode(500, new { message = "Internal server error" }));
         }
     }
 
     [HttpPut("{id}")]
-    public async Task<IActionResult> Update(string id, [FromBody] SecurityEventUpdateRequest request)
+    public Task<IActionResult> Update(string id, [FromBody] SecurityEventUpdateRequest request)
     {
         try
         {
@@ -109,7 +109,7 @@ public class SecurityEventsController : ControllerBase
 
             if (securityEvent == null)
             {
-                return NotFound(new { message = "Security event not found" });
+                return Task.FromResult<IActionResult>(NotFound(new { message = "Security event not found" }));
             }
 
             // Update fields from request
@@ -117,12 +117,12 @@ public class SecurityEventsController : ControllerBase
             securityEvent.AssignedTo = request.AssignedTo ?? securityEvent.AssignedTo;
             securityEvent.Notes = request.Notes ?? securityEvent.Notes;
 
-            return Ok(new { data = securityEvent });
+            return Task.FromResult<IActionResult>(Ok(new { data = securityEvent }));
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error updating security event: {Id}", id);
-            return StatusCode(500, new { message = "Internal server error" });
+            return Task.FromResult<IActionResult>(StatusCode(500, new { message = "Internal server error" }));
         }
     }
 

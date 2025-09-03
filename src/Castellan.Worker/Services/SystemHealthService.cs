@@ -263,6 +263,22 @@ public class SystemHealthService
         }
 
         // Try to check database dates
+        if (string.IsNullOrEmpty(_ipEnrichmentOptions.Value.MaxMindCityDbPath))
+        {
+            return new SystemStatusDto
+            {
+                Id = "5",
+                Component = "IP Enrichment Service",
+                Status = "Warning",
+                LastCheck = DateTime.UtcNow,
+                ResponseTime = 25,
+                Uptime = "95.2%",
+                Details = "MaxMind database path not configured",
+                ErrorCount = 0,
+                WarningCount = 1
+            };
+        }
+        
         var cityDbInfo = new FileInfo(_ipEnrichmentOptions.Value.MaxMindCityDbPath);
         var daysSinceUpdate = (DateTime.Now - cityDbInfo.LastWriteTime).Days;
         

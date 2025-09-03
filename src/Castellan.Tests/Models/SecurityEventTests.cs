@@ -71,7 +71,7 @@ public class SecurityEventTests
         }";
 
         // Act
-        var securityEvent = SecurityEvent.CreateFromLlmResponse(originalEvent, validJson, SecurityEventType.AuthenticationFailure);
+        var securityEvent = SecurityEvent.CreateFromLlmResponse(originalEvent, validJson);
 
         // Assert
         securityEvent.Should().NotBeNull();
@@ -135,7 +135,7 @@ public class SecurityEventTests
         // Act
         var securityEvent = SecurityEvent.CreateCorrelationBased(
             originalEvent,
-            "burstactivity",
+            SecurityEventType.BurstActivity,
             "high",
             90,
             "Burst of failed login attempts detected",
@@ -233,10 +233,12 @@ public class SecurityEventTests
             "Test event."
         );
 
-        // Act
+        // Act  
+        // Parse eventType string to enum (test the parsing logic)
+        var parsedEventType = Enum.TryParse<SecurityEventType>(eventType, true, out var result) ? result : SecurityEventType.Unknown;
         var securityEvent = SecurityEvent.CreateCorrelationBased(
             originalEvent,
-            eventType,
+            parsedEventType,
             "medium",
             80,
             "Test event",
@@ -275,8 +277,7 @@ public class SecurityEventTests
             95,
             "Successful login detected",
             new[] { "T1078" },
-            new[] { "Monitor user activity" },
-            enrichmentData
+            new[] { "Monitor user activity" }
         );
 
         // Assert

@@ -152,7 +152,7 @@ public class TrayIconTests : IDisposable
     }
 
     [Fact]
-    public void CreateSimpleIcon_ShouldHandleConcurrentAccess()
+    public async Task CreateSimpleIcon_ShouldHandleConcurrentAccess()
     {
         // Act
         var tasks = new List<Task<System.Drawing.Icon>>();
@@ -161,7 +161,7 @@ public class TrayIconTests : IDisposable
             tasks.Add(Task.Run(() => Program.CreateSimpleIcon()));
         }
 
-        var icons = Task.WhenAll(tasks).Result;
+        var icons = await Task.WhenAll(tasks);
 
         // Assert
         icons.Should().NotContainNulls();
@@ -202,7 +202,7 @@ public class TrayIconTests : IDisposable
     }
 
     [Fact]
-    public void CreateSimpleIcon_ShouldBeThreadSafe()
+    public async Task CreateSimpleIcon_ShouldBeThreadSafe()
     {
         // Act
         var icons = new System.Drawing.Icon[5];
@@ -217,7 +217,7 @@ public class TrayIconTests : IDisposable
             }));
         }
 
-        Task.WaitAll(tasks.ToArray());
+        await Task.WhenAll(tasks);
 
         // Assert
         icons.Should().NotContainNulls();

@@ -40,6 +40,12 @@ public class StartupOrchestratorService : BackgroundService
                     await StartQdrantAsync(stoppingToken);
                 }
 
+                // Start Ollama if configured
+                if (_configuration.GetValue<bool>("Startup:AutoStart:Ollama", true))
+                {
+                    await StartOllamaAsync(stoppingToken);
+                }
+
                 // Start React Admin if configured
                 if (_configuration.GetValue<bool>("Startup:AutoStart:ReactAdmin", true))
                 {
@@ -119,6 +125,77 @@ public class StartupOrchestratorService : BackgroundService
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to start Qdrant. Make sure Docker is installed and running.");
+        }
+    }
+
+    private async Task StartOllamaAsync(CancellationToken cancellationToken)
+    {
+        try
+        {
+            _logger.LogInformation("Checking Ollama status...");
+
+            // Check if Ollama is already running
+            using var httpClient = new HttpClient();
+            httpClient.Timeout = TimeSpan.FromSeconds(2);
+            
+            try
+            {
+                var response = await httpClient.GetAsync("http://localhost:11434/api/tags", cancellationToken);
+                if (response.IsSuccessStatusCode)
+                {
+                    _logger.LogInformation("Ollama is already running");
+                    return;
+                }
+            }
+            catch
+            {
+                // Ollama not running, start it
+            }
+
+            _logger.LogInformation("Starting Ollama service...");
+
+            // Start Ollama service in the background
+            var startInfo = new ProcessStartInfo
+            {
+                FileName = "ollama",
+                Arguments = "serve",
+                UseShellExecute = false,
+                CreateNoWindow = true,
+                RedirectStandardOutput = true,
+                RedirectStandardError = true
+            };
+
+            var process = Process.Start(startInfo);
+            if (process != null)
+            {
+                _managedProcesses.Add(process);
+                
+                // Wait for Ollama to be ready (up to 30 seconds)
+                for (int i = 0; i < 30; i++)
+                {
+                    await Task.Delay(TimeSpan.FromSeconds(1), cancellationToken);
+                    
+                    try
+                    {
+                        var response = await httpClient.GetAsync("http://localhost:11434/api/tags", cancellationToken);
+                        if (response.IsSuccessStatusCode)
+                        {
+                            _logger.LogInformation("Ollama started successfully");
+                            return;
+                        }
+                    }
+                    catch
+                    {
+                        // Still starting up
+                    }
+                }
+                
+                _logger.LogWarning("Ollama may still be starting up - check status manually");
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to start Ollama. Make sure Ollama is installed (https://ollama.ai).");
         }
     }
 

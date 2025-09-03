@@ -107,12 +107,12 @@ public class BasicTests
     }
 
     [Theory]
-    [InlineData(4624, "AuthenticationSuccess")]
-    [InlineData(4625, "AuthenticationFailure")]
-    [InlineData(4672, "PrivilegeEscalation")]
-    [InlineData(4720, "AccountManagement")]
-    [InlineData(4688, "ProcessCreation")]
-    public void SecurityEvent_ShouldHandleDifferentEventTypes(int eventId, string expectedType)
+    [InlineData(4624)]
+    [InlineData(4625)]
+    [InlineData(4672)]
+    [InlineData(4720)]
+    [InlineData(4688)]
+    public void SecurityEvent_ShouldHandleDifferentEventTypes(int eventId)
     {
         // Arrange
         var logEvent = TestDataFactory.CreateSecurityEvent(eventId, "testuser");
@@ -193,8 +193,7 @@ public class BasicTests
             75,
             "Test event",
             new[] { "T1078" },
-            new[] { "Monitor activity" },
-            null // Explicitly passing null
+            new[] { "Monitor activity" }
         );
 
         // Assert

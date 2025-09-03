@@ -858,7 +858,8 @@ public class PipelineIntegrationTests : IDisposable
     {
         await Task.Delay(1); // Small delay to make it truly async
         throw exception;
-        yield break; // This will never be reached
+        yield break; // Required for async-iterator method even after throw
+#pragma warning disable CS0162 // Unreachable code detected
     }
 
     public void Dispose()

@@ -183,7 +183,7 @@ public sealed class Pipeline(
                 var emb = await embedder.EmbedAsync(text, ct);
                 var embeddingTime = (DateTimeOffset.UtcNow - embeddingStartTime).TotalMilliseconds;
                 
-                log.LogDebug("Pipeline: embedding length={emb.Length} for event {EventId}", emb.Length);
+                log.LogDebug("Pipeline: embedding length={EmbeddingLength} for event {EventId}", emb.Length, logEvent.EventId);
                 
                 // Measure upsert time
                 var upsertStartTime = DateTimeOffset.UtcNow;

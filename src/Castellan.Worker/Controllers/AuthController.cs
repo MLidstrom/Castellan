@@ -23,7 +23,7 @@ public class AuthController : ControllerBase
     }
 
     [HttpPost("login")]
-    public async Task<IActionResult> Login([FromBody] LoginRequest request)
+    public Task<IActionResult> Login([FromBody] LoginRequest request)
     {
         try
         {
@@ -34,7 +34,7 @@ public class AuthController : ControllerBase
             if (string.IsNullOrEmpty(_authOptions.AdminUser.Username) || string.IsNullOrEmpty(_authOptions.AdminUser.Password))
             {
                 _logger.LogError("Authentication not properly configured. Check AdminUser settings.");
-                return StatusCode(500, new { message = "Authentication not configured" });
+                return Task.FromResult<IActionResult>(StatusCode(500, new { message = "Authentication not configured" }));
             }
 
             if (request.Username == _authOptions.AdminUser.Username && request.Password == _authOptions.AdminUser.Password)
@@ -64,21 +64,21 @@ public class AuthController : ControllerBase
                 };
 
                 _logger.LogInformation("Login successful for user: {Username}", request.Username);
-                return Ok(response);
+                return Task.FromResult<IActionResult>(Ok(response));
             }
 
             _logger.LogWarning("Login failed for user: {Username}", request.Username);
-            return Unauthorized(new { message = "Invalid credentials" });
+            return Task.FromResult<IActionResult>(Unauthorized(new { message = "Invalid credentials" }));
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error during login for user: {Username}", request.Username);
-            return StatusCode(500, new { message = "Internal server error" });
+            return Task.FromResult<IActionResult>(StatusCode(500, new { message = "Internal server error" }));
         }
     }
 
     [HttpPost("refresh")]
-    public async Task<IActionResult> Refresh([FromBody] RefreshTokenRequest request)
+    public Task<IActionResult> Refresh([FromBody] RefreshTokenRequest request)
     {
         try
         {
@@ -94,29 +94,29 @@ public class AuthController : ControllerBase
                 ExpiresAt = DateTimeOffset.UtcNow.AddHours(24).ToUnixTimeMilliseconds()
             };
 
-            return Ok(response);
+            return Task.FromResult<IActionResult>(Ok(response));
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error during token refresh");
-            return StatusCode(500, new { message = "Internal server error" });
+            return Task.FromResult<IActionResult>(StatusCode(500, new { message = "Internal server error" }));
         }
     }
 
     [HttpPost("logout")]
     [Authorize]
-    public async Task<IActionResult> Logout()
+    public Task<IActionResult> Logout()
     {
         try
         {
             _logger.LogInformation("User logout");
             // In production, invalidate the token on the server side
-            return Ok(new { message = "Logged out successfully" });
+            return Task.FromResult<IActionResult>(Ok(new { message = "Logged out successfully" }));
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error during logout");
-            return StatusCode(500, new { message = "Internal server error" });
+            return Task.FromResult<IActionResult>(StatusCode(500, new { message = "Internal server error" }));
         }
     }
 
