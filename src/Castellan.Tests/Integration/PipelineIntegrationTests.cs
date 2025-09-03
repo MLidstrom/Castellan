@@ -85,6 +85,13 @@ public class PipelineIntegrationTests : IDisposable
         services.AddSingleton(_mockAutomatedResponseService.Object);
         services.AddSingleton(Options.Create(_alertOptions));
         services.AddSingleton(Options.Create(_notificationOptions));
+        services.AddSingleton(Options.Create(new PipelineOptions
+        {
+            EnableParallelProcessing = true,
+            MaxConcurrency = 4,
+            ParallelOperationTimeoutMs = 30000,
+            EnableParallelVectorOperations = true
+        }));
         services.AddSingleton(Options.Create(new Castellan.Worker.Configuration.CorrelationOptions
         {
             EnableLowScoreEvents = true, // Enable for testing to maintain existing test behavior

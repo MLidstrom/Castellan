@@ -20,6 +20,7 @@ public sealed class Pipeline(
     IIPEnrichmentService ipEnrichmentService,
     IOptions<AlertOptions> alertOptions,
     IOptions<NotificationOptions> notificationOptions,
+    IOptions<PipelineOptions> pipelineOptions,
     INotificationService notificationService,
     IPerformanceMonitor performanceMonitor,
     ISecurityEventStore securityEventStore,
@@ -28,6 +29,7 @@ public sealed class Pipeline(
 ) : BackgroundService
 {
     private readonly IOptions<NotificationOptions> _notificationOptions = notificationOptions;
+    private readonly IOptions<PipelineOptions> _pipelineOptions = pipelineOptions;
     private readonly IIPEnrichmentService _ipEnrichmentService = ipEnrichmentService;
     private readonly IAutomatedResponseService _automatedResponseService = automatedResponseService;
     
@@ -163,47 +165,37 @@ public sealed class Pipeline(
 
     private async Task<SecurityEvent?> AnalyzeEventWithCorrelation(LogEvent logEvent, CancellationToken ct)
     {
-        // Extract and enrich IP addresses from the event
-        var enrichmentData = await EnrichEventIPs(logEvent, ct);
-        
-        // First, try deterministic security event detection
-        var deterministicEvent = securityDetector.DetectSecurityEvent(logEvent);
+        // STAGE 1: Execute independent operations in parallel
+        var (enrichmentData, deterministicEvent, preparedText) = 
+            await ExecuteIndependentOperationsParallel(logEvent, ct);
         
         SecurityEvent? llmEvent = null;
         
-        // If no deterministic event, or for additional analysis, try LLM
+        // STAGE 2: Conditional LLM processing with parallel vector operations
         if (deterministicEvent == null || deterministicEvent.RiskLevel == "low")
         {
             try
             {
-                var text = $"{logEvent.Channel} {logEvent.EventId} {logEvent.Level} {logEvent.User}\n{logEvent.Message}";
-                
-                // Measure embedding time
+                // Sequential: Embedding generation (cannot be parallelized)
                 var embeddingStartTime = DateTimeOffset.UtcNow;
-                var emb = await embedder.EmbedAsync(text, ct);
+                var embedding = await embedder.EmbedAsync(preparedText, ct);
                 var embeddingTime = (DateTimeOffset.UtcNow - embeddingStartTime).TotalMilliseconds;
                 
-                log.LogDebug("Pipeline: embedding length={EmbeddingLength} for event {EventId}", emb.Length, logEvent.EventId);
+                log.LogDebug("Pipeline: embedding length={EmbeddingLength} for event {EventId}", embedding.Length, logEvent.EventId);
                 
-                // Measure upsert time
-                var upsertStartTime = DateTimeOffset.UtcNow;
-                await store.UpsertAsync(logEvent, emb, ct);
-                var upsertTime = (DateTimeOffset.UtcNow - upsertStartTime).TotalMilliseconds;
-                
-                // Measure search time
-                var searchStartTime = DateTimeOffset.UtcNow;
-                var neighbors = await store.SearchAsync(emb, k: 8, ct);
-                var searchTime = (DateTimeOffset.UtcNow - searchStartTime).TotalMilliseconds;
+                // Parallel: Vector operations (upsert and search concurrently)
+                var (upsertTime, searchTime, neighbors) = 
+                    await ExecuteVectorOperationsParallel(logEvent, embedding, ct);
                 
                 // Record vector store metrics
                 performanceMonitor.RecordVectorStoreMetrics(embeddingTime, upsertTime, searchTime, 1);
                 
-                // Measure LLM analysis time
+                // Sequential: LLM analysis (depends on search results)
                 var llmStartTime = DateTimeOffset.UtcNow;
                 var analysis = await llm.AnalyzeAsync(logEvent, neighbors.Select(n => n.evt), ct);
                 var llmTime = (DateTimeOffset.UtcNow - llmStartTime).TotalMilliseconds;
                 
-                // Record LLM metrics (provider/model info would need to be extracted from llm)
+                // Record LLM metrics
                 performanceMonitor.RecordLlmMetrics("Ollama", "llama3.1", llmTime, 0, true);
                 
                 // Create security event from LLM response
@@ -213,25 +205,25 @@ public sealed class Pipeline(
             {
                 log.LogWarning(ex, "LLM analysis failed for event {EventId}, continuing with deterministic analysis only", logEvent.EventId);
                 
-                // Record failed vector store or LLM metrics
+                // Record failed metrics
                 performanceMonitor.RecordVectorStoreMetrics(error: ex.Message);
                 performanceMonitor.RecordLlmMetrics("Ollama", "llama3.1", 0, 0, false);
             }
         }
 
-        // M4: Use rules engine for correlation and fusion
-                    log.LogInformation("Before rules engine: deterministicEvent={DeterministicEvent}, llmEvent={LlmEvent}", 
+        // STAGE 3: Rules engine correlation (sequential, depends on all results)
+        log.LogInformation("Before rules engine: deterministicEvent={DeterministicEvent}, llmEvent={LlmEvent}", 
             deterministicEvent?.RiskLevel ?? "null", llmEvent?.RiskLevel ?? "null");
         
         var fusedEvent = rulesEngine.AnalyzeWithCorrelation(logEvent, deterministicEvent, llmEvent);
         
-        // Add IP enrichment data to the fused event
+        // STAGE 4: Final enrichment (add IP enrichment data to the fused event)
         if (fusedEvent != null && !string.IsNullOrEmpty(enrichmentData))
         {
             fusedEvent = AddIPEnrichmentToEvent(fusedEvent, enrichmentData);
         }
         
-                    log.LogInformation("After rules engine: fusedEvent={FusedEvent}", 
+        log.LogInformation("After rules engine: fusedEvent={FusedEvent}", 
             fusedEvent?.RiskLevel ?? "null");
         
         if (fusedEvent != null)
@@ -572,6 +564,122 @@ public sealed class Pipeline(
         {
             while (channel.Reader.TryRead(out var item))
                 yield return item;
+        }
+    }
+
+    // PARALLEL PROCESSING HELPER METHODS
+
+    /// <summary>
+    /// Prepares text for embedding generation from a LogEvent
+    /// </summary>
+    private string PrepareTextForEmbedding(LogEvent logEvent)
+    {
+        return $"{logEvent.Channel} {logEvent.EventId} {logEvent.Level} {logEvent.User}\n{logEvent.Message}";
+    }
+
+    /// <summary>
+    /// Executes independent operations in parallel: IP enrichment, deterministic detection, and text preparation
+    /// </summary>
+    private async Task<(string? enrichmentData, SecurityEvent? deterministicEvent, string preparedText)> 
+        ExecuteIndependentOperationsParallel(LogEvent logEvent, CancellationToken ct)
+    {
+        if (!_pipelineOptions.Value.EnableParallelProcessing)
+        {
+            // Fall back to sequential processing
+            var enrichmentData = await EnrichEventIPs(logEvent, ct);
+            var deterministicEvent = securityDetector.DetectSecurityEvent(logEvent);
+            var preparedText = PrepareTextForEmbedding(logEvent);
+            return (enrichmentData, deterministicEvent, preparedText);
+        }
+
+        try
+        {
+            // Create timeout token for parallel operations
+            using var timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
+            timeoutCts.CancelAfter(_pipelineOptions.Value.ParallelOperationTimeoutMs);
+
+            // Execute independent operations in parallel
+            var ipEnrichmentTask = EnrichEventIPs(logEvent, timeoutCts.Token);
+            var deterministicDetectionTask = Task.Run(() => securityDetector.DetectSecurityEvent(logEvent), timeoutCts.Token);
+            var textPreparationTask = Task.Run(() => PrepareTextForEmbedding(logEvent), timeoutCts.Token);
+
+            // Wait for all parallel operations to complete
+            await Task.WhenAll(ipEnrichmentTask, deterministicDetectionTask, textPreparationTask);
+
+            return (
+                await ipEnrichmentTask,
+                await deterministicDetectionTask,
+                await textPreparationTask
+            );
+        }
+        catch (OperationCanceledException) when (ct.IsCancellationRequested)
+        {
+            // Main cancellation token was cancelled
+            throw;
+        }
+        catch (Exception ex)
+        {
+            log.LogWarning(ex, "Parallel operations failed for event {EventId}, falling back to sequential processing", logEvent.EventId);
+            
+            // Fall back to sequential processing on error
+            var enrichmentData = await EnrichEventIPs(logEvent, ct);
+            var deterministicEvent = securityDetector.DetectSecurityEvent(logEvent);
+            var preparedText = PrepareTextForEmbedding(logEvent);
+            return (enrichmentData, deterministicEvent, preparedText);
+        }
+    }
+
+    /// <summary>
+    /// Executes vector operations (upsert and search) in parallel
+    /// </summary>
+    private async Task<(double upsertTime, double searchTime, IReadOnlyList<(LogEvent evt, float score)> neighbors)> 
+        ExecuteVectorOperationsParallel(LogEvent logEvent, float[] embedding, CancellationToken ct)
+    {
+        if (!_pipelineOptions.Value.EnableParallelVectorOperations)
+        {
+            // Fall back to sequential vector operations
+            var upsertStartTime = DateTimeOffset.UtcNow;
+            await store.UpsertAsync(logEvent, embedding, ct);
+            var upsertTime = (DateTimeOffset.UtcNow - upsertStartTime).TotalMilliseconds;
+
+            var searchStartTime = DateTimeOffset.UtcNow;
+            var neighbors = await store.SearchAsync(embedding, k: 8, ct);
+            var searchTime = (DateTimeOffset.UtcNow - searchStartTime).TotalMilliseconds;
+
+            return (upsertTime, searchTime, neighbors);
+        }
+
+        try
+        {
+            // Execute vector operations in parallel
+            var upsertStartTime = DateTimeOffset.UtcNow;
+            var searchStartTime = DateTimeOffset.UtcNow;
+
+            var upsertTask = store.UpsertAsync(logEvent, embedding, ct);
+            var searchTask = store.SearchAsync(embedding, k: 8, ct);
+
+            await Task.WhenAll(upsertTask, searchTask);
+
+            var upsertTime = (DateTimeOffset.UtcNow - upsertStartTime).TotalMilliseconds;
+            var searchTime = (DateTimeOffset.UtcNow - searchStartTime).TotalMilliseconds;
+            var neighbors = await searchTask;
+
+            return (upsertTime, searchTime, neighbors);
+        }
+        catch (Exception ex)
+        {
+            log.LogWarning(ex, "Parallel vector operations failed for event {EventId}, falling back to sequential", logEvent.EventId);
+            
+            // Fall back to sequential vector operations on error
+            var upsertStartTime = DateTimeOffset.UtcNow;
+            await store.UpsertAsync(logEvent, embedding, ct);
+            var upsertTime = (DateTimeOffset.UtcNow - upsertStartTime).TotalMilliseconds;
+
+            var searchStartTime = DateTimeOffset.UtcNow;
+            var neighbors = await store.SearchAsync(embedding, k: 8, ct);
+            var searchTime = (DateTimeOffset.UtcNow - searchStartTime).TotalMilliseconds;
+
+            return (upsertTime, searchTime, neighbors);
         }
     }
 }

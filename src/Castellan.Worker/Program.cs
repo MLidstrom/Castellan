@@ -50,6 +50,7 @@ builder.Services.Configure<QdrantOptions>(builder.Configuration.GetSection("Qdra
 builder.Services.Configure<EmbeddingOptions>(builder.Configuration.GetSection("Embeddings"));
 builder.Services.Configure<LlmOptions>(builder.Configuration.GetSection("LLM"));
 builder.Services.Configure<AlertOptions>(builder.Configuration.GetSection("Alerts"));
+builder.Services.Configure<PipelineOptions>(builder.Configuration.GetSection("Pipeline"));
 builder.Services.Configure<CorrelationOptions>(builder.Configuration.GetSection("Correlation"));
 builder.Services.Configure<NotificationOptions>(builder.Configuration.GetSection("Notifications"));
 builder.Services.Configure<IPEnrichmentOptions>(builder.Configuration.GetSection("IPEnrichment"));
