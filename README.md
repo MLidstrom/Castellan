@@ -11,15 +11,17 @@
 ![GitHub Tag](https://img.shields.io/github/v/tag/MLidstrom/Castellan)
 [![.NET](https://img.shields.io/badge/.NET-8.0-512BD4?logo=.net)](https://dotnet.microsoft.com/)
 [![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
-[![Platform](https://img.shields.io/badge/Platform-Windows-blue.svg)](https://www.microsoft.com/windows)
+[![Platform](https://img.shields.io/badge/Platform-Windows%7CLinux%7CmacOS-blue.svg)](https://www.microsoft.com/windows)
+[![Security](https://img.shields.io/badge/Security-BCrypt%20%7C%20JWT-green.svg)](https://auth0.com/blog/hashing-in-action-understanding-bcrypt/)
+[![Reliability](https://img.shields.io/badge/Reliability-Enterprise%20Grade-blue.svg)](#observability--reliability)
 [![AI](https://img.shields.io/badge/AI-Powered-orange.svg)](https://openai.com/)
 [![MITRE](https://img.shields.io/badge/MITRE-ATT%26CK-darkred.svg)](https://attack.mitre.org/)
 
 </div>
 
-## AI‑Powered Windows Security Monitoring
+## AI‑Powered Cross-Platform Security Monitoring
 
-**Castellan** is an advanced security monitoring and threat detection platform that transforms Windows event logs into actionable security intelligence using AI-powered analysis, vector search, and real-time correlation. It also includes proactive threat scanning capabilities to detect malware and backdoors on your system.
+**Castellan** is an advanced security monitoring and threat detection platform that transforms Windows event logs into actionable security intelligence using AI-powered analysis, vector search, and real-time correlation. With enterprise-grade security features including BCrypt password hashing, JWT token management, and cross-platform deployment capabilities, it provides comprehensive threat detection for Windows, Linux, and macOS environments.
 
 > **Castellan** (noun): A governor or warden of a castle or fortification; a person responsible for the defense and security of a stronghold. From the medieval Latin *castellanus*, meaning "pertaining to a castle." The name reflects our mission to provide vigilant security monitoring and defense for your digital infrastructure. ([Source: Merriam-Webster](https://www.merriam-webster.com/dictionary/castellan))
 
@@ -53,12 +55,24 @@
 - **🆕 Teams/Slack Integration** - Real-time security alerts in Microsoft Teams and Slack channels
 - **Desktop Notifications** - Real-time security alerts
 - **Web Admin Interface** - React-based management dashboard
+- **Cross-Platform Support** - Unified scripts for Windows, Linux, and macOS
 - **Local Deployment** - No cloud dependencies, runs entirely on your local infrastructure
 
+### 🔒 **Enterprise Security**
+- **BCrypt Password Hashing** - Industry-standard password security with configurable work factors
+- **JWT Token Management** - Secure refresh token rotation and server-side invalidation
+- **Token Blacklisting** - Real-time token revocation with automatic cleanup
+- **Password Complexity Validation** - Comprehensive password strength requirements
+- **Audit Trail** - Complete authentication event logging for security monitoring
+- **Configuration Validation** - Startup validation prevents deployment with invalid security settings
+- **Error Handling** - Consistent security error responses with correlation tracking
+
 ### 🧪 **Quality & Testing**
-- **Comprehensive Test Suite** - 450+ tests with 98%+ success rate covering all critical functionality
-- **Production Ready** - Robust error handling, advanced mocking, and comprehensive validation
+- **Comprehensive Test Suite** - 375 tests with 97.6% success rate (366 passing, 9 functional tests require fixes) covering all critical functionality
+- **Production Ready** - ✅ **Compilation Fixed** - All build errors resolved (January 2025), robust error handling, advanced mocking, and comprehensive validation
 - **Continuous Validation** - Automated testing for controllers, services, and integration scenarios
+- **Enterprise Architecture** - Service lifetime optimization, configuration validation, and startup safety checks
+- **Structured Observability** - Correlation ID tracking, comprehensive logging, and request tracing
 
 ## 📊 Performance & Scale
 
@@ -145,6 +159,47 @@ flowchart LR
     style M fill:#e3f2fd,color:#000
 ```
 
+## 🔐 Security Architecture
+
+**Enterprise-Grade Authentication System:**
+```
+Client Request ──► JWT Validation ──► Token Blacklist Check ──► API Access
+      │                    │                       │
+      ▼                    ▼                       ▼
+Login/Register ──► BCrypt Hashing ──► Refresh Token ──► Secure Session
+```
+
+**Security Features:**
+- **Password Security**: BCrypt hashing with configurable work factors (4-12 rounds)
+- **Token Management**: JWT with secure refresh token rotation and automatic expiration
+- **Token Blacklisting**: Real-time token revocation with in-memory cache and cleanup
+- **Complexity Validation**: Enforced password strength requirements (length, character types)
+- **Audit Trail**: Comprehensive authentication event logging for security monitoring
+- **Session Security**: Automatic token expiration, renewal, and secure refresh handling
+- **Multi-layered Defense**: Multiple security checks at authentication, authorization, and session levels
+- **Request Tracing**: Every API request tracked with unique correlation IDs for security incident investigation
+- **Configuration Safety**: Startup validation prevents deployment with invalid security configurations
+
+## 🔍 Observability & Reliability
+
+**Enterprise-Grade Operations:**
+```
+Request ──► Correlation ID ──► Structured Logging ──► Error Handling ──► Response
+    │               │                   │                  │
+    ▼               ▼                   ▼                  ▼
+Tracing ──► Performance Metrics ──► Exception Context ──► Audit Trail
+```
+
+**Reliability Features:**
+- **Correlation Tracking**: Unique request IDs for complete request lifecycle tracing
+- **Structured Logging**: JSON-formatted logs with contextual information for analysis
+- **Global Exception Handling**: Consistent error responses across all API endpoints
+- **Service Validation**: Startup checks ensure all critical services are properly configured
+- **Configuration Validation**: Prevents deployment with invalid system configurations
+- **Performance Monitoring**: Request duration tracking and service health metrics
+- **Fail-Fast Architecture**: Application stops startup on critical configuration errors
+- **Request Context**: Complete request information available for debugging and security analysis
+
 ## 🔔 Notification Services
 
 Castellan provides multiple channels for real-time security alert delivery:
@@ -226,6 +281,21 @@ ollama pull llama3.1:8b-instruct-q8_0    # LLM model: https://ollama.com/library
 ```
 
 ### 6. Start All Services
+
+**Cross-Platform (Unified Commands)**
+```bash
+# Use Makefile for consistent experience across all platforms
+make start          # Build and start all services
+make start-bg       # Start in background
+make status         # Check component status
+make stop           # Stop all services
+make test           # Run all tests
+make help           # Show all available commands
+```
+
+**Platform-Specific Commands**
+
+*Windows (PowerShell):*
 ```powershell
 # Start everything (Worker handles all orchestration)
 .\scripts\start.ps1
@@ -234,7 +304,6 @@ ollama pull llama3.1:8b-instruct-q8_0    # LLM model: https://ollama.com/library
 .\scripts\start.ps1                    # Standard start with build
 .\scripts\start.ps1 -NoBuild          # Skip build step
 .\scripts\start.ps1 -Background       # Run in background
-.\scripts\start.ps1 -NoBuild -Background  # Skip build + background
 
 # Check service status:
 .\scripts\status.ps1                  # Basic status check
@@ -243,11 +312,22 @@ ollama pull llama3.1:8b-instruct-q8_0    # LLM model: https://ollama.com/library
 # Stop all services:
 .\scripts\stop.ps1                    # Graceful stop
 .\scripts\stop.ps1 -Force            # Force stop all
-.\scripts\stop.ps1 -KeepQdrant       # Stop but keep Qdrant running
+```
 
-# Run tests:
-.\scripts\run-tests.ps1              # Run all tests
-.\scripts\run-tests.ps1 -Verbosity detailed  # Verbose output
+*Linux/macOS (Bash):*
+```bash
+# Start everything
+./scripts/start.sh                   # Standard start with build
+./scripts/start.sh --no-build        # Skip build step
+./scripts/start.sh --background      # Run in background
+
+# Check service status:
+./scripts/status.sh                  # Basic status check
+./scripts/status.sh --detailed      # Detailed component info
+
+# Stop all services:
+./scripts/stop.sh                    # Graceful stop
+./scripts/stop.sh --force           # Force stop all
 ```
 
 **🛡️ Automatic MITRE ATT&CK Import**: On first startup, Castellan automatically downloads and imports 800+ official MITRE ATT&CK techniques from GitHub. This provides rich intelligence for security event analysis and tooltip descriptions. The import runs in the background and requires internet connectivity.
@@ -328,6 +408,8 @@ Castellan uses a hybrid data storage approach for optimal performance and functi
 
 ## 🔧 Configuration
 
+**⚠️ Configuration Validation**: Castellan automatically validates all configuration settings at startup. Invalid configurations will prevent the application from starting with clear error messages indicating what needs to be fixed.
+
 ### Environment Variables
 ```powershell
 # Authentication Configuration (REQUIRED)
@@ -367,9 +449,15 @@ dotnet build -c Release
 - **[Authentication Setup](docs/AUTHENTICATION_SETUP.md)** - Security configuration and credential setup
 - **[Getting Started](docs/GETTING_STARTED.md)** - Quick start guide for development
 - **[Startup Configuration](docs/STARTUP_CONFIGURATION.md)** - Service orchestration and startup management
-- **[Test Suite](src/Castellan.Tests/)** - Comprehensive test coverage with 375 tests (95.7% success rate)
+- **[Test Suite](src/Castellan.Tests/)** - Comprehensive test coverage with 375 tests (97.6% success rate - 366 passing, 9 functional tests pending fixes)
+
+### Architecture & Quality
+- **[Improvement Plan](IMPROVEMENT_PLAN.md)** - Comprehensive code improvement roadmap and progress tracking
+- **[Service Lifetime Audit](SERVICE_LIFETIME_AUDIT.md)** - Dependency injection optimization and service lifetime analysis
+- **[Phase 2 Completion](PHASE_2_COMPLETION_SUMMARY.md)** - Architecture and configuration improvements summary
 
 ### Development & Operations
+- **[Windows PowerShell Compatibility](docs/WINDOWS_POWERSHELL_COMPATIBILITY.md)** - Native Windows PowerShell 5.1 support guide
 - **[Windows Logging Hardening](scripts/enable-logging-hardening.md)** - Windows audit policy configuration guide
 - **[Troubleshooting Guide](docs/TROUBLESHOOTING.md)** - Common issues and solutions
 

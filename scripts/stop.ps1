@@ -1,10 +1,16 @@
 # Stop Castellan Components
+# Compatible with Windows PowerShell 5.1 and PowerShell 7+
 param(
     [switch]$Force = $false,
     [switch]$KeepQdrant = $true,  # Changed default to true - Qdrant stays running by default
     [switch]$StopQdrant = $false, # New flag to explicitly stop Qdrant
     [switch]$StopOllama = $false  # New flag to explicitly stop Ollama
 )
+
+# Ensure we're using TLS 1.2 for web requests on older PowerShell versions
+if ($PSVersionTable.PSVersion.Major -lt 6) {
+    [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
+}
 
 Write-Host "Stopping Castellan Components" -ForegroundColor Cyan
 Write-Host "==============================" -ForegroundColor Cyan
@@ -53,7 +59,7 @@ function Stop-SafeProcess {
 Write-Host "Stopping Worker API..." -ForegroundColor Yellow
 try {
     # Try graceful shutdown via API first
-    $shutdownResponse = Invoke-WebRequest -Uri "http://localhost:5000/shutdown" -Method POST -ErrorAction SilentlyContinue
+    $shutdownResponse = Invoke-WebRequest -Uri "http://localhost:5000/shutdown" -Method POST -UseBasicParsing -TimeoutSec 5 -ErrorAction SilentlyContinue
     if ($shutdownResponse.StatusCode -eq 200) {
         Write-Host "OK: Sent graceful shutdown signal to Worker API" -ForegroundColor Green
         Start-Sleep -Seconds 2

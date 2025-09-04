@@ -179,10 +179,6 @@ If you're still experiencing issues after trying these solutions:
 
 ## Common Error Messages
 
-### "Unable to resolve service for type"
-- **Cause**: Dependency injection configuration issue
-- **Solution**: Ensure all required services are registered in `Program.cs`
-
 ### "Collection does not exist"
 - **Cause**: Qdrant vector database collection not initialized
 - **Solution**: Restart the application to auto-create collections

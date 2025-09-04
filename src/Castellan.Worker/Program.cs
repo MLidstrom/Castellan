@@ -18,7 +18,9 @@ using Castellan.Worker.Models;
 using Castellan.Worker.Services;
 using Castellan.Worker.Services.NotificationChannels;
 using Castellan.Worker.Configuration;
+using Castellan.Worker.Configuration.Validation;
 using Castellan.Worker.Data;
+using Castellan.Worker.Middleware;
 using Serilog;
 
 // Enable HTTP/2 over cleartext (h2c) for local gRPC (Qdrant 6334)
@@ -26,20 +28,29 @@ AppContext.SetSwitch("System.Net.Http.SocketsHttpHandler.Http2UnencryptedSupport
 
 var builder = WebApplication.CreateBuilder(args);
 
+// Create logs directory
+Directory.CreateDirectory("logs");
+
 // Log edition information at startup
 Console.WriteLine($"Starting {EditionFeatures.GetVersionString()}");
 
-// Configure Serilog
+// Configure Serilog with structured logging and correlation ID support
 Log.Logger = new LoggerConfiguration()
     .MinimumLevel.Debug()
-    .WriteTo.Console()
-    .WriteTo.File("run.log", 
+    .Enrich.FromLogContext()
+    .Enrich.WithProperty("Application", "Castellan")
+    .Enrich.WithProperty("Environment", builder.Environment.EnvironmentName)
+    .WriteTo.Console(outputTemplate:
+        "[{Timestamp:HH:mm:ss} {Level:u3}] {Message:lj} {Properties:j}{NewLine}{Exception}")
+    .WriteTo.File("logs/run-.log", 
         rollingInterval: RollingInterval.Day,
         fileSizeLimitBytes: 2 * 1024 * 1024, // 2MB
         retainedFileCountLimit: 5,
         rollOnFileSizeLimit: true,
         shared: true,
-        flushToDiskInterval: TimeSpan.FromSeconds(1))
+        flushToDiskInterval: TimeSpan.FromSeconds(1),
+        outputTemplate: 
+            "{Timestamp:yyyy-MM-dd HH:mm:ss.fff zzz} [{Level:u3}] {CorrelationId} {SourceContext} {Message:lj} {Properties:j}{NewLine}{Exception}")
     .CreateLogger();
 
 builder.Logging.ClearProviders();
@@ -59,6 +70,16 @@ builder.Services.Configure<ThreatScanOptions>(builder.Configuration.GetSection("
 builder.Services.Configure<AuthenticationOptions>(builder.Configuration.GetSection(AuthenticationOptions.SectionName));
 builder.Services.Configure<TeamsNotificationOptions>(builder.Configuration.GetSection("Notifications:Teams"));
 builder.Services.Configure<SlackNotificationOptions>(builder.Configuration.GetSection("Notifications:Slack"));
+
+// Register configuration validators
+builder.Services.AddSingleton<IValidateOptions<AuthenticationOptions>, AuthenticationOptionsValidator>();
+builder.Services.AddSingleton<IValidateOptions<QdrantOptions>, QdrantOptionsValidator>();
+builder.Services.AddSingleton<IValidateOptions<PipelineOptions>, PipelineOptionsValidator>();
+
+// Add new security services
+builder.Services.AddSingleton<IPasswordHashingService, BCryptPasswordHashingService>();
+builder.Services.AddSingleton<IJwtTokenBlacklistService, MemoryJwtTokenBlacklistService>();
+builder.Services.AddSingleton<IRefreshTokenService, MemoryRefreshTokenService>();
 
 builder.Services.AddSingleton<ILogCollector, EvtxCollector>();
 
@@ -100,8 +121,8 @@ if (ipEnrichmentProvider.Equals("MaxMind", StringComparison.OrdinalIgnoreCase))
 else
     builder.Services.AddSingleton<IIPEnrichmentService, MaxMindIPEnrichmentService>(); // Default to MaxMind
 
-// Register system health service
-builder.Services.AddScoped<SystemHealthService>();
+// Register system health service (singleton for system-level metrics)
+builder.Services.AddSingleton<SystemHealthService>();
 
 // Register threat scanner service
 builder.Services.Configure<ThreatScanOptions>(builder.Configuration.GetSection("ThreatScanner"));
@@ -176,6 +197,62 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
         };
     });
 
+#if DEBUG
+// Validate service registrations in development
+Console.WriteLine("Validating service registrations...");
+try 
+{
+    using var scope = builder.Services.BuildServiceProvider().CreateScope();
+    
+    // Test critical services can be resolved
+    var criticalServices = new[]
+    {
+        typeof(IPasswordHashingService),
+        typeof(IJwtTokenBlacklistService),
+        typeof(IRefreshTokenService),
+        typeof(IVectorStore),
+        typeof(IEmbedder),
+        typeof(ILlmClient),
+        typeof(INotificationService),
+        typeof(IPerformanceMonitor)
+    };
+    
+    foreach (var serviceType in criticalServices)
+    {
+        var service = scope.ServiceProvider.GetRequiredService(serviceType);
+        Console.WriteLine($"✅ {serviceType.Name} resolved successfully");
+    }
+    
+    Console.WriteLine("✅ All critical services validated successfully");
+}
+catch (Exception ex)
+{
+    Console.WriteLine($"❌ Service resolution failed: {ex.Message}");
+    throw;
+}
+
+// Validate critical configuration options
+Console.WriteLine("Validating configuration options...");
+try
+{
+    var authOptions = scope.ServiceProvider.GetRequiredService<IOptionsMonitor<AuthenticationOptions>>();
+    var qdrantOptions = scope.ServiceProvider.GetRequiredService<IOptionsMonitor<QdrantOptions>>();
+    var pipelineOptions = scope.ServiceProvider.GetRequiredService<IOptionsMonitor<PipelineOptions>>();
+    
+    // Accessing .Value will trigger validation
+    _ = authOptions.CurrentValue;
+    _ = qdrantOptions.CurrentValue;
+    _ = pipelineOptions.CurrentValue;
+    
+    Console.WriteLine("✅ All configuration options validated successfully");
+}
+catch (OptionsValidationException ex)
+{
+    Console.WriteLine($"❌ Configuration validation failed: {ex.Message}");
+    throw;
+}
+#endif
+
 var app = builder.Build();
 
 // Initialize database
@@ -196,7 +273,15 @@ using (var scope = app.Services.CreateScope())
 
 // Configure the HTTP request pipeline
 
+// Add correlation ID tracking (should be first)
+app.UseCorrelationId();
+
+// Add global exception handling (should be early in pipeline)
+app.UseGlobalExceptionHandling();
+
 app.UseCors();
+// Add JWT validation middleware (checks token blacklist)
+app.UseMiddleware<JwtValidationMiddleware>();
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
