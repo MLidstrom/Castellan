@@ -60,7 +60,7 @@ public class SystemStatusController : ControllerBase
     }
 
     [HttpGet("test")]
-    public async Task<IActionResult> GetTest()
+    public IActionResult GetTest()
     {
         try
         {

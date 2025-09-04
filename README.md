@@ -457,7 +457,7 @@ dotnet build -c Release
 - **[Authentication Setup](docs/AUTHENTICATION_SETUP.md)** - Security configuration and credential setup
 - **[Getting Started](docs/GETTING_STARTED.md)** - Quick start guide for development
 - **[Startup Configuration](docs/STARTUP_CONFIGURATION.md)** - Service orchestration and startup management
-- **[Test Suite](src/Castellan.Tests/)** - Comprehensive test coverage with 375 tests (97.6% success rate - 366 passing, 9 functional tests pending fixes)
+- **[Test Suite](src/Castellan.Tests/)** - Comprehensive test coverage with 375 tests (97.6% success rate - 366 passing, 9 functional tests pending fixes) with clean output
 
 ### Architecture & Quality
 - **[Improvement Plan](IMPROVEMENT_PLAN.md)** - Comprehensive code improvement roadmap and progress tracking

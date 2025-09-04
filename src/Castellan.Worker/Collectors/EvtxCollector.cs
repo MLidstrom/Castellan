@@ -105,6 +105,7 @@ public sealed class EvtxCollector(IOptions<EvtxOptions> opts, ILogger<EvtxCollec
 
     private async IAsyncEnumerable<LogEvent> CollectHistoricalFromChannelAsync(string channel, DateTimeOffset startTime, DateTimeOffset endTime, [System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken ct)
     {
+        await Task.CompletedTask; // Required for async iterator
         var events = new List<LogEvent>();
         
         try

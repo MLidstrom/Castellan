@@ -38,10 +38,12 @@ public sealed class Pipeline(
     private readonly object _semaphoreLock = new object();
     
     // Throttling metrics
+#pragma warning disable CS0649 // Field is never assigned to - these are infrastructure for semaphore throttling implementation
     private long _semaphoreQueueCount;
     private long _semaphoreWaitTimeTotal;
     private long _semaphoreAcquisitions;
     private long _semaphoreTimeouts;
+#pragma warning restore CS0649
     
     // Performance tracking
     private readonly DateTimeOffset _startTime = DateTimeOffset.UtcNow;
@@ -86,10 +88,10 @@ public sealed class Pipeline(
     /// <summary>
     /// Acquire semaphore permission with timeout and metrics tracking
     /// </summary>
-    private async Task<bool> TryAcquireSemaphoreAsync(CancellationToken ct)
+    private Task<bool> TryAcquireSemaphoreAsync(CancellationToken ct)
     {
         // Temporarily disable semaphore logic for build
-        return true;
+        return Task.FromResult(true);
     }
     
     /// <summary>

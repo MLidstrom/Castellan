@@ -35,9 +35,9 @@ public class AutomatedResponseService : IAutomatedResponseService
         _logger.LogInformation("   - RequireConfirmation: {RequireConfirmation}", _options.RequireConfirmation);
     }
 
-    public async Task<bool> IsResponseEnabledAsync()
+    public Task<bool> IsResponseEnabledAsync()
     {
-        return _options.Enabled;
+        return Task.FromResult(_options.Enabled);
     }
 
     public async Task ExecuteResponseAsync(SecurityEvent securityEvent)
@@ -345,7 +345,7 @@ public class AutomatedResponseService : IAutomatedResponseService
         }
     }
 
-    private async Task CreateIncidentTicketAsync(SecurityEvent securityEvent, string title)
+    private Task CreateIncidentTicketAsync(SecurityEvent securityEvent, string title)
     {
         try
         {
@@ -379,6 +379,8 @@ public class AutomatedResponseService : IAutomatedResponseService
         {
             _logger.LogError(ex, "🤖 Exception while creating incident ticket");
         }
+        
+        return Task.CompletedTask;
     }
 
     private async Task<(bool Success, string? Error)> ExecuteCommandAsync(string command)
