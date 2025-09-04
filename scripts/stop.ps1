@@ -53,7 +53,7 @@ function Stop-SafeProcess {
 Write-Host "Stopping Worker API..." -ForegroundColor Yellow
 try {
     # Try graceful shutdown via API first
-    $shutdownResponse = Invoke-WebRequest -Uri "http://localhost:5000/shutdown" -Method POST -UseBasicParsing -ErrorAction SilentlyContinue
+    $shutdownResponse = Invoke-WebRequest -Uri "http://localhost:5000/shutdown" -Method POST -ErrorAction SilentlyContinue
     if ($shutdownResponse.StatusCode -eq 200) {
         Write-Host "OK: Sent graceful shutdown signal to Worker API" -ForegroundColor Green
         Start-Sleep -Seconds 2
@@ -84,20 +84,20 @@ try {
         # Port detection failed, continue to other methods
     }
     
-    # Method 2: WMI command line detection (original method)
-    $wmiProcesses = @()
+    # Method 2: CIM command line detection (original method)
+    $cimProcesses = @()
     try {
-        $wmiResults = Get-WmiObject Win32_Process -Filter "Name='dotnet.exe'" | Where-Object {
+        $cimResults = Get-CimInstance Win32_Process -Filter "Name='dotnet.exe'" | Where-Object {
             $_.CommandLine -like "*Castellan.Worker*"
         }
-        foreach ($wmiProc in $wmiResults) {
-            $process = Get-Process -Id $wmiProc.ProcessId -ErrorAction SilentlyContinue
+        foreach ($cimProc in $cimResults) {
+            $process = Get-Process -Id $cimProc.ProcessId -ErrorAction SilentlyContinue
             if ($process) {
-                $wmiProcesses += $process
+                $cimProcesses += $process
             }
         }
     } catch {
-        # WMI detection failed, continue
+        # CIM detection failed, continue
     }
     
     # Method 3: Check working directory for dotnet processes
@@ -106,8 +106,8 @@ try {
         $dotnetProcesses = Get-Process -Name "dotnet" -ErrorAction SilentlyContinue
         foreach ($proc in $dotnetProcesses) {
             try {
-                $procWmi = Get-WmiObject Win32_Process -Filter "ProcessId=$($proc.Id)" -ErrorAction SilentlyContinue
-                if ($procWmi -and $procWmi.ExecutablePath -and (Split-Path $procWmi.ExecutablePath -Parent) -like "*Castellan.Worker*") {
+                $procCim = Get-CimInstance Win32_Process -Filter "ProcessId=$($proc.Id)" -ErrorAction SilentlyContinue
+                if ($procCim -and $procCim.ExecutablePath -and (Split-Path $procCim.ExecutablePath -Parent) -like "*Castellan.Worker*") {
                     $workDirProcesses += $proc
                 }
             } catch {
@@ -121,7 +121,7 @@ try {
     # Combine all detected processes and remove duplicates
     $allWorkerProcesses = @()
     $allWorkerProcesses += $portProcesses
-    $allWorkerProcesses += $wmiProcesses  
+    $allWorkerProcesses += $cimProcesses  
     $allWorkerProcesses += $workDirProcesses
     $uniqueWorkerProcesses = $allWorkerProcesses | Sort-Object Id | Get-Unique -AsString
     
@@ -176,7 +176,7 @@ Stop-SafeProcess -ProcessName "Castellan.Tray" -DisplayName "System Tray"
 
 # Stop React Admin
 Write-Host "`nStopping React Admin..." -ForegroundColor Yellow
-$nodeProcesses = Get-WmiObject Win32_Process -Filter "Name='node.exe'" -ErrorAction SilentlyContinue | Where-Object {
+$nodeProcesses = Get-CimInstance Win32_Process -Filter "Name='node.exe'" -ErrorAction SilentlyContinue | Where-Object {
     $_.CommandLine -like "*castellan-admin*" -or $_.CommandLine -like "*:8080*"
 }
 
@@ -252,7 +252,7 @@ if ($StopOllama) {
 # Kill any orphaned cmd windows running npm
 if ($Force) {
     Write-Host "`nCleaning up orphaned processes..." -ForegroundColor Yellow
-    $cmdProcesses = Get-WmiObject Win32_Process -Filter "Name='cmd.exe'" -ErrorAction SilentlyContinue | Where-Object {
+    $cmdProcesses = Get-CimInstance Win32_Process -Filter "Name='cmd.exe'" -ErrorAction SilentlyContinue | Where-Object {
         $_.CommandLine -like "*npm*" -and $_.CommandLine -like "*castellan*"
     }
     
