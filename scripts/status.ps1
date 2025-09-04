@@ -1,8 +1,14 @@
 # Castellan Status Check Script
+# Compatible with Windows PowerShell 5.1 and PowerShell 7+
 param(
     [switch]$Pause = $false,
     [switch]$Detailed = $false
 )
+
+# Ensure we're using TLS 1.2 for web requests on older PowerShell versions
+if ($PSVersionTable.PSVersion.Major -lt 6) {
+    [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
+}
 
 Write-Host "Castellan Component Status Check" -ForegroundColor Cyan
 Write-Host "=================================" -ForegroundColor Cyan
@@ -20,14 +26,14 @@ $statusSummary = @{
 # Check Castellan Worker API
 Write-Host "Checking Castellan Worker API..." -ForegroundColor Yellow
 try {
-    $workerResponse = Invoke-WebRequest -Uri "http://localhost:5000/health" -ErrorAction Stop
+    $workerResponse = Invoke-WebRequest -Uri "http://localhost:5000/health" -UseBasicParsing -TimeoutSec 5 -ErrorAction Stop
     if ($workerResponse.StatusCode -eq 200) {
         Write-Host "OK: Worker API is running on localhost:5000" -ForegroundColor Green
         $statusSummary.Worker = $true
         
         if ($Detailed) {
             try {
-                $statsResponse = Invoke-WebRequest -Uri "http://localhost:5000/api/events/stats" -ErrorAction Stop
+                $statsResponse = Invoke-WebRequest -Uri "http://localhost:5000/api/events/stats" -UseBasicParsing -TimeoutSec 5 -ErrorAction Stop
                 $stats = $statsResponse.Content | ConvertFrom-Json
                 Write-Host "  Total Events: $($stats.totalEvents)" -ForegroundColor Gray
                 Write-Host "  High Risk: $($stats.highRiskCount)" -ForegroundColor Gray
@@ -44,7 +50,7 @@ try {
 # Check Qdrant Vector Database
 Write-Host "`nChecking Qdrant Vector Database..." -ForegroundColor Yellow
 try {
-    $qdrantResponse = Invoke-WebRequest -Uri "http://localhost:6333/collections" -ErrorAction Stop
+    $qdrantResponse = Invoke-WebRequest -Uri "http://localhost:6333/collections" -UseBasicParsing -TimeoutSec 5 -ErrorAction Stop
     if ($qdrantResponse.StatusCode -eq 200) {
         Write-Host "OK: Qdrant is running on localhost:6333" -ForegroundColor Green
         $statusSummary.Qdrant = $true
@@ -67,7 +73,7 @@ try {
 # Check Ollama LLM Service
 Write-Host "`nChecking Ollama LLM Service..." -ForegroundColor Yellow
 try {
-    $ollamaResponse = Invoke-WebRequest -Uri "http://localhost:11434/api/tags" -ErrorAction Stop
+    $ollamaResponse = Invoke-WebRequest -Uri "http://localhost:11434/api/tags" -UseBasicParsing -TimeoutSec 5 -ErrorAction Stop
     if ($ollamaResponse.StatusCode -eq 200) {
         Write-Host "OK: Ollama is running on localhost:11434" -ForegroundColor Green
         $statusSummary.Ollama = $true
@@ -89,7 +95,7 @@ try {
 # Check React Admin Interface
 Write-Host "`nChecking React Admin Interface..." -ForegroundColor Yellow
 try {
-    $adminResponse = Invoke-WebRequest -Uri "http://localhost:8080" -ErrorAction Stop
+    $adminResponse = Invoke-WebRequest -Uri "http://localhost:8080" -UseBasicParsing -TimeoutSec 5 -ErrorAction Stop
     if ($adminResponse.StatusCode -eq 200) {
         Write-Host "OK: React Admin is running on localhost:8080" -ForegroundColor Green
         $statusSummary.ReactAdmin = $true

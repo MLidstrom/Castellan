@@ -1,8 +1,14 @@
 # Start Castellan - Enhanced wrapper with validation and error handling
+# Compatible with Windows PowerShell 5.1 and PowerShell 7+
 param(
     [switch]$NoBuild = $false,
     [switch]$Background = $false
 )
+
+# Ensure we're using TLS 1.2 for web requests on older PowerShell versions
+if ($PSVersionTable.PSVersion.Major -lt 6) {
+    [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
+}
 
 Write-Host "Starting Castellan Worker Service..." -ForegroundColor Cyan
 Write-Host "The Worker will automatically start all required services." -ForegroundColor Gray
@@ -146,7 +152,7 @@ try {
 # Check Ollama
 Write-Host "Checking Ollama LLM service..." -ForegroundColor Yellow
 try {
-    $ollamaResponse = Invoke-WebRequest -Uri "http://localhost:11434/api/tags" -UseBasicParsing -ErrorAction SilentlyContinue
+    $ollamaResponse = Invoke-WebRequest -Uri "http://localhost:11434/api/tags" -UseBasicParsing -TimeoutSec 5 -ErrorAction SilentlyContinue
     if ($ollamaResponse.StatusCode -eq 200) {
         Write-Host "OK: Ollama is already running" -ForegroundColor Green
     } else {

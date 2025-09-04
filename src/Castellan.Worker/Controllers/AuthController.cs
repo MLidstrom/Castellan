@@ -6,6 +6,8 @@ using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
 using Castellan.Worker.Configuration;
+using Castellan.Worker.Abstractions;
+using Castellan.Worker.Models;
 
 namespace Castellan.Worker.Controllers;
 
@@ -15,38 +17,52 @@ public class AuthController : ControllerBase
 {
     private readonly ILogger<AuthController> _logger;
     private readonly AuthenticationOptions _authOptions;
+    private readonly IPasswordHashingService _passwordHashingService;
+    private readonly IRefreshTokenService _refreshTokenService;
+    private readonly IJwtTokenBlacklistService _jwtTokenBlacklistService;
 
-    public AuthController(ILogger<AuthController> logger, IOptions<AuthenticationOptions> authOptions)
+    public AuthController(
+        ILogger<AuthController> logger, 
+        IOptions<AuthenticationOptions> authOptions,
+        IPasswordHashingService passwordHashingService,
+        IRefreshTokenService refreshTokenService,
+        IJwtTokenBlacklistService jwtTokenBlacklistService)
     {
         _logger = logger;
         _authOptions = authOptions.Value;
+        _passwordHashingService = passwordHashingService;
+        _refreshTokenService = refreshTokenService;
+        _jwtTokenBlacklistService = jwtTokenBlacklistService;
     }
 
     [HttpPost("login")]
-    public Task<IActionResult> Login([FromBody] LoginRequest request)
+    public async Task<IActionResult> Login([FromBody] LoginRequest request)
     {
         try
         {
             _logger.LogInformation("Login attempt for user: {Username}", request.Username);
 
             // Validate credentials from configuration
-            // TODO: In production, implement proper password hashing and user store
             if (string.IsNullOrEmpty(_authOptions.AdminUser.Username) || string.IsNullOrEmpty(_authOptions.AdminUser.Password))
             {
                 _logger.LogError("Authentication not properly configured. Check AdminUser settings.");
-                return Task.FromResult<IActionResult>(StatusCode(500, new { message = "Authentication not configured" }));
+                return StatusCode(500, new { message = "Authentication not configured" });
             }
 
-            if (request.Username == _authOptions.AdminUser.Username && request.Password == _authOptions.AdminUser.Password)
+            // Verify username and password using secure BCrypt comparison
+            var isValidUser = request.Username == _authOptions.AdminUser.Username;
+            var isValidPassword = isValidUser && _passwordHashingService.VerifyPassword(request.Password, _authOptions.AdminUser.Password);
+            
+            if (isValidUser && isValidPassword)
             {
-                var token = GenerateJwtToken(request.Username);
-                var refreshToken = GenerateRefreshToken();
+                var jwtToken = GenerateJwtToken(request.Username);
+                var refreshTokenResult = await _refreshTokenService.GenerateRefreshTokenAsync("1", 30);
 
                 var response = new LoginResponse
                 {
-                    Token = token,
-                    RefreshToken = refreshToken,
-                    ExpiresAt = DateTimeOffset.UtcNow.AddHours(24).ToUnixTimeMilliseconds(),
+                    Token = jwtToken,
+                    RefreshToken = refreshTokenResult.Token,
+                    ExpiresAt = DateTimeOffset.UtcNow.AddHours(_authOptions.Jwt.ExpirationHours).ToUnixTimeMilliseconds(),
                     User = new UserInfo
                     {
                         Id = "1",
@@ -64,59 +80,116 @@ public class AuthController : ControllerBase
                 };
 
                 _logger.LogInformation("Login successful for user: {Username}", request.Username);
-                return Task.FromResult<IActionResult>(Ok(response));
+                return Ok(response);
             }
 
-            _logger.LogWarning("Login failed for user: {Username}", request.Username);
-            return Task.FromResult<IActionResult>(Unauthorized(new { message = "Invalid credentials" }));
+            _logger.LogWarning("Login failed for user: {Username}. Invalid credentials.", request.Username);
+            return Unauthorized(new { message = "Invalid credentials" });
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error during login for user: {Username}", request.Username);
-            return Task.FromResult<IActionResult>(StatusCode(500, new { message = "Internal server error" }));
+            return StatusCode(500, new { message = "Internal server error" });
         }
     }
 
     [HttpPost("refresh")]
-    public Task<IActionResult> Refresh([FromBody] RefreshTokenRequest request)
+    public async Task<IActionResult> Refresh([FromBody] RefreshTokenRequest request)
     {
         try
         {
-            // In production, validate the refresh token against a secure store
-            // For now, generate a new token
-            var newToken = GenerateJwtToken(_authOptions.AdminUser.Username);
-            var newRefreshToken = GenerateRefreshToken();
+            _logger.LogInformation("Refresh token request received");
+
+            // Validate the refresh token
+            var validationResult = await _refreshTokenService.ValidateRefreshTokenAsync(request.RefreshToken);
+            if (validationResult == null || !validationResult.IsActive)
+            {
+                _logger.LogWarning("Invalid refresh token provided");
+                return Unauthorized(new { message = "Invalid refresh token" });
+            }
+
+            // Rotate the refresh token (revoke old, create new)
+            var rotationResult = await _refreshTokenService.RotateRefreshTokenAsync(request.RefreshToken, validationResult.UserId);
+            if (rotationResult == null)
+            {
+                _logger.LogWarning("Failed to rotate refresh token");
+                return Unauthorized(new { message = "Token rotation failed" });
+            }
+
+            // Generate new JWT token
+            var newJwtToken = GenerateJwtToken(validationResult.UserId);
 
             var response = new RefreshTokenResponse
             {
-                Token = newToken,
-                RefreshToken = newRefreshToken,
-                ExpiresAt = DateTimeOffset.UtcNow.AddHours(24).ToUnixTimeMilliseconds()
+                Token = newJwtToken,
+                RefreshToken = rotationResult.Token,
+                ExpiresAt = DateTimeOffset.UtcNow.AddHours(_authOptions.Jwt.ExpirationHours).ToUnixTimeMilliseconds()
             };
 
-            return Task.FromResult<IActionResult>(Ok(response));
+            _logger.LogInformation("Token refresh successful for user: {UserId}", validationResult.UserId);
+            return Ok(response);
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error during token refresh");
-            return Task.FromResult<IActionResult>(StatusCode(500, new { message = "Internal server error" }));
+            return StatusCode(500, new { message = "Internal server error" });
         }
     }
 
     [HttpPost("logout")]
     [Authorize]
-    public Task<IActionResult> Logout()
+    public async Task<IActionResult> Logout()
     {
         try
         {
-            _logger.LogInformation("User logout");
-            // In production, invalidate the token on the server side
-            return Task.FromResult<IActionResult>(Ok(new { message = "Logged out successfully" }));
+            var username = User.Identity?.Name ?? "unknown";
+            _logger.LogInformation("User logout for: {Username}", username);
+
+            // Get the JWT token from the Authorization header
+            var authHeader = Request.Headers["Authorization"].FirstOrDefault();
+            if (authHeader != null && authHeader.StartsWith("Bearer "))
+            {
+                var token = authHeader.Substring("Bearer ".Length).Trim();
+                
+                // Extract JTI and expiration from the JWT token for blacklisting
+                var tokenHandler = new JwtSecurityTokenHandler();
+                try
+                {
+                    var jsonToken = tokenHandler.ReadJwtToken(token);
+                    var jti = jsonToken.Claims.FirstOrDefault(c => c.Type == JwtRegisteredClaimNames.Jti)?.Value;
+                    var expiration = jsonToken.ValidTo;
+                    
+                    if (!string.IsNullOrEmpty(jti))
+                    {
+                        // Blacklist the JWT token
+                        await _jwtTokenBlacklistService.BlacklistTokenAsync(jti, expiration);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex, "Failed to parse JWT token for blacklisting");
+                }
+                
+                // Also revoke any refresh tokens for this user (if we had user ID)
+                var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                if (!string.IsNullOrEmpty(userId))
+                {
+                    await _refreshTokenService.RevokeAllUserTokensAsync(userId);
+                }
+                
+                _logger.LogInformation("Successfully logged out user: {Username}", username);
+            }
+            else
+            {
+                _logger.LogWarning("Logout attempted without valid Authorization header");
+            }
+
+            return Ok(new { message = "Logged out successfully" });
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error during logout");
-            return Task.FromResult<IActionResult>(StatusCode(500, new { message = "Internal server error" }));
+            return StatusCode(500, new { message = "Internal server error" });
         }
     }
 
@@ -136,7 +209,8 @@ public class AuthController : ControllerBase
             new Claim(ClaimTypes.Name, username),
             new Claim(ClaimTypes.Email, _authOptions.AdminUser.Email),
             new Claim(ClaimTypes.Role, "admin"),
-            new Claim("permissions", "security-events:read,security-events:write,compliance-reports:read,system-status:read")
+            new Claim("permissions", "security-events:read,security-events:write,compliance-reports:read,system-status:read"),
+            new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()) // Add JTI for blacklisting
         };
 
         var token = new JwtSecurityToken(
@@ -149,10 +223,6 @@ public class AuthController : ControllerBase
         return new JwtSecurityTokenHandler().WriteToken(token);
     }
 
-    private string GenerateRefreshToken()
-    {
-        return Convert.ToBase64String(Guid.NewGuid().ToByteArray());
-    }
 }
 
 // DTOs
