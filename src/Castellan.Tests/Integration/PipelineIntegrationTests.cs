@@ -85,13 +85,37 @@ public class PipelineIntegrationTests : IDisposable
         services.AddSingleton(_mockAutomatedResponseService.Object);
         services.AddSingleton(Options.Create(_alertOptions));
         services.AddSingleton(Options.Create(_notificationOptions));
-        services.AddSingleton(Options.Create(new PipelineOptions
+        
+        // Register PipelineOptions for IOptionsMonitor<T> support
+        // Add the Options services first
+        services.AddOptions();
+        
+        var pipelineOptions = new PipelineOptions
         {
             EnableParallelProcessing = true,
             MaxConcurrency = 4,
             ParallelOperationTimeoutMs = 30000,
-            EnableParallelVectorOperations = true
-        }));
+            EnableParallelVectorOperations = true,
+            EnableSemaphoreThrottling = false, // Disable for tests to avoid complexity
+            MaxConcurrentTasks = 8,
+            EnableAdaptiveThrottling = false,
+            EventHistoryRetentionMinutes = 60,
+            MaxEventsPerCorrelationKey = 1000,
+            EnableDetailedMetrics = false // Disable for tests
+        };
+        services.Configure<PipelineOptions>(opt => 
+        {
+            opt.EnableParallelProcessing = pipelineOptions.EnableParallelProcessing;
+            opt.MaxConcurrency = pipelineOptions.MaxConcurrency;
+            opt.ParallelOperationTimeoutMs = pipelineOptions.ParallelOperationTimeoutMs;
+            opt.EnableParallelVectorOperations = pipelineOptions.EnableParallelVectorOperations;
+            opt.EnableSemaphoreThrottling = pipelineOptions.EnableSemaphoreThrottling;
+            opt.MaxConcurrentTasks = pipelineOptions.MaxConcurrentTasks;
+            opt.EnableAdaptiveThrottling = pipelineOptions.EnableAdaptiveThrottling;
+            opt.EventHistoryRetentionMinutes = pipelineOptions.EventHistoryRetentionMinutes;
+            opt.MaxEventsPerCorrelationKey = pipelineOptions.MaxEventsPerCorrelationKey;
+            opt.EnableDetailedMetrics = pipelineOptions.EnableDetailedMetrics;
+        });
         services.AddSingleton(Options.Create(new Castellan.Worker.Configuration.CorrelationOptions
         {
             EnableLowScoreEvents = true, // Enable for testing to maintain existing test behavior
@@ -557,6 +581,7 @@ public class PipelineIntegrationTests : IDisposable
 
         // Replace the collector in the service provider
         var services = new ServiceCollection();
+        services.AddOptions(); // Required for IOptionsMonitor
         services.AddSingleton(mockEvtxCollector.Object);
         services.AddSingleton(_mockVectorStore.Object);
         services.AddSingleton(_mockEmbedder.Object);
@@ -565,6 +590,22 @@ public class PipelineIntegrationTests : IDisposable
         services.AddSingleton<ILogger<SecurityEventDetector>>(new Mock<ILogger<SecurityEventDetector>>().Object);
         services.AddSingleton<ILogger<RulesEngine>>(new Mock<ILogger<RulesEngine>>().Object);
         services.AddSingleton(Options.Create(_alertOptions));
+        
+        // Configure PipelineOptions for IOptionsMonitor<T> support
+        services.Configure<PipelineOptions>(opt => 
+        {
+            opt.EnableParallelProcessing = true;
+            opt.MaxConcurrency = 4;
+            opt.ParallelOperationTimeoutMs = 30000;
+            opt.EnableParallelVectorOperations = true;
+            opt.EnableSemaphoreThrottling = false;
+            opt.MaxConcurrentTasks = 8;
+            opt.EnableAdaptiveThrottling = false;
+            opt.EventHistoryRetentionMinutes = 60;
+            opt.MaxEventsPerCorrelationKey = 1000;
+            opt.EnableDetailedMetrics = false;
+        });
+        
         services.AddSingleton<SecurityEventDetector>();
         services.AddSingleton<RulesEngine>();
         services.AddSingleton<Pipeline>();
@@ -650,6 +691,7 @@ public class PipelineIntegrationTests : IDisposable
 
         // Replace the collector in the service provider
         var services = new ServiceCollection();
+        services.AddOptions(); // Required for IOptionsMonitor
         services.AddSingleton(mockEvtxCollector.Object);
         services.AddSingleton(_mockVectorStore.Object);
         services.AddSingleton(_mockEmbedder.Object);
@@ -658,6 +700,22 @@ public class PipelineIntegrationTests : IDisposable
         services.AddSingleton<ILogger<SecurityEventDetector>>(new Mock<ILogger<SecurityEventDetector>>().Object);
         services.AddSingleton<ILogger<RulesEngine>>(new Mock<ILogger<RulesEngine>>().Object);
         services.AddSingleton(Options.Create(_alertOptions));
+        
+        // Configure PipelineOptions for IOptionsMonitor<T> support
+        services.Configure<PipelineOptions>(opt => 
+        {
+            opt.EnableParallelProcessing = true;
+            opt.MaxConcurrency = 4;
+            opt.ParallelOperationTimeoutMs = 30000;
+            opt.EnableParallelVectorOperations = true;
+            opt.EnableSemaphoreThrottling = false;
+            opt.MaxConcurrentTasks = 8;
+            opt.EnableAdaptiveThrottling = false;
+            opt.EventHistoryRetentionMinutes = 60;
+            opt.MaxEventsPerCorrelationKey = 1000;
+            opt.EnableDetailedMetrics = false;
+        });
+        
         services.AddSingleton<SecurityEventDetector>();
         services.AddSingleton<RulesEngine>();
         services.AddSingleton<Pipeline>();
@@ -747,6 +805,7 @@ public class PipelineIntegrationTests : IDisposable
 
         // Replace the collector in the service provider
         var services = new ServiceCollection();
+        services.AddOptions(); // Required for IOptionsMonitor
         services.AddSingleton(mockEvtxCollector.Object);
         services.AddSingleton(_mockVectorStore.Object);
         services.AddSingleton(_mockEmbedder.Object);
@@ -755,6 +814,22 @@ public class PipelineIntegrationTests : IDisposable
         services.AddSingleton<ILogger<SecurityEventDetector>>(new Mock<ILogger<SecurityEventDetector>>().Object);
         services.AddSingleton<ILogger<RulesEngine>>(new Mock<ILogger<RulesEngine>>().Object);
         services.AddSingleton(Options.Create(_alertOptions));
+        
+        // Configure PipelineOptions for IOptionsMonitor<T> support
+        services.Configure<PipelineOptions>(opt => 
+        {
+            opt.EnableParallelProcessing = true;
+            opt.MaxConcurrency = 4;
+            opt.ParallelOperationTimeoutMs = 30000;
+            opt.EnableParallelVectorOperations = true;
+            opt.EnableSemaphoreThrottling = false;
+            opt.MaxConcurrentTasks = 8;
+            opt.EnableAdaptiveThrottling = false;
+            opt.EventHistoryRetentionMinutes = 60;
+            opt.MaxEventsPerCorrelationKey = 1000;
+            opt.EnableDetailedMetrics = false;
+        });
+        
         services.AddSingleton<SecurityEventDetector>();
         services.AddSingleton<RulesEngine>();
         services.AddSingleton<Pipeline>();
@@ -808,6 +883,7 @@ public class PipelineIntegrationTests : IDisposable
 
         // Replace the collector in the service provider
         var services = new ServiceCollection();
+        services.AddOptions(); // Required for IOptionsMonitor
         services.AddSingleton(mockCustomCollector.Object);
         services.AddSingleton(_mockVectorStore.Object);
         services.AddSingleton(_mockEmbedder.Object);
@@ -816,6 +892,22 @@ public class PipelineIntegrationTests : IDisposable
         services.AddSingleton<ILogger<SecurityEventDetector>>(new Mock<ILogger<SecurityEventDetector>>().Object);
         services.AddSingleton<ILogger<RulesEngine>>(new Mock<ILogger<RulesEngine>>().Object);
         services.AddSingleton(Options.Create(_alertOptions));
+        
+        // Configure PipelineOptions for IOptionsMonitor<T> support
+        services.Configure<PipelineOptions>(opt => 
+        {
+            opt.EnableParallelProcessing = true;
+            opt.MaxConcurrency = 4;
+            opt.ParallelOperationTimeoutMs = 30000;
+            opt.EnableParallelVectorOperations = true;
+            opt.EnableSemaphoreThrottling = false;
+            opt.MaxConcurrentTasks = 8;
+            opt.EnableAdaptiveThrottling = false;
+            opt.EventHistoryRetentionMinutes = 60;
+            opt.MaxEventsPerCorrelationKey = 1000;
+            opt.EnableDetailedMetrics = false;
+        });
+        
         services.AddSingleton<SecurityEventDetector>();
         services.AddSingleton<RulesEngine>();
         services.AddSingleton<Pipeline>();
@@ -865,10 +957,10 @@ public class PipelineIntegrationTests : IDisposable
     {
         await Task.Delay(1); // Small delay to make it truly async
         throw exception;
-        yield break; // Required for async-iterator method even after throw
 #pragma warning disable CS0162 // Unreachable code detected
+        yield break; // Required for async-iterator method even after throw
+#pragma warning restore CS0162
     }
-
     public void Dispose()
     {
         _serviceProvider?.Dispose();

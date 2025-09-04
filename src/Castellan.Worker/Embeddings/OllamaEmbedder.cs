@@ -1,11 +1,12 @@
 using System.Net.Http.Json;
 using System.Text.Json;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Castellan.Worker.Abstractions;
 
 namespace Castellan.Worker.Embeddings;
 
-public sealed class OllamaEmbedder(IOptions<EmbeddingOptions> opt, HttpClient http) : IEmbedder
+public sealed class OllamaEmbedder(IOptions<EmbeddingOptions> opt, HttpClient http, ILogger<OllamaEmbedder>? logger = null) : IEmbedder
 {
     public async Task<float[]> EmbedAsync(string text, CancellationToken ct)
     {
@@ -18,14 +19,14 @@ public sealed class OllamaEmbedder(IOptions<EmbeddingOptions> opt, HttpClient ht
             var arr = await ParseEmbeddingAsync(resp, ct);
             if (arr.Length > 0)
             {
-                Console.WriteLine($"OllamaEmbedder: parsed embedding length={arr.Length} via /api/embeddings");
+                logger?.LogDebug("OllamaEmbedder: parsed embedding length={Length} via /api/embeddings", arr.Length);
                 return arr;
             }
-            Console.WriteLine("OllamaEmbedder: /api/embeddings returned empty embedding array, falling back to /api/embed");
+            logger?.LogDebug("OllamaEmbedder: /api/embeddings returned empty embedding array, falling back to /api/embed");
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"OllamaEmbedder: /api/embeddings failed: {ex.Message}. Falling back to /api/embed");
+            logger?.LogDebug("OllamaEmbedder: /api/embeddings failed: {Message}. Falling back to /api/embed", ex.Message);
         }
 
         // Fallback to legacy endpoint /api/embed which returns { embeddings: [[...]] }
@@ -33,11 +34,11 @@ public sealed class OllamaEmbedder(IOptions<EmbeddingOptions> opt, HttpClient ht
         var resp2 = await http.PostAsJsonAsync($"{opt.Value.Endpoint}/api/embed", fallbackPayload, ct);
         resp2.EnsureSuccessStatusCode();
         var arr2 = await ParseEmbeddingAsync(resp2, ct);
-        Console.WriteLine($"OllamaEmbedder: parsed embedding length={arr2.Length} via /api/embed");
+        logger?.LogDebug("OllamaEmbedder: parsed embedding length={Length} via /api/embed", arr2.Length);
         return arr2;
     }
 
-    private static async Task<float[]> ParseEmbeddingAsync(HttpResponseMessage resp, CancellationToken ct)
+    private async Task<float[]> ParseEmbeddingAsync(HttpResponseMessage resp, CancellationToken ct)
     {
         var raw = await resp.Content.ReadAsStringAsync(ct);
         try
@@ -49,7 +50,7 @@ public sealed class OllamaEmbedder(IOptions<EmbeddingOptions> opt, HttpClient ht
             {
                 var arr = embEl.EnumerateArray().Select(x => (float)x.GetDouble()).ToArray();
                 if (arr.Length == 0)
-                    Console.WriteLine($"OllamaEmbedder: empty embedding array. Raw response prefix={raw.Substring(0, Math.Min(300, raw.Length))}");
+                    logger?.LogWarning("OllamaEmbedder: empty embedding array. Raw response prefix={Prefix}", raw.Substring(0, Math.Min(300, raw.Length)));
                 return arr;
             }
             if (root.TryGetProperty("data", out var dataEl) && dataEl.ValueKind == JsonValueKind.Array && dataEl.GetArrayLength() > 0)
@@ -59,7 +60,7 @@ public sealed class OllamaEmbedder(IOptions<EmbeddingOptions> opt, HttpClient ht
                 {
                     var arr = emb2.EnumerateArray().Select(x => (float)x.GetDouble()).ToArray();
                     if (arr.Length == 0)
-                        Console.WriteLine($"OllamaEmbedder: empty embedding array in data[0]. Raw response prefix={raw.Substring(0, Math.Min(300, raw.Length))}");
+                    logger?.LogWarning("OllamaEmbedder: empty embedding array in data[0]. Raw response prefix={Prefix}", raw.Substring(0, Math.Min(300, raw.Length)));
                     return arr;
                 }
             }
@@ -71,16 +72,16 @@ public sealed class OllamaEmbedder(IOptions<EmbeddingOptions> opt, HttpClient ht
                 {
                     var arr = first.EnumerateArray().Select(x => (float)x.GetDouble()).ToArray();
                     if (arr.Length == 0)
-                        Console.WriteLine($"OllamaEmbedder: empty embedding array in embeddings[0]. Raw response prefix={raw.Substring(0, Math.Min(300, raw.Length))}");
+                    logger?.LogWarning("OllamaEmbedder: empty embedding array in embeddings[0]. Raw response prefix={Prefix}", raw.Substring(0, Math.Min(300, raw.Length)));
                     return arr;
                 }
             }
-            Console.WriteLine($"OllamaEmbedder: unexpected response, returning empty. Raw prefix={raw.Substring(0, Math.Min(200, raw.Length))}");
+            logger?.LogWarning("OllamaEmbedder: unexpected response, returning empty. Raw prefix={Prefix}", raw.Substring(0, Math.Min(200, raw.Length)));
             return Array.Empty<float>();
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"OllamaEmbedder: failed to parse response: {ex.Message}. Raw prefix={raw.Substring(0, Math.Min(200, raw.Length))}");
+            logger?.LogError("OllamaEmbedder: failed to parse response: {Message}. Raw prefix={Prefix}", ex.Message, raw.Substring(0, Math.Min(200, raw.Length)));
             return Array.Empty<float>();
         }
     }

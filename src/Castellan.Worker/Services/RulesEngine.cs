@@ -382,13 +382,13 @@ public class RulesEngine
     private SecurityEventType DetermineEventType(LogEvent logEvent, double correlationScore, double burstScore, double anomalyScore)
     {
         if (burstScore > 0.7)
-            return SecurityEventType.Unknown; // Map to appropriate type
+            return SecurityEventType.BurstActivity;
         if (correlationScore > 0.7)
-            return SecurityEventType.Unknown; // Map to appropriate type
+            return SecurityEventType.CorrelatedActivity;
         if (anomalyScore > 0.7)
-            return SecurityEventType.Unknown; // Map to appropriate type
+            return SecurityEventType.AnomalousActivity;
         
-        return SecurityEventType.Unknown;
+        return SecurityEventType.SuspiciousActivity;
     }
 
     private string GenerateCorrelationSummary(LogEvent logEvent, double correlationScore, double burstScore, double anomalyScore)

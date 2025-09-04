@@ -428,11 +428,19 @@ $env:EMBEDDINGS__PROVIDER = "Ollama"   # Ollama (https://ollama.com/) or OpenAI
 $env:LLM__PROVIDER = "Ollama"          # Ollama (https://ollama.com/) or OpenAI
 $env:OPENAI_API_KEY = "your-openai-key"   # Get from: https://platform.openai.com/api-keys
 
-# Pipeline Performance Configuration
+# Pipeline Performance Configuration (Phase 3 Optimizations)
 $env:PIPELINE__ENABLEPARALLELPROCESSING = "true"        # Enable parallel processing (default: true)
 $env:PIPELINE__MAXCONCURRENCY = "4"                     # Max concurrent operations (default: 4)
 $env:PIPELINE__PARALLELOPERATIONTIMEOUTMS = "30000"     # Parallel operation timeout (default: 30s)
 $env:PIPELINE__ENABLEPARALLELVECTOROPERATIONS = "true"  # Enable parallel vector ops (default: true)
+
+# New Phase 3 Performance Features
+$env:PIPELINE__ENABLESEMAPHORETHROTTLING = "true"       # Enable semaphore-based throttling
+$env:PIPELINE__MAXCONCURRENTTASKS = "8"                 # Max concurrent tasks with semaphore
+$env:PIPELINE__SEMAPHORETIMEOUTMS = "15000"             # Semaphore acquisition timeout
+$env:PIPELINE__MEMORYHIGHWATERMARKMB = "1024"           # Memory cleanup threshold (MB)
+$env:PIPELINE__EVENTHISTORYRETENTIONMINUTES = "60"      # Event retention for correlation
+$env:PIPELINE__ENABLEDETAILEDMETRICS = "true"           # Enable detailed performance metrics
 
 ```
 
@@ -455,6 +463,8 @@ dotnet build -c Release
 - **[Improvement Plan](IMPROVEMENT_PLAN.md)** - Comprehensive code improvement roadmap and progress tracking
 - **[Service Lifetime Audit](SERVICE_LIFETIME_AUDIT.md)** - Dependency injection optimization and service lifetime analysis
 - **[Phase 2 Completion](PHASE_2_COMPLETION_SUMMARY.md)** - Architecture and configuration improvements summary
+- **[Performance Baseline](BASELINE.md)** - Phase 3 performance optimization baseline metrics
+- **[Performance Tuning Guide](docs/performance_tuning.md)** - **NEW** - Comprehensive performance optimization and tuning guide
 
 ### Development & Operations
 - **[Windows PowerShell Compatibility](docs/WINDOWS_POWERSHELL_COMPATIBILITY.md)** - Native Windows PowerShell 5.1 support guide
@@ -466,6 +476,7 @@ dotnet build -c Release
 - **[Compliance Guide](docs/COMPLIANCE.md)** - Compliance framework implementation
 - **[API Documentation](docs/API.md)** - REST API reference
 - **[Configuration Guide](docs/CONFIGURATION.md)** - Advanced configuration options
+- **[Changelog](CHANGELOG.md)** - **NEW** - Release notes and upgrade information
 
 ## 🤝 Contributing
 

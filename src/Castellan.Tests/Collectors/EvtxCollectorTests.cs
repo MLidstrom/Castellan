@@ -635,11 +635,11 @@ public class EvtxCollectorTests
     }
 
     [Fact]
-    public async Task CollectHistoricalAsync_ShouldHandleNullOptions()
+    public void CollectHistoricalAsync_ShouldHandleNullOptions()
     {
         // Arrange
         var mockOptions = new Mock<IOptions<EvtxOptions>>();
-        mockOptions.Setup(x => x.Value).Returns((EvtxOptions)null);
+        mockOptions.Setup(x => x.Value).Returns((EvtxOptions)null!);
 
         var mockLogger = new Mock<ILogger<EvtxCollector>>();
 

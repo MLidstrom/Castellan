@@ -165,9 +165,26 @@ public class SecurityEvent
                 AnomalyScore = 0.0
             };
         }
-        catch (JsonException ex)
+        catch (JsonException)
         {
-            throw new ArgumentException($"Failed to parse LLM response JSON: {ex.Message}", nameof(llmResponseJson), ex);
+            // Return a fallback event when JSON parsing fails
+            return new SecurityEvent
+            {
+                Id = Guid.NewGuid().ToString(),
+                OriginalEvent = originalEvent,
+                EventType = SecurityEventType.Unknown,
+                RiskLevel = "unknown",
+                Confidence = 0,
+                Summary = "Failed to parse LLM response",
+                MitreTechniques = Array.Empty<string>(),
+                RecommendedActions = Array.Empty<string>(),
+                IsDeterministic = false,
+                IsCorrelationBased = false,
+                IsEnhanced = false,
+                CorrelationScore = 0.0,
+                BurstScore = 0.0,
+                AnomalyScore = 0.0
+            };
         }
     }
 

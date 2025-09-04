@@ -57,7 +57,7 @@ public class NotificationServiceTests : IDisposable
     public void Constructor_NullLogger_ThrowsArgumentNullException()
     {
         // Arrange, Act & Assert - The actual service throws ArgumentNullException when logger is null
-        Action act = () => new NotificationService(null, _mockOptions.Object, _mockNotificationManager.Object);
+        Action act = () => new NotificationService(null!, _mockOptions.Object, _mockNotificationManager.Object);
         act.Should().Throw<ArgumentNullException>().WithParameterName("logger");
     }
 
@@ -65,7 +65,7 @@ public class NotificationServiceTests : IDisposable
     public void Constructor_NullOptions_ThrowsNullReferenceException()
     {
         // Arrange, Act & Assert - The actual service throws NullReferenceException when accessing options.Value
-        Action act = () => new NotificationService(_mockLogger.Object, null, _mockNotificationManager.Object);
+        Action act = () => new NotificationService(_mockLogger.Object, null!, _mockNotificationManager.Object);
         act.Should().Throw<NullReferenceException>();
     }
 

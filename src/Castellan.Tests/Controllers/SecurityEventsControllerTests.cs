@@ -45,7 +45,7 @@ public class SecurityEventsControllerTests : IDisposable
     public void Constructor_NullLogger_DoesNotThrowImmediately()
     {
         // Arrange, Act & Assert - The actual controller doesn't validate parameters
-        Action act = () => new SecurityEventsController(null, _mockVectorStore.Object, _mockSecurityEventStore.Object);
+        Action act = () => new SecurityEventsController(null!, _mockVectorStore.Object, _mockSecurityEventStore.Object);
         act.Should().NotThrow();
     }
 
@@ -53,7 +53,7 @@ public class SecurityEventsControllerTests : IDisposable
     public void Constructor_NullSecurityEventStore_DoesNotThrowImmediately()
     {
         // Arrange, Act & Assert - The actual controller doesn't validate parameters
-        Action act = () => new SecurityEventsController(_mockLogger.Object, _mockVectorStore.Object, null);
+        Action act = () => new SecurityEventsController(_mockLogger.Object, _mockVectorStore.Object, null!);
         act.Should().NotThrow();
     }
 
@@ -101,7 +101,7 @@ public class SecurityEventsControllerTests : IDisposable
     {
         // Arrange
         var eventId = "non-existent-id";
-        _mockSecurityEventStore.Setup(x => x.GetSecurityEvent(eventId)).Returns((SecurityEvent)null);
+        _mockSecurityEventStore.Setup(x => x.GetSecurityEvent(eventId)).Returns((SecurityEvent)null!);
 
         // Act
         var result = await _controller.GetOne(eventId);

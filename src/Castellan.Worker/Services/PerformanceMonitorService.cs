@@ -36,6 +36,14 @@ public sealed class PerformanceMonitorService : IPerformanceMonitor
     private long _totalNotificationFailures;
     private string? _lastError;
     private DateTimeOffset? _lastErrorTime;
+    
+    // New throttling and detailed metrics
+    private readonly ConcurrentQueue<ThrottlingSnapshot> _throttlingMetrics = new();
+    private readonly ConcurrentQueue<DetailedPipelineSnapshot> _detailedPipelineMetrics = new();
+    private readonly ConcurrentQueue<MemoryPressureSnapshot> _memoryPressureMetrics = new();
+    private long _totalSemaphoreAcquisitions;
+    private long _totalSemaphoreTimeouts;
+    private double _baselineThroughput; // Events per second baseline for comparison
 
     // Performance counters
     private readonly Process _currentProcess;
@@ -220,6 +228,85 @@ public sealed class PerformanceMonitorService : IPerformanceMonitor
         }
     }
 
+    public void RecordPipelineThrottling(int semaphoreQueueLength, double semaphoreWaitTimeMs, bool semaphoreAcquisitionSuccessful, int concurrentTasksRunning)
+    {
+        var snapshot = new ThrottlingSnapshot
+        {
+            Timestamp = DateTimeOffset.UtcNow,
+            SemaphoreQueueLength = semaphoreQueueLength,
+            SemaphoreWaitTimeMs = semaphoreWaitTimeMs,
+            SemaphoreAcquisitionSuccessful = semaphoreAcquisitionSuccessful,
+            ConcurrentTasksRunning = concurrentTasksRunning
+        };
+
+        _throttlingMetrics.Enqueue(snapshot);
+        
+        if (semaphoreAcquisitionSuccessful)
+        {
+            Interlocked.Increment(ref _totalSemaphoreAcquisitions);
+        }
+        else
+        {
+            Interlocked.Increment(ref _totalSemaphoreTimeouts);
+        }
+        
+        CleanupOldMetrics();
+
+        if (_options.LogMetrics && semaphoreQueueLength > 0)
+        {
+            _logger.LogDebug("Pipeline throttling: queue={QueueLength}, wait={WaitTime}ms, success={Success}, running={Running}", 
+                semaphoreQueueLength, semaphoreWaitTimeMs, semaphoreAcquisitionSuccessful, concurrentTasksRunning);
+        }
+    }
+
+    public void RecordDetailedPipelineMetrics(double eventsPerSecond, double avgProcessingLatencyMs, double throughputImprovement = 0)
+    {
+        var snapshot = new DetailedPipelineSnapshot
+        {
+            Timestamp = DateTimeOffset.UtcNow,
+            EventsPerSecond = eventsPerSecond,
+            AvgProcessingLatencyMs = avgProcessingLatencyMs,
+            ThroughputImprovement = throughputImprovement
+        };
+
+        _detailedPipelineMetrics.Enqueue(snapshot);
+        
+        // Set baseline on first measurement if not set
+        if (_baselineThroughput == 0 && eventsPerSecond > 0)
+        {
+            _baselineThroughput = eventsPerSecond;
+            _logger.LogInformation("Pipeline baseline throughput set: {Throughput} events/sec", _baselineThroughput);
+        }
+        
+        CleanupOldMetrics();
+
+        if (_options.LogMetrics)
+        {
+            _logger.LogDebug("Pipeline detailed metrics: {EventsPerSecond} events/sec, {AvgLatency}ms avg latency, {Improvement}% improvement", 
+                eventsPerSecond, avgProcessingLatencyMs, throughputImprovement);
+        }
+    }
+
+    public void RecordMemoryPressure(double memoryUsageMB, long gcPressure, bool memoryCleanupTriggered = false)
+    {
+        var snapshot = new MemoryPressureSnapshot
+        {
+            Timestamp = DateTimeOffset.UtcNow,
+            MemoryUsageMB = memoryUsageMB,
+            GcPressure = gcPressure,
+            MemoryCleanupTriggered = memoryCleanupTriggered
+        };
+
+        _memoryPressureMetrics.Enqueue(snapshot);
+        CleanupOldMetrics();
+
+        if (_options.LogMetrics && (memoryCleanupTriggered || memoryUsageMB > _options.HighMemoryThresholdMB))
+        {
+            _logger.LogInformation("Memory pressure: {MemoryMB}MB, GC pressure: {GcPressure}, cleanup triggered: {CleanupTriggered}", 
+                memoryUsageMB, gcPressure, memoryCleanupTriggered);
+        }
+    }
+
     public PerformanceMetrics GetCurrentMetrics()
     {
         var now = DateTimeOffset.UtcNow;
@@ -314,6 +401,9 @@ public sealed class PerformanceMonitorService : IPerformanceMonitor
         CleanupQueue(_securityDetectionMetrics, cutoff);
         CleanupQueue(_llmMetrics, cutoff);
         CleanupQueue(_notificationMetrics, cutoff);
+        CleanupQueue(_throttlingMetrics, cutoff);
+        CleanupQueue(_detailedPipelineMetrics, cutoff);
+        CleanupQueue(_memoryPressureMetrics, cutoff);
     }
 
     private static void CleanupQueue<T>(ConcurrentQueue<T> queue, DateTimeOffset cutoff) where T : ITimestamped
@@ -498,4 +588,29 @@ internal record NotificationSnapshot : ITimestamped
     public string RiskLevel { get; init; } = string.Empty;
     public double DeliveryTimeMs { get; init; }
     public bool Success { get; init; }
+}
+
+internal record ThrottlingSnapshot : ITimestamped
+{
+    public DateTimeOffset Timestamp { get; init; }
+    public int SemaphoreQueueLength { get; init; }
+    public double SemaphoreWaitTimeMs { get; init; }
+    public bool SemaphoreAcquisitionSuccessful { get; init; }
+    public int ConcurrentTasksRunning { get; init; }
+}
+
+internal record DetailedPipelineSnapshot : ITimestamped
+{
+    public DateTimeOffset Timestamp { get; init; }
+    public double EventsPerSecond { get; init; }
+    public double AvgProcessingLatencyMs { get; init; }
+    public double ThroughputImprovement { get; init; }
+}
+
+internal record MemoryPressureSnapshot : ITimestamped
+{
+    public DateTimeOffset Timestamp { get; init; }
+    public double MemoryUsageMB { get; init; }
+    public long GcPressure { get; init; }
+    public bool MemoryCleanupTriggered { get; init; }
 }

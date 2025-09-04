@@ -72,6 +72,31 @@ public interface IPerformanceMonitor
     void RecordVectorCleanup(int vectorsRemoved);
 
     /// <summary>
+    /// Record pipeline throttling metrics
+    /// </summary>
+    /// <param name="semaphoreQueueLength">Current semaphore queue length</param>
+    /// <param name="semaphoreWaitTimeMs">Time spent waiting for semaphore in milliseconds</param>
+    /// <param name="semaphoreAcquisitionSuccessful">Whether semaphore acquisition was successful</param>
+    /// <param name="concurrentTasksRunning">Number of concurrent tasks currently running</param>
+    void RecordPipelineThrottling(int semaphoreQueueLength, double semaphoreWaitTimeMs, bool semaphoreAcquisitionSuccessful, int concurrentTasksRunning);
+
+    /// <summary>
+    /// Record detailed pipeline processing metrics
+    /// </summary>
+    /// <param name="eventsPerSecond">Current events processed per second</param>
+    /// <param name="avgProcessingLatencyMs">Average processing latency in milliseconds</param>
+    /// <param name="throughputImprovement">Throughput improvement percentage vs baseline</param>
+    void RecordDetailedPipelineMetrics(double eventsPerSecond, double avgProcessingLatencyMs, double throughputImprovement = 0);
+
+    /// <summary>
+    /// Record memory pressure metrics
+    /// </summary>
+    /// <param name="memoryUsageMB">Current memory usage in MB</param>
+    /// <param name="gcPressure">GC pressure level</param>
+    /// <param name="memoryCleanupTriggered">Whether memory cleanup was triggered</param>
+    void RecordMemoryPressure(double memoryUsageMB, long gcPressure, bool memoryCleanupTriggered = false);
+
+    /// <summary>
     /// Get current performance metrics
     /// </summary>
     /// <returns>Current performance metrics</returns>

@@ -42,7 +42,7 @@ public class OllamaEmbedderTests
         _mockOptions.Setup(x => x.Value).Returns(options);
 
         // Act
-        var embedder = new OllamaEmbedder(_mockOptions.Object, _httpClient);
+        var embedder = new OllamaEmbedder(_mockOptions.Object, _httpClient, null);
 
         // Assert
         embedder.Should().NotBeNull();
@@ -77,7 +77,7 @@ public class OllamaEmbedderTests
                 Content = new StringContent(responseJson)
             });
 
-        var embedder = new OllamaEmbedder(_mockOptions.Object, _httpClient);
+        var embedder = new OllamaEmbedder(_mockOptions.Object, _httpClient, null);
 
         // Act
         var result = await embedder.EmbedAsync("test text", CancellationToken.None);
@@ -117,7 +117,7 @@ public class OllamaEmbedderTests
                 Content = new StringContent(responseJson)
             });
 
-        var embedder = new OllamaEmbedder(_mockOptions.Object, _httpClient);
+        var embedder = new OllamaEmbedder(_mockOptions.Object, _httpClient, null);
 
         // Act
         var result = await embedder.EmbedAsync("", CancellationToken.None);
@@ -158,7 +158,7 @@ public class OllamaEmbedderTests
                 Content = new StringContent(responseJson)
             });
 
-        var embedder = new OllamaEmbedder(_mockOptions.Object, _httpClient);
+        var embedder = new OllamaEmbedder(_mockOptions.Object, _httpClient, null);
 
         // Act
         var result = await embedder.EmbedAsync(longText, CancellationToken.None);
@@ -199,7 +199,7 @@ public class OllamaEmbedderTests
                 Content = new StringContent(responseJson)
             });
 
-        var embedder = new OllamaEmbedder(_mockOptions.Object, _httpClient);
+        var embedder = new OllamaEmbedder(_mockOptions.Object, _httpClient, null);
 
         // Act
         var result = await embedder.EmbedAsync(specialText, CancellationToken.None);
@@ -235,7 +235,7 @@ public class OllamaEmbedderTests
                 StatusCode = HttpStatusCode.InternalServerError
             });
 
-        var embedder = new OllamaEmbedder(_mockOptions.Object, _httpClient);
+        var embedder = new OllamaEmbedder(_mockOptions.Object, _httpClient, null);
 
         // Act & Assert
         var action = () => embedder.EmbedAsync("test text", CancellationToken.None);
@@ -270,7 +270,7 @@ public class OllamaEmbedderTests
                 Content = new StringContent(invalidJson)
             });
 
-        var embedder = new OllamaEmbedder(_mockOptions.Object, _httpClient);
+        var embedder = new OllamaEmbedder(_mockOptions.Object, _httpClient, null);
 
         // Act
         var result = await embedder.EmbedAsync("test text", CancellationToken.None);
@@ -308,7 +308,7 @@ public class OllamaEmbedderTests
                 Content = new StringContent(responseJson)
             });
 
-        var embedder = new OllamaEmbedder(_mockOptions.Object, _httpClient);
+        var embedder = new OllamaEmbedder(_mockOptions.Object, _httpClient, null);
 
         // Act
         var result = await embedder.EmbedAsync("test text", CancellationToken.None);
@@ -331,7 +331,7 @@ public class OllamaEmbedderTests
         };
         _mockOptions.Setup(x => x.Value).Returns(options);
 
-        var embedder = new OllamaEmbedder(_mockOptions.Object, _httpClient);
+        var embedder = new OllamaEmbedder(_mockOptions.Object, _httpClient, null);
         var cts = new CancellationTokenSource();
         cts.Cancel();
 
