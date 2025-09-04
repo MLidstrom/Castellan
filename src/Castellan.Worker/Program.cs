@@ -235,9 +235,10 @@ catch (Exception ex)
 Console.WriteLine("Validating configuration options...");
 try
 {
-    var authOptions = scope.ServiceProvider.GetRequiredService<IOptionsMonitor<AuthenticationOptions>>();
-    var qdrantOptions = scope.ServiceProvider.GetRequiredService<IOptionsMonitor<QdrantOptions>>();
-    var pipelineOptions = scope.ServiceProvider.GetRequiredService<IOptionsMonitor<PipelineOptions>>();
+    using var configScope = builder.Services.BuildServiceProvider().CreateScope();
+    var authOptions = configScope.ServiceProvider.GetRequiredService<IOptionsMonitor<AuthenticationOptions>>();
+    var qdrantOptions = configScope.ServiceProvider.GetRequiredService<IOptionsMonitor<QdrantOptions>>();
+    var pipelineOptions = configScope.ServiceProvider.GetRequiredService<IOptionsMonitor<PipelineOptions>>();
     
     // Accessing .Value will trigger validation
     _ = authOptions.CurrentValue;
