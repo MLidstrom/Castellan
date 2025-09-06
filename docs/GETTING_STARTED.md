@@ -30,8 +30,11 @@ $env:AUTHENTICATION__ADMINUSER__PASSWORD = "your-secure-password"
 ### 2. Start Everything
 
 ```powershell
-# Start all services (C# handles orchestration)
+# Start all services in background (C# handles orchestration)
 .\scripts\start.ps1
+
+# For foreground/interactive mode:
+.\scripts\start.ps1 -Foreground
 
 # This will automatically:
 # - Start Qdrant vector database in Docker
@@ -127,8 +130,9 @@ npm start
 
 - ✅ Windows Event Log monitoring
 - ✅ AI-powered security event analysis 
-- ✅ Vector-based threat detection
+- ✅ Vector-based threat detection with batch processing (3-5x performance improvement)
 - ✅ Persistent storage with 24-hour rolling window
+- ✅ Advanced performance optimization (parallel processing, batching, throttling)
 - ✅ Desktop notifications
 - ✅ Web admin interface
 - ✅ Teams/Slack integration

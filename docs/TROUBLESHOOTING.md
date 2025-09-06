@@ -4,6 +4,36 @@ This guide covers common issues you might encounter while using Castellan and th
 
 ## React Admin Interface Issues
 
+### MITRE ATT&CK Techniques Page Issues
+
+**"dataProvider error. Check the console for details."**
+
+✅ **FIXED (January 2025)**: This issue has been resolved. If you still encounter this error:
+
+1. **Verify MITRE Data Import**: Check if MITRE techniques were imported successfully
+   ```powershell
+   # Test MITRE endpoint directly
+   $headers = @{ "Authorization" = "Bearer YOUR_TOKEN" }
+   Invoke-WebRequest -Uri "http://localhost:5000/api/mitre/techniques" -Headers $headers
+   ```
+
+2. **Import MITRE Data Manually**: If the endpoint returns empty results
+   ```powershell
+   # Trigger manual import
+   Invoke-WebRequest -Uri "http://localhost:5000/api/mitre/import" -Method POST -Headers $headers
+   ```
+
+3. **Clear Browser Cache**: Force reload the React Admin interface
+   - Press Ctrl+F5 for hard refresh
+   - Or clear browser cache and cookies for localhost:8080
+
+4. **Check Browser Console**: Open DevTools (F12) → Console tab for specific errors
+   - Look for authentication token issues
+   - Check for network connectivity problems
+   - Verify API response format errors
+
+**Root Cause**: The issue was caused by MITRE API endpoints returning `{ techniques: [...] }` format while the dataProvider expected standard array responses. This has been fixed in the castellanDataProvider.ts transformation logic.
+
 ### Threat Scanner Buttons Not Working
 If the "Quick Scan" or "Full Scan" buttons in the React Admin interface don't work:
 
@@ -132,6 +162,95 @@ If the system tray application doesn't start automatically:
 - **Invalid Credentials**: Verify username and password match your configuration
 - **Token Expired**: JWT tokens expire after 24 hours by default, re-login required
 - **Browser Cache**: Clear browser cache and cookies if experiencing persistent login issues
+
+### "No tokens found" Error on Login Page
+
+✅ **IMPROVED (January 2025)**: Enhanced error handling to provide clearer user experience.
+
+1. **Expected Behavior**: This message is normal on initial page load before authentication
+   - The login page will show this briefly while loading
+   - It should disappear once the login form is displayed
+
+2. **Persistent "No tokens found"**: If the error persists or prevents login:
+   ```powershell
+   # Check if Worker API is running
+   Invoke-WebRequest -Uri "http://localhost:5000/api/system/edition" -Method GET
+   
+   # If Worker API is down, start services
+   .\scripts\start.ps1
+   ```
+
+3. **Backend Server Not Available**: If you see "Backend server not available":
+   - This indicates the Worker API at localhost:5000 is not responding
+   - Check that the Worker API service is running and stable
+   - The semaphore fix prevents Worker API crashes that previously caused this error
+
+**Root Cause**: Previous versions had unstable Worker API due to semaphore bugs, causing authentication endpoints to be unavailable. This has been resolved with the Pipeline.cs stability fix.
+
+## Worker API Issues
+
+### Worker Service Crashes Immediately After Startup
+
+**"SemaphoreFullException: Adding the specified count to the semaphore would cause it to exceed its maximum count."**
+
+✅ **FIXED (January 2025)**: This critical stability issue has been resolved. If you still experience crashes:
+
+1. **Update to Latest Version**: Ensure you have the latest Pipeline.cs with the semaphore fix
+   ```powershell
+   # Pull latest changes
+   git pull origin main
+   
+   # Rebuild the project
+   dotnet build -c Release
+   ```
+
+2. **Check Semaphore Configuration**: Verify pipeline settings in appsettings.json
+   ```json
+   "Pipeline": {
+     "EnableSemaphoreThrottling": true,
+     "MaxConcurrentTasks": 8
+   }
+   ```
+
+3. **Monitor Background Jobs**: If running in background, check job status
+   ```powershell
+   # Check background job status
+   Get-Job | Where-Object { $_.Name -like "*Worker*" }
+   
+   # View job output for errors
+   Receive-Job -Id JOB_ID
+   ```
+
+4. **Start in Foreground for Debugging**: Run Worker in foreground to see detailed errors
+   ```powershell
+   cd src\Castellan.Worker
+   dotnet run --configuration Release
+   ```
+
+**Root Cause**: The issue was caused by mismatched semaphore acquisition and release logic where `TryAcquireSemaphoreAsync()` returned true without actually acquiring the semaphore, but `ReleaseSemaphore()` tried to release it anyway. This has been fixed with proper semaphore state tracking.
+
+### "Failed to fetch" Errors During Login
+
+✅ **RESOLVED**: This is typically caused by Worker API not running or crashing. With the semaphore fix, the Worker API now runs stable and login endpoints remain available.
+
+1. **Verify Worker API Status**: Check if Worker is running and responding
+   ```powershell
+   # Test system endpoint
+   Invoke-WebRequest -Uri "http://localhost:5000/api/system/edition" -Method GET
+   
+   # Test login endpoint
+   $body = @{ username = "admin"; password = "your-password" } | ConvertTo-Json
+   Invoke-WebRequest -Uri "http://localhost:5000/api/auth/login" -Method POST -ContentType "application/json" -Body $body
+   ```
+
+2. **Restart Services if Needed**: Use background job commands for stable operation
+   ```powershell
+   # Stop any existing services
+   .\scripts\stop.ps1
+   
+   # Start with background jobs (recommended)
+   .\scripts\start.ps1
+   ```
 
 ## General Troubleshooting Steps
 

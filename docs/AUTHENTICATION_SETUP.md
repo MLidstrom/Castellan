@@ -88,13 +88,7 @@ Update `appsettings.json`:
 ## Production Deployment
 
 ### Environment Variables
-```bash
-# Linux/Docker
-export AUTHENTICATION__JWT__SECRETKEY="your-production-jwt-secret-64-chars-minimum"
-export AUTHENTICATION__ADMINUSER__USERNAME="admin"
-export AUTHENTICATION__ADMINUSER__PASSWORD="your-production-secure-password"
-
-# Windows
+```powershell
 $env:AUTHENTICATION__JWT__SECRETKEY = "your-production-jwt-secret-64-chars-minimum"
 $env:AUTHENTICATION__ADMINUSER__USERNAME = "admin"
 $env:AUTHENTICATION__ADMINUSER__PASSWORD = "your-production-secure-password"
@@ -138,11 +132,9 @@ ENV AUTHENTICATION__ADMINUSER__PASSWORD="your-production-secure-password"
    ```
 
 3. **Test with curl:**
-   ```bash
-   curl -X POST http://localhost:5000/api/auth/login \
-     -H "Content-Type: application/json" \
-     -d '{"username":"your-username","password":"your-password"}'
-   ```
+```powershell
+Invoke-RestMethod -Method POST -Uri 'http://localhost:5000/api/auth/login' -ContentType 'application/json' -Body '{"username":"your-username","password":"your-password"}'
+```
 
 ## Migration from Hardcoded Credentials
 

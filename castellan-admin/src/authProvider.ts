@@ -22,6 +22,10 @@ export const authProvider: AuthProvider = {
         return Promise.resolve();
       })
       .catch(error => {
+        // Handle network errors when backend is not available
+        if (error.message.includes('fetch') || error.name === 'TypeError') {
+          return Promise.reject(new Error('Backend server is not available. Please wait a moment and try again.'));
+        }
         return Promise.reject(error);
       });
   },
@@ -42,7 +46,12 @@ export const authProvider: AuthProvider = {
   },
   
   checkAuth: () => {
-    return localStorage.getItem('auth_token') ? Promise.resolve() : Promise.reject();
+    const token = localStorage.getItem('auth_token');
+    if (token) {
+      return Promise.resolve();
+    }
+    // Don't log 'No token found' error - this is expected for login page
+    return Promise.reject({ message: 'Please log in', silent: true });
   },
   
   getPermissions: () => {

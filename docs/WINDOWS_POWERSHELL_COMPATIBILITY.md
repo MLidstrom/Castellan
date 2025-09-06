@@ -49,8 +49,7 @@ $processes = Get-CimInstance Win32_Process -Filter "Name='dotnet.exe'" | Where-O
 | `start.ps1` | TLS 1.2, UseBasicParsing, robust Docker/Ollama detection |
 | `status.ps1` | CIM-based process detection, timeout handling, structured output |
 | `stop.ps1` | Multi-method process detection, graceful shutdown attempts |
-| `run-tests.ps1` | Native .NET test runner integration |
-| `test-ps51-compatibility.ps1` | Comprehensive compatibility testing |
+|| `test-ps51-compatibility.ps1` | Comprehensive compatibility verification |
 
 ### 🚀 **Usage Examples**
 
@@ -80,13 +79,13 @@ $processes = Get-CimInstance Win32_Process -Filter "Name='dotnet.exe'" | Where-O
 # Force stop with Qdrant shutdown
 .\scripts\stop.ps1 -Force -StopQdrant
 
-# Run tests with verbose output
+# Run compatibility verification
 .\scripts\run-tests.ps1 -Verbosity detailed
 ```
 
-## Compatibility Testing
+## Compatibility Verification
 
-### 🧪 **Built-in Test Suite**
+### 🧪 **Built-in Compatibility Check**
 
 Run the compatibility test to verify your system:
 
@@ -94,7 +93,7 @@ Run the compatibility test to verify your system:
 .\scripts\test-ps51-compatibility.ps1
 ```
 
-**Test Coverage:**
+**Verification Scope:**
 - ✅ PowerShell version compatibility
 - ✅ TLS 1.2 configuration  
 - ✅ Web request functionality
@@ -106,7 +105,7 @@ Run the compatibility test to verify your system:
 
 On a compatible Windows system, you should see:
 ```
-SUCCESS: All tests passed (6/6)
+SUCCESS: All checks passed (6/6)
 Your system is fully compatible with Castellan PowerShell scripts!
 ```
 
@@ -114,9 +113,9 @@ Your system is fully compatible with Castellan PowerShell scripts!
 
 | PowerShell Version | Status | Notes |
 |-------------------|---------|-------|
-| **Windows PowerShell 5.1** | ✅ **Full Support** | Primary target, all features tested |
+| **Windows PowerShell 5.1** | ✅ **Full Support** | Primary target, fully verified |
 | **PowerShell 7.x** | ✅ **Full Support** | Cross-platform, enhanced features |
-| **Windows PowerShell 5.0** | ⚠️ **Limited Support** | May work but not tested |
+| **Windows PowerShell 5.0** | ⚠️ **Limited Support** | May work but not fully verified |
 | **Windows PowerShell 4.0** | ❌ **Not Supported** | Missing required features |
 
 ## Troubleshooting
@@ -167,7 +166,7 @@ Set-ExecutionPolicy Bypass -Scope Process
    .\scripts\validate_ps.ps1
    ```
 
-4. **Test Web Connectivity**:
+4. **Check Web Connectivity**:
    ```powershell
    Invoke-WebRequest -Uri "http://httpbin.org/get" -UseBasicParsing
    ```
@@ -194,7 +193,7 @@ Set-ExecutionPolicy Bypass -Scope Process
 
 ### 📋 **Recommendations**
 
-1. **Always test compatibility first**:
+1. **Always verify compatibility first**:
    ```powershell
    .\scripts\test-ps51-compatibility.ps1
    ```
@@ -228,15 +227,15 @@ Set-ExecutionPolicy Bypass -Scope Process
 
 If you encounter compatibility issues:
 
-1. Run the compatibility test first
+1. Run the compatibility check first
 2. Check the troubleshooting section above
 3. Review logs in the `logs/` directory
-4. Open an issue with test results and system information
+4. Open an issue with verification results and system information
 
 ---
 
 **Document Version**: 1.1  
 **Last Updated**: January 2025  
-**Tested On**: Windows PowerShell 5.1.26100.4768  
+**Verified On**: Windows PowerShell 5.1.26100.4768  
 **Compilation Status**: ✅ **Fixed and Verified**  
 **Status**: ✅ **Fully Compatible**

@@ -3,6 +3,7 @@ using System.Text.Json;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using Microsoft.Extensions.DependencyInjection;
 using Castellan.Worker.Abstractions;
 using Castellan.Worker.Models;
 using Castellan.Worker.Services;
@@ -25,6 +26,7 @@ public sealed class Pipeline(
     IPerformanceMonitor performanceMonitor,
     ISecurityEventStore securityEventStore,
     IAutomatedResponseService automatedResponseService,
+    IServiceProvider serviceProvider,
     ILogger<Pipeline> log
 ) : BackgroundService
 {
@@ -48,6 +50,14 @@ public sealed class Pipeline(
     // Performance tracking
     private readonly DateTimeOffset _startTime = DateTimeOffset.UtcNow;
     private double _baselineEventsPerSecond = 0;
+    
+    // Vector batch processing
+    private readonly List<(LogEvent logEvent, float[] embedding)> _vectorBuffer = new();
+    private readonly object _vectorBufferLock = new object();
+    private System.Threading.Timer? _batchFlushTimer;
+    private volatile bool _isFlushingBatch = false;
+    private long _totalVectorsBatched = 0;
+    private long _totalBatchFlushes = 0;
     
     /// <summary>
     /// Initialize or update the processing semaphore based on current configuration
@@ -90,8 +100,26 @@ public sealed class Pipeline(
     /// </summary>
     private Task<bool> TryAcquireSemaphoreAsync(CancellationToken ct)
     {
-        // Temporarily disable semaphore logic for build
-        return Task.FromResult(true);
+        // If semaphore is disabled, return true but indicate no acquisition needed
+        var semaphore = _processingSemaphore;
+        if (semaphore == null)
+        {
+            return Task.FromResult(true);
+        }
+        
+        // Try to acquire the semaphore (simplified for now - no timeout logic)
+        try
+        {
+            if (semaphore.Wait(0)) // Non-blocking attempt
+            {
+                return Task.FromResult(true);
+            }
+            return Task.FromResult(false);
+        }
+        catch
+        {
+            return Task.FromResult(false);
+        }
     }
     
     /// <summary>
@@ -157,10 +185,161 @@ public sealed class Pipeline(
     }
     
     /// <summary>
-    /// Dispose semaphore resources
+    /// Buffer a vector for batch processing or process immediately if batching is disabled
+    /// </summary>
+    private async Task BufferVectorForBatch(LogEvent logEvent, float[] embedding, CancellationToken ct)
+    {
+        var options = _pipelineOptions.CurrentValue;
+        
+        if (!options.EnableVectorBatching)
+        {
+            // Batching disabled, process immediately
+            await store.UpsertAsync(logEvent, embedding, ct);
+            return;
+        }
+        
+        bool shouldFlushBatch = false;
+        
+        lock (_vectorBufferLock)
+        {
+            _vectorBuffer.Add((logEvent, embedding));
+            Interlocked.Increment(ref _totalVectorsBatched);
+            
+            // Check if we've reached the batch size limit
+            shouldFlushBatch = _vectorBuffer.Count >= options.VectorBatchSize;
+        }
+        
+        if (shouldFlushBatch)
+        {
+            await FlushVectorBatch(ct);
+        }
+    }
+    
+    /// <summary>
+    /// Flush the current vector buffer to the vector store
+    /// </summary>
+    private async Task FlushVectorBatch(CancellationToken ct)
+    {
+        if (_isFlushingBatch) return; // Avoid concurrent flushes
+        
+        List<(LogEvent logEvent, float[] embedding)> itemsToFlush;
+        
+        lock (_vectorBufferLock)
+        {
+            if (_vectorBuffer.Count == 0) return; // Nothing to flush
+            
+            itemsToFlush = new List<(LogEvent, float[])>(_vectorBuffer);
+            _vectorBuffer.Clear();
+            _isFlushingBatch = true;
+        }
+        
+        try
+        {
+            var batchStartTime = DateTimeOffset.UtcNow;
+            
+            await store.BatchUpsertAsync(itemsToFlush, ct);
+            
+            var batchTime = (DateTimeOffset.UtcNow - batchStartTime).TotalMilliseconds;
+            Interlocked.Increment(ref _totalBatchFlushes);
+            
+            // Record batch metrics
+            performanceMonitor.RecordVectorStoreMetrics(
+                embeddingTimeMs: 0, // Embedding already done
+                upsertTimeMs: batchTime, 
+                searchTimeMs: 0, // No search in batch
+                vectorsProcessed: itemsToFlush.Count
+            );
+            
+            if (log.IsEnabled(LogLevel.Debug))
+            {
+                log.LogDebug("Flushed vector batch: {Count} vectors in {BatchTimeMs:F2}ms", 
+                    itemsToFlush.Count, batchTime);
+            }
+        }
+        catch (Exception ex)
+        {
+            log.LogError(ex, "Error flushing vector batch of {Count} items", itemsToFlush.Count);
+            
+            // Record error metrics
+            performanceMonitor.RecordVectorStoreMetrics(
+                embeddingTimeMs: 0,
+                upsertTimeMs: 0,
+                searchTimeMs: 0,
+                vectorsProcessed: 0,
+                error: ex.Message
+            );
+            
+            // Re-throw to handle upstream
+            throw;
+        }
+        finally
+        {
+            _isFlushingBatch = false;
+        }
+    }
+    
+    /// <summary>
+    /// Initialize batch flush timer for time-based flushing
+    /// </summary>
+    private void InitializeBatchFlushTimer()
+    {
+        var options = _pipelineOptions.CurrentValue;
+        
+        if (!options.EnableVectorBatching)
+        {
+            _batchFlushTimer?.Dispose();
+            _batchFlushTimer = null;
+            return;
+        }
+        
+        // Create timer for periodic batch flushing
+        _batchFlushTimer?.Dispose();
+        _batchFlushTimer = new System.Threading.Timer(async _ =>
+        {
+            try
+            {
+                await FlushVectorBatch(CancellationToken.None);
+            }
+            catch (Exception ex)
+            {
+                log.LogWarning(ex, "Error during scheduled batch flush");
+            }
+        }, null, TimeSpan.FromMilliseconds(options.VectorBatchTimeoutMs), 
+             TimeSpan.FromMilliseconds(options.VectorBatchTimeoutMs));
+    }
+    
+    /// <summary>
+    /// Get current batch processing metrics
+    /// </summary>
+    public (int CurrentBufferSize, long TotalVectorsBatched, long TotalBatchFlushes) GetBatchMetrics()
+    {
+        lock (_vectorBufferLock)
+        {
+            return (_vectorBuffer.Count, _totalVectorsBatched, _totalBatchFlushes);
+        }
+    }
+    
+    /// <summary>
+    /// Dispose semaphore and batch timer resources
     /// </summary>
     public override void Dispose()
     {
+        // Flush any remaining vectors before disposing
+        try
+        {
+            if (_vectorBuffer.Count > 0)
+            {
+                FlushVectorBatch(CancellationToken.None).Wait(TimeSpan.FromSeconds(5));
+            }
+        }
+        catch (Exception ex)
+        {
+            log.LogWarning(ex, "Error flushing remaining vectors during disposal");
+        }
+        
+        _batchFlushTimer?.Dispose();
+        _batchFlushTimer = null;
+        
         lock (_semaphoreLock)
         {
             _processingSemaphore?.Dispose();
@@ -174,11 +353,15 @@ public sealed class Pipeline(
         // Initialize semaphore based on current configuration
         InitializeSemaphore();
         
-        // Listen for configuration changes and reinitialize semaphore
+        // Initialize batch flush timer
+        InitializeBatchFlushTimer();
+        
+        // Listen for configuration changes and reinitialize semaphore and batch timer
         _pipelineOptions.OnChange((options, name) =>
         {
-            log.LogInformation("Pipeline configuration changed, reinitializing semaphore");
+            log.LogInformation("Pipeline configuration changed, reinitializing semaphore and batch timer");
             InitializeSemaphore();
+            InitializeBatchFlushTimer();
         });
         
         await store.EnsureCollectionAsync(ct);
@@ -227,30 +410,40 @@ public sealed class Pipeline(
                 queueDepth++; // Simplified queue depth tracking
                 
                 // Try to acquire semaphore permission for throttling
-                semaphoreAcquired = await TryAcquireSemaphoreAsync(ct);
-                
-                if (!semaphoreAcquired)
+                // Only set semaphoreAcquired if we actually have a semaphore to release later
+                var hasSemaphore = _processingSemaphore != null;
+                if (hasSemaphore)
                 {
-                    var options = _pipelineOptions.CurrentValue;
-                    if (options.SkipOnThrottleTimeout)
+                    semaphoreAcquired = await TryAcquireSemaphoreAsync(ct);
+                    
+                    if (!semaphoreAcquired)
                     {
-                        log.LogDebug("Skipping event {EventId} due to throttling timeout", e.EventId);
-                        queueDepth--;
-                        continue;
-                    }
-                    else
-                    {
-                        // Wait and retry (with exponential backoff)
-                        await Task.Delay(1000, ct); // Simple delay, could be improved with exponential backoff
-                        semaphoreAcquired = await TryAcquireSemaphoreAsync(ct);
-                        
-                        if (!semaphoreAcquired)
+                        var options = _pipelineOptions.CurrentValue;
+                        if (options.SkipOnThrottleTimeout)
                         {
-                            log.LogWarning("Dropping event {EventId} due to persistent throttling", e.EventId);
+                            log.LogDebug("Skipping event {EventId} due to throttling timeout", e.EventId);
                             queueDepth--;
                             continue;
                         }
+                        else
+                        {
+                            // Wait and retry (with exponential backoff)
+                            await Task.Delay(1000, ct); // Simple delay, could be improved with exponential backoff
+                            semaphoreAcquired = await TryAcquireSemaphoreAsync(ct);
+                            
+                            if (!semaphoreAcquired)
+                            {
+                                log.LogWarning("Dropping event {EventId} due to persistent throttling", e.EventId);
+                                queueDepth--;
+                                continue;
+                            }
+                        }
                     }
+                }
+                else
+                {
+                    // No semaphore enabled, so no need to release anything later
+                    semaphoreAcquired = false;
                 }
                 
                 // M4: Enhanced analysis with correlation and fusion
@@ -377,10 +570,25 @@ public sealed class Pipeline(
         {
             try
             {
-                // Sequential: Embedding generation (cannot be parallelized)
+                // Phase 2B: Cache-first embedding generation with performance metrics
                 var embeddingStartTime = DateTimeOffset.UtcNow;
-                var embedding = await embedder.EmbedAsync(preparedText, ct);
-                var embeddingTime = (DateTimeOffset.UtcNow - embeddingStartTime).TotalMilliseconds;
+                
+                // Try to get embedding from cache first, then generate if needed
+                var embeddingResult = await GetOrGenerateEmbeddingWithCache(preparedText, logEvent, ct);
+                var embedding = embeddingResult.Embedding;
+                var embeddingTime = embeddingResult.RetrievalTimeMs;
+                
+                // Log cache performance for monitoring
+                if (embeddingResult.WasCached)
+                {
+                    log.LogDebug("Embedding cache HIT for event {EventId} (speedup: {Speedup:F1}x)", 
+                        logEvent.EventId, embeddingResult.SpeedupRatio);
+                }
+                else
+                {
+                    log.LogDebug("Embedding cache MISS for event {EventId} (generation: {GenTime:F1}ms)", 
+                        logEvent.EventId, embeddingResult.GenerationTimeMs);
+                }
                 
                 log.LogDebug("Pipeline: embedding length={EmbeddingLength} for event {EventId}", embedding.Length, logEvent.EventId);
                 
@@ -831,7 +1039,61 @@ public sealed class Pipeline(
     }
 
     /// <summary>
-    /// Executes vector operations (upsert and search) in parallel
+    /// Gets or generates an embedding using Phase 2B cache-first approach with performance metrics
+    /// </summary>
+    private async Task<EmbeddingResult> GetOrGenerateEmbeddingWithCache(string text, LogEvent logEvent, CancellationToken ct)
+    {
+        try
+        {
+            // Check if embedding cache service is available (Phase 2B feature)
+            var embeddingCacheService = serviceProvider.GetService<EmbeddingCacheService>();
+            if (embeddingCacheService == null)
+            {
+                // Fallback to direct embedding generation if cache service not available
+                log.LogDebug("EmbeddingCacheService not available, using direct embedding generation");
+                var startTime = DateTimeOffset.UtcNow;
+                var embedding = await embedder.EmbedAsync(text, ct);
+                var generationTime = (DateTimeOffset.UtcNow - startTime).TotalMilliseconds;
+                
+                return new EmbeddingResult
+                {
+                    Embedding = embedding,
+                    WasCached = false,
+                    RetrievalTimeMs = generationTime,
+                    GenerationTimeMs = generationTime
+                };
+            }
+            
+            // Use cache-first approach with context from the event
+            var context = $"{logEvent.Channel}:{logEvent.EventId}";
+            return await embeddingCacheService.GetOrGenerateEmbeddingAsync(
+                text,
+                async (textToEmbed, token) => await embedder.EmbedAsync(textToEmbed, token),
+                context,
+                ct);
+        }
+        catch (Exception ex)
+        {
+            log.LogWarning(ex, "Error in embedding cache integration for event {EventId}, falling back to direct generation", 
+                logEvent.EventId);
+            
+            // Fallback to direct embedding generation on any cache errors
+            var startTime = DateTimeOffset.UtcNow;
+            var embedding = await embedder.EmbedAsync(text, ct);
+            var generationTime = (DateTimeOffset.UtcNow - startTime).TotalMilliseconds;
+            
+            return new EmbeddingResult
+            {
+                Embedding = embedding,
+                WasCached = false,
+                RetrievalTimeMs = generationTime,
+                GenerationTimeMs = generationTime
+            };
+        }
+    }
+    
+    /// <summary>
+    /// Executes vector operations (batch upsert and search) with optimal performance
     /// </summary>
     private async Task<(double upsertTime, double searchTime, IReadOnlyList<(LogEvent evt, float score)> neighbors)> 
         ExecuteVectorOperationsParallel(LogEvent logEvent, float[] embedding, CancellationToken ct)
@@ -840,7 +1102,7 @@ public sealed class Pipeline(
         {
             // Fall back to sequential vector operations
             var upsertStartTime = DateTimeOffset.UtcNow;
-            await store.UpsertAsync(logEvent, embedding, ct);
+            await BufferVectorForBatch(logEvent, embedding, ct);
             var upsertTime = (DateTimeOffset.UtcNow - upsertStartTime).TotalMilliseconds;
 
             var searchStartTime = DateTimeOffset.UtcNow;
@@ -852,11 +1114,13 @@ public sealed class Pipeline(
 
         try
         {
-            // Execute vector operations in parallel
+            // Execute vector operations in parallel: batch upsert + immediate search
             var upsertStartTime = DateTimeOffset.UtcNow;
             var searchStartTime = DateTimeOffset.UtcNow;
 
-            var upsertTask = store.UpsertAsync(logEvent, embedding, ct);
+            // Use batch processing for upsert (better performance for high volume)
+            var upsertTask = BufferVectorForBatch(logEvent, embedding, ct);
+            // Keep search immediate (required for LLM analysis)
             var searchTask = store.SearchAsync(embedding, k: 8, ct);
 
             await Task.WhenAll(upsertTask, searchTask);
@@ -873,7 +1137,7 @@ public sealed class Pipeline(
             
             // Fall back to sequential vector operations on error
             var upsertStartTime = DateTimeOffset.UtcNow;
-            await store.UpsertAsync(logEvent, embedding, ct);
+            await BufferVectorForBatch(logEvent, embedding, ct);
             var upsertTime = (DateTimeOffset.UtcNow - upsertStartTime).TotalMilliseconds;
 
             var searchStartTime = DateTimeOffset.UtcNow;

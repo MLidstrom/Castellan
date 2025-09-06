@@ -7,7 +7,7 @@ set -euo pipefail
 
 # Default values
 NO_BUILD=false
-BACKGROUND=false
+FOREGROUND=false  # Background is now default; foreground must be explicitly requested
 
 # Color codes for output
 RED='\033[0;31m'
@@ -24,8 +24,8 @@ while [[ $# -gt 0 ]]; do
             NO_BUILD=true
             shift
             ;;
-        --background)
-            BACKGROUND=true
+        --foreground)
+            FOREGROUND=true
             shift
             ;;
         -h|--help)
@@ -33,7 +33,7 @@ while [[ $# -gt 0 ]]; do
             echo ""
             echo "Options:"
             echo "  --no-build     Skip build step"
-            echo "  --background   Run Worker in background"
+            echo "  --foreground   Run Worker in foreground (default is background)"
             echo "  -h, --help     Show this help message"
             exit 0
             ;;
@@ -208,8 +208,15 @@ else
 fi
 
 # Step 5: Start the Worker service
-if start_worker "$BACKGROUND"; then
-    if [[ "$BACKGROUND" == "false" ]]; then
+# Background is now the default; --foreground overrides this
+if [[ "$FOREGROUND" == "true" ]]; then
+    RUN_IN_BACKGROUND="false"
+else
+    RUN_IN_BACKGROUND="true"
+fi
+
+if start_worker "$RUN_IN_BACKGROUND"; then
+    if [[ "$FOREGROUND" == "true" ]]; then
         echo -e "\n${CYAN}Worker service stopped${NC}"
     fi
     exit 0

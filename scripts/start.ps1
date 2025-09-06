@@ -1,8 +1,9 @@
 # Start Castellan - Enhanced wrapper with validation and error handling
 # Compatible with Windows PowerShell 5.1 and PowerShell 7+
+# NOTE: Worker runs in background by default. Use -Foreground to run interactively.
 param(
     [switch]$NoBuild = $false,
-    [switch]$Background = $false
+    [switch]$Foreground = $false  # Override default background behavior
 )
 
 # Ensure we're using TLS 1.2 for web requests on older PowerShell versions
@@ -196,8 +197,11 @@ else {
 }
 
 # Step 5: Start the Worker service
-if (Start-Worker -RunInBackground:$Background) {
-    if (-not $Background) {
+# Background is now the default; -Foreground overrides this
+$runInBackground = -not $Foreground
+
+if (Start-Worker -RunInBackground:$runInBackground) {
+    if ($Foreground) {
         Write-Host "`nWorker service stopped" -ForegroundColor Cyan
     }
     exit 0

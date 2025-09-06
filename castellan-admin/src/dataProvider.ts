@@ -213,5 +213,8 @@ const mockDataProvider: DataProvider = {
 const apiUrl = process.env.REACT_APP_CASTELLAN_API_URL || 'http://localhost:5000/api';
 const realDataProvider = simpleRestProvider(apiUrl, httpClient);
 
-// Use mock data for now, switch to real API when backend is ready
-export const dataProvider = mockDataProvider;
+// Import the real Castellan data provider
+import { castellanDataProvider } from './dataProvider/castellanDataProvider';
+
+// Switch to real API - backend is ready!
+export const dataProvider = castellanDataProvider;

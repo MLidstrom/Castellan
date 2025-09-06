@@ -21,6 +21,8 @@ using Castellan.Worker.Configuration;
 using Castellan.Worker.Configuration.Validation;
 using Castellan.Worker.Data;
 using Castellan.Worker.Middleware;
+using Castellan.Worker.Services.ConnectionPools;
+using Castellan.Worker.Services.ConnectionPools.Interfaces;
 using Serilog;
 
 // Enable HTTP/2 over cleartext (h2c) for local gRPC (Qdrant 6334)
@@ -71,6 +73,9 @@ builder.Services.Configure<AuthenticationOptions>(builder.Configuration.GetSecti
 builder.Services.Configure<TeamsNotificationOptions>(builder.Configuration.GetSection("Notifications:Teams"));
 builder.Services.Configure<SlackNotificationOptions>(builder.Configuration.GetSection("Notifications:Slack"));
 
+// Configure connection pools
+builder.Services.Configure<ConnectionPoolOptions>(builder.Configuration.GetSection("ConnectionPools"));
+
 // Register configuration validators
 builder.Services.AddSingleton<IValidateOptions<AuthenticationOptions>, AuthenticationOptionsValidator>();
 builder.Services.AddSingleton<IValidateOptions<QdrantOptions>, QdrantOptionsValidator>();
@@ -96,6 +101,21 @@ builder.Services.AddSingleton<INotificationConfigurationStore, FileBasedNotifica
 
 builder.Services.AddHttpClient();
 builder.Services.AddMemoryCache(); // For IP enrichment caching
+
+// Add connection pools
+builder.Services.AddSingleton<QdrantConnectionPool>();
+builder.Services.AddSingleton<IQdrantConnectionPool>(provider => provider.GetRequiredService<QdrantConnectionPool>());
+
+// Phase 2B: Intelligent Caching Layer Services
+builder.Services.Configure<CacheOptions>(builder.Configuration.GetSection(CacheOptions.SectionName));
+builder.Services.AddSingleton<ICacheService, MemoryCacheService>();
+builder.Services.AddSingleton<TextHashingService>(provider =>
+{
+    var cacheOptions = provider.GetRequiredService<IOptionsMonitor<CacheOptions>>();
+    var logger = provider.GetRequiredService<ILogger<TextHashingService>>();
+    return new TextHashingService(cacheOptions.CurrentValue.Embedding, logger);
+});
+builder.Services.AddSingleton<EmbeddingCacheService>();
 
 // Add SQLite Database
 var dbPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "data", "castellan.db");
@@ -149,8 +169,8 @@ if (llmProvider.Equals("Ollama", StringComparison.OrdinalIgnoreCase))
 else
     builder.Services.AddSingleton<ILlmClient, OpenAILlm>();
 
-// Use QdrantVectorStore now that Qdrant is running
-builder.Services.AddSingleton<IVectorStore, QdrantVectorStore>();
+// Use QdrantPooledVectorStore with connection pooling for improved performance
+builder.Services.AddSingleton<IVectorStore, QdrantPooledVectorStore>();
 builder.Services.AddSingleton<SecurityEventDetector>();
 builder.Services.AddSingleton<RulesEngine>(); // M4: Add RulesEngine for correlation and fusion
 builder.Services.AddSingleton<ISecurityEventStore, FileBasedSecurityEventStore>(); // Persistent store for API access
@@ -214,7 +234,11 @@ try
         typeof(IEmbedder),
         typeof(ILlmClient),
         typeof(INotificationService),
-        typeof(IPerformanceMonitor)
+        typeof(IPerformanceMonitor),
+        // Phase 2B Caching Services
+        typeof(ICacheService),
+        typeof(TextHashingService),
+        typeof(EmbeddingCacheService)
     };
     
     foreach (var serviceType in criticalServices)
@@ -239,11 +263,13 @@ try
     var authOptions = configScope.ServiceProvider.GetRequiredService<IOptionsMonitor<AuthenticationOptions>>();
     var qdrantOptions = configScope.ServiceProvider.GetRequiredService<IOptionsMonitor<QdrantOptions>>();
     var pipelineOptions = configScope.ServiceProvider.GetRequiredService<IOptionsMonitor<PipelineOptions>>();
+    var cacheOptions = configScope.ServiceProvider.GetRequiredService<IOptionsMonitor<CacheOptions>>();
     
     // Accessing .Value will trigger validation
     _ = authOptions.CurrentValue;
     _ = qdrantOptions.CurrentValue;
     _ = pipelineOptions.CurrentValue;
+    _ = cacheOptions.CurrentValue;
     
     Console.WriteLine("✅ All configuration options validated successfully");
 }

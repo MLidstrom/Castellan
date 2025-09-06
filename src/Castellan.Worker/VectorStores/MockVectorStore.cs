@@ -32,6 +32,26 @@ public sealed class MockVectorStore : IVectorStore
         return Task.CompletedTask;
     }
 
+    public Task BatchUpsertAsync(List<(LogEvent logEvent, float[] embedding)> items, CancellationToken ct)
+    {
+        if (items == null || items.Count == 0)
+        {
+            return Task.CompletedTask;
+        }
+
+        foreach (var (logEvent, embedding) in items)
+        {
+            // Remove existing entry if present (use UniqueId for matching)
+            _storage.RemoveAll(item => item.Event.UniqueId == logEvent.UniqueId);
+            
+            // Add new entry
+            _storage.Add((logEvent, embedding));
+        }
+        
+        _logger.LogInformation("Batch upserted {Count} events in mock vector store", items.Count);
+        return Task.CompletedTask;
+    }
+
     public Task<IReadOnlyList<(LogEvent evt, float score)>> SearchAsync(float[] query, int k, CancellationToken ct)
     {
         // Simple mock search - return the most recent events with simulated scores

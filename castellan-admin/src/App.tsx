@@ -11,6 +11,7 @@ import {
   SecurityEventList,
   SecurityEventShow,
   SecurityEventEdit,
+  SecurityEventCreate,
 } from './resources/SecurityEvents';
 import {
   SystemStatusList,
@@ -20,12 +21,24 @@ import {
 // Import disabled Pro resource components
 import {
   DisabledComplianceReports,
-  DisabledThreatScanner,
 } from './resources/DisabledProResource';
+
+// Import threat scanner resource
+import {
+  ThreatScannerList,
+  ThreatScannerShow,
+} from './resources/ThreatScanner';
+
+// Import MITRE techniques resource
+import {
+  MitreTechniquesList,
+  MitreTechniquesShow,
+} from './resources/MitreTechniques';
 
 // Import notification settings resource
 import {
   NotificationSettingsList,
+  NotificationSettingsShow,
   NotificationSettingsCreate,
   NotificationSettingsEdit,
 } from './resources/NotificationSettings';
@@ -39,6 +52,7 @@ import {
   Computer as SystemIcon,
   BugReport as ThreatScannerIcon,
   Notifications as NotificationsIcon,
+  Gavel as MitreIcon,
 } from '@mui/icons-material';
 
 const App = () => (
@@ -54,9 +68,18 @@ const App = () => (
       list={SecurityEventList}
       show={SecurityEventShow}
       edit={SecurityEventEdit}
-      // create={SecurityEventCreate} // Disabled due to TypeScript issues
+      create={SecurityEventCreate}
       icon={SecurityIcon}
       recordRepresentation={(record) => `${record.eventType} - ${record.id}`}
+    />
+    
+    {/* MITRE ATT&CK Techniques Resource - Available in CastellanProFree */}
+    <Resource
+      name="mitre-techniques"
+      list={MitreTechniquesList}
+      show={MitreTechniquesShow}
+      icon={MitreIcon}
+      recordRepresentation={(record) => `${record.techniqueId} - ${record.name}`}
     />
     
     {/* Compliance Reports Resource - Premium Feature (Disabled in CastellanProFree) */}
@@ -78,19 +101,20 @@ const App = () => (
       recordRepresentation={(record) => `${record.component} - ${record.status}`}
     />
     
-    {/* Threat Scanner Resource - Premium Feature (Disabled in CastellanProFree) */}
+    {/* Threat Scanner Resource - Now Available */}
     <Resource
       name="threat-scanner"
-      list={DisabledThreatScanner}
-      show={DisabledThreatScanner}
+      list={ThreatScannerList}
+      show={ThreatScannerShow}
       icon={ThreatScannerIcon}
-      recordRepresentation={() => 'Threat Scanner - Premium Feature'}
+      recordRepresentation={(record) => `${record.scanType} - ${record.id}`}
     />
     
     {/* Notification Settings Resource - Available in CastellanProFree */}
     <Resource
       name="notification-settings"
       list={NotificationSettingsList}
+      show={NotificationSettingsShow}
       create={NotificationSettingsCreate}
       edit={NotificationSettingsEdit}
       icon={NotificationsIcon}

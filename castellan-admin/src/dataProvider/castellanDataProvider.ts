@@ -49,7 +49,12 @@ const RESOURCE_MAP: Record<string, string> = {
     'users': 'users',
     'settings': 'settings',
     'analytics': 'analytics',
-    'reports': 'reports'
+    'reports': 'reports',
+    // MITRE ATT&CK resource mappings
+    'mitre/techniques': 'mitre/techniques',
+    'mitre/tactics': 'mitre/tactics',
+    'mitre/groups': 'mitre/groups',
+    'mitre/software': 'mitre/software'
 };
 
 // Transform react-admin filter format to backend API format
@@ -80,7 +85,20 @@ const transformFilters = (filters: any) => {
 
 // Transform backend response to react-admin format
 const transformResponse = (resource: string, response: any) => {
-    // Handle different response formats
+    // Handle MITRE-specific response formats
+    if (resource.startsWith('mitre/')) {
+        const resourceType = resource.split('/')[1]; // 'techniques', 'tactics', 'groups', 'software'
+        
+        // MITRE endpoints return { techniques: [...] } or { tactics: [...] } etc.
+        if (response[resourceType]) {
+            return {
+                data: response[resourceType],
+                total: response.totalCount || response[resourceType].length
+            };
+        }
+    }
+    
+    // Handle standard response formats
     if (response.data) {
         return {
             data: response.data,
@@ -118,7 +136,13 @@ export const castellanDataProvider: DataProvider = {
         }
 
         const backendResource = RESOURCE_MAP[resource] || resource;
-        const { page, perPage } = params.pagination || { page: 1, perPage: 10 };
+        
+        // Use smaller page sizes for MITRE resources to prevent timeouts
+        let { page, perPage } = params.pagination || { page: 1, perPage: 10 };
+        if (resource.startsWith('mitre/')) {
+            perPage = Math.min(perPage, 25); // Limit MITRE queries to 25 items max
+        }
+        
         const { field, order } = params.sort || { field: 'id', order: 'ASC' };
         
         // Build query parameters
@@ -265,7 +289,7 @@ export const castellanDataProvider: DataProvider = {
     // Update existing resource
     update: async (resource, params) => {
         // Handle disabled premium resources for CastellanFree
-        const premiumResources = ['compliance-reports', 'threat-scanner'];
+        const premiumResources = ['compliance-reports'];
         if (premiumResources.includes(resource)) {
             throw new Error(`${resource} is a premium feature not available in CastellanFree`);
         }
@@ -289,7 +313,7 @@ export const castellanDataProvider: DataProvider = {
     // Update many resources
     updateMany: async (resource, params) => {
         // Handle disabled premium resources for CastellanFree
-        const premiumResources = ['compliance-reports', 'threat-scanner'];
+        const premiumResources = ['compliance-reports'];
         if (premiumResources.includes(resource)) {
             throw new Error(`${resource} is a premium feature not available in CastellanFree`);
         }
@@ -316,7 +340,7 @@ export const castellanDataProvider: DataProvider = {
     // Delete resource
     delete: async (resource, params) => {
         // Handle disabled premium resources for CastellanFree
-        const premiumResources = ['compliance-reports', 'threat-scanner'];
+        const premiumResources = ['compliance-reports'];
         if (premiumResources.includes(resource)) {
             throw new Error(`${resource} is a premium feature not available in CastellanFree`);
         }
@@ -339,7 +363,7 @@ export const castellanDataProvider: DataProvider = {
     // Delete many resources
     deleteMany: async (resource, params) => {
         // Handle disabled premium resources for CastellanFree
-        const premiumResources = ['compliance-reports', 'threat-scanner'];
+        const premiumResources = ['compliance-reports'];
         if (premiumResources.includes(resource)) {
             throw new Error(`${resource} is a premium feature not available in CastellanFree`);
         }
@@ -517,6 +541,24 @@ export const enhancedCastellanDataProvider = {
             return json;
         } catch (error) {
             console.error('Error fetching notification health:', error);
+            throw error;
+        }
+    },
+
+    // Custom method for generic API calls (used by MITRE components)
+    custom: async ({ url, method = 'GET', body }: { url: string; method?: string; body?: any }) => {
+        const fullUrl = url.startsWith('http') ? url : `${API_URL}/${url}`;
+        
+        try {
+            const options: fetchUtils.Options = { method };
+            if (body) {
+                options.body = JSON.stringify(body);
+            }
+            
+            const { json } = await httpClient(fullUrl, options);
+            return { data: json };
+        } catch (error) {
+            console.error(`Error making custom API call to ${fullUrl}:`, error);
             throw error;
         }
     }

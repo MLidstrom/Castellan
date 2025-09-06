@@ -6,13 +6,17 @@ import {
   BooleanField,
   Create,
   Edit,
+  Show,
   SimpleForm,
+  SimpleShowLayout,
   TextInput,
   BooleanInput,
   SelectInput,
   ArrayInput,
   SimpleFormIterator,
   NumberInput,
+  NumberField,
+  DateField,
   useDataProvider,
   useNotify,
   useRefresh,
@@ -400,6 +404,40 @@ const NotificationToolbar = () => {
         }
       />
     </Toolbar>
+  );
+};
+
+// Notification Settings Show View
+export const NotificationSettingsShow = () => {
+  return (
+    <Show title="Notification Configuration Details">
+      <SimpleShowLayout>
+        <TextField source="name" label="Configuration Name" />
+        
+        <Typography variant="h6" sx={{ mt: 3, mb: 1 }}>Microsoft Teams</Typography>
+        <BooleanField source="teams.enabled" label="Enabled" />
+        <TextField source="teams.webhookUrl" label="Webhook URL" />
+        <TextField source="teams.castellanUrl" label="Castellan URL" />
+        <NumberField source="teams.rateLimitSettings.criticalThrottleMinutes" label="Critical Throttle (min)" />
+        <NumberField source="teams.rateLimitSettings.highThrottleMinutes" label="High Throttle (min)" />
+        <NumberField source="teams.rateLimitSettings.mediumThrottleMinutes" label="Medium Throttle (min)" />
+        <NumberField source="teams.rateLimitSettings.lowThrottleMinutes" label="Low Throttle (min)" />
+        
+        <Typography variant="h6" sx={{ mt: 3, mb: 1 }}>Slack</Typography>
+        <BooleanField source="slack.enabled" label="Enabled" />
+        <TextField source="slack.webhookUrl" label="Webhook URL" />
+        <TextField source="slack.castellanUrl" label="Castellan URL" />
+        <TextField source="slack.defaultChannel" label="Default Channel" />
+        <TextField source="slack.criticalChannel" label="Critical Channel" />
+        <TextField source="slack.highChannel" label="High Channel" />
+        <NumberField source="slack.rateLimitSettings.criticalThrottleMinutes" label="Critical Throttle (min)" />
+        <NumberField source="slack.rateLimitSettings.highThrottleMinutes" label="High Throttle (min)" />
+        <NumberField source="slack.rateLimitSettings.mediumThrottleMinutes" label="Medium Throttle (min)" />
+        <NumberField source="slack.rateLimitSettings.lowThrottleMinutes" label="Low Throttle (min)" />
+        
+        <DateField source="createdAt" showTime label="Created" />
+      </SimpleShowLayout>
+    </Show>
   );
 };
 

@@ -45,8 +45,8 @@ help:
 	@echo "  test         - Run all tests"
 	@echo "  test-verbose - Run tests with detailed output"
 	@echo "  test-no-build- Run tests without building"
-	@echo "  start        - Start all services (foreground)"
-	@echo "  start-bg     - Start all services (background)"
+	@echo "  start        - Start all services (background by default)"
+	@echo "  start-fg     - Start all services (foreground)"
 	@echo "  start-quick  - Start without building"
 	@echo "  stop         - Stop all services gracefully"
 	@echo "  stop-force   - Force stop all services"
@@ -112,15 +112,15 @@ test-coverage:
 
 # Service management targets
 start:
-	@echo "Starting all services (foreground)..."
+	@echo "Starting all services (background by default)..."
 	$(SHELL_CMD) $(SCRIPT_START)
 
-start-bg:
-	@echo "Starting all services (background)..."
+start-fg:
+	@echo "Starting all services (foreground)..."
 ifeq ($(DETECTED_OS),Windows)
-	$(SHELL_CMD) $(SCRIPT_START) -Background
+	$(SHELL_CMD) $(SCRIPT_START) -Foreground
 else
-	$(SHELL_CMD) $(SCRIPT_START) --background
+	$(SHELL_CMD) $(SCRIPT_START) --foreground
 endif
 
 start-quick:

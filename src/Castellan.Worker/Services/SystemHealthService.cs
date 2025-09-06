@@ -7,6 +7,7 @@ using Castellan.Worker.Models;
 using Castellan.Worker.VectorStores;
 using Castellan.Worker.Llms;
 using Castellan.Worker.Embeddings;
+using Castellan.Worker.Services.ConnectionPools.Interfaces;
 
 namespace Castellan.Worker.Services;
 
@@ -22,6 +23,7 @@ public class SystemHealthService
     private readonly IOptions<IPEnrichmentOptions> _ipEnrichmentOptions;
     private readonly IPerformanceMonitor _performanceMonitor;
     private readonly IThreatScanner _threatScanner;
+    private readonly IQdrantConnectionPool? _connectionPool;
 
     public SystemHealthService(
         ILogger<SystemHealthService> logger,
@@ -30,7 +32,8 @@ public class SystemHealthService
         IOptions<LlmOptions> llmOptions,
         IOptions<IPEnrichmentOptions> ipEnrichmentOptions,
         IPerformanceMonitor performanceMonitor,
-        IThreatScanner threatScanner)
+        IThreatScanner threatScanner,
+        IQdrantConnectionPool? connectionPool = null)
     {
         _logger = logger;
         _httpClientFactory = httpClientFactory;
@@ -39,6 +42,7 @@ public class SystemHealthService
         _ipEnrichmentOptions = ipEnrichmentOptions;
         _performanceMonitor = performanceMonitor;
         _threatScanner = threatScanner;
+        _connectionPool = connectionPool;
     }
 
     public async Task<List<SystemStatusDto>> GetSystemStatusAsync()
@@ -65,6 +69,12 @@ public class SystemHealthService
 
         // Check Threat Scanner Service
         statuses.Add(await CheckThreatScannerStatusAsync());
+
+        // Check Connection Pool Status (if enabled)
+        if (_connectionPool != null)
+        {
+            statuses.Add(await CheckConnectionPoolStatusAsync());
+        }
 
         return statuses;
     }
@@ -371,6 +381,74 @@ public class SystemHealthService
                 ResponseTime = (int)sw.ElapsedMilliseconds,
                 Uptime = "0%",
                 Details = $"Threat scanner unavailable: {ex.Message}",
+                ErrorCount = 1,
+                WarningCount = 0
+            };
+        }
+    }
+
+    private async Task<SystemStatusDto> CheckConnectionPoolStatusAsync()
+    {
+        var sw = System.Diagnostics.Stopwatch.StartNew();
+        try
+        {
+            if (_connectionPool == null)
+            {
+                return new SystemStatusDto
+                {
+                    Id = "8",
+                    Component = "Qdrant Connection Pool",
+                    Status = "Disabled",
+                    LastCheck = DateTime.UtcNow,
+                    ResponseTime = 0,
+                    Uptime = "N/A",
+                    Details = "Connection pool not configured",
+                    ErrorCount = 0,
+                    WarningCount = 0
+                };
+            }
+
+            var healthStatus = await _connectionPool.GetHealthStatusAsync();
+            var metrics = _connectionPool.GetMetrics();
+            var instances = _connectionPool.GetAvailableInstances();
+            sw.Stop();
+
+            var healthyInstances = healthStatus.Values.Count(h => h == ConnectionPoolHealthStatus.Healthy);
+            var totalInstances = instances.Count;
+            var healthPercentage = totalInstances > 0 ? (healthyInstances * 100 / totalInstances) : 100;
+
+            var status = healthyInstances == 0 ? "Error" : 
+                        healthyInstances < totalInstances ? "Warning" : "Healthy";
+            
+            var details = $"{healthyInstances}/{totalInstances} instances healthy, " +
+                         $"Active connections: {metrics.ActiveConnections}, " +
+                         $"Pool utilization: {metrics.UtilizationPercentage:F1}%";
+
+            return new SystemStatusDto
+            {
+                Id = "8",
+                Component = "Qdrant Connection Pool",
+                Status = status,
+                LastCheck = DateTime.UtcNow,
+                ResponseTime = (int)sw.ElapsedMilliseconds,
+                Uptime = $"{healthPercentage}%",
+                Details = details,
+                ErrorCount = healthyInstances == 0 ? 1 : 0,
+                WarningCount = (healthyInstances < totalInstances && healthyInstances > 0) ? 1 : 0
+            };
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to check connection pool status");
+            return new SystemStatusDto
+            {
+                Id = "8",
+                Component = "Qdrant Connection Pool",
+                Status = "Error",
+                LastCheck = DateTime.UtcNow,
+                ResponseTime = (int)sw.ElapsedMilliseconds,
+                Uptime = "0%",
+                Details = $"Connection pool check failed: {ex.Message}",
                 ErrorCount = 1,
                 WarningCount = 0
             };

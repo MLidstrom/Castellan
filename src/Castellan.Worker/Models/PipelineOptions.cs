@@ -156,4 +156,29 @@ public sealed class PipelineOptions
     /// Enable performance alerts when thresholds are exceeded
     /// </summary>
     public bool EnablePerformanceAlerts { get; set; } = true;
+
+    // --- VECTOR BATCH PROCESSING SETTINGS ---
+
+    /// <summary>
+    /// Enable batch processing for vector operations (upsert)
+    /// </summary>
+    public bool EnableVectorBatching { get; set; } = true;
+
+    /// <summary>
+    /// Maximum number of vectors to batch together before flushing to vector store
+    /// </summary>
+    [Range(1, 1000, ErrorMessage = "VectorBatchSize must be between 1 and 1000")]
+    public int VectorBatchSize { get; set; } = 100;
+
+    /// <summary>
+    /// Maximum time in milliseconds to wait before flushing a partial batch
+    /// </summary>
+    [Range(100, 60000, ErrorMessage = "VectorBatchTimeoutMs must be between 100ms and 60000ms (1 minute)")]
+    public int VectorBatchTimeoutMs { get; set; } = 5000;
+
+    /// <summary>
+    /// Maximum time in milliseconds to wait for batch processing to complete
+    /// </summary>
+    [Range(1000, 300000, ErrorMessage = "VectorBatchProcessingTimeoutMs must be between 1000ms and 300000ms (5 minutes)")]
+    public int VectorBatchProcessingTimeoutMs { get; set; } = 30000;
 }

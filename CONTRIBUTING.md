@@ -5,13 +5,13 @@ Thank you for your interest in contributing to Castellan! We welcome contributio
 ## 🤝 How to Contribute
 
 ### Reporting Issues
-- Check if the issue already exists in [GitHub Issues](https://github.com/MLidstrom/castellan/issues)
+- Check if the issue already exists in [GitHub Issues](https://github.com/MLidstrom/Castellan/issues)
 - Provide a clear description of the problem
 - Include steps to reproduce the issue
 - Share relevant logs and system information
 
 ### Suggesting Features
-- Open a discussion in [GitHub Discussions](https://github.com/MLidstrom/castellan/discussions)
+- Open a discussion in [GitHub Discussions](https://github.com/MLidstrom/Castellan/discussions)
 - Explain the use case and benefits
 - Consider how it fits with existing features
 
@@ -20,7 +20,7 @@ Thank you for your interest in contributing to Castellan! We welcome contributio
 2. Create a feature branch (`git checkout -b feature/amazing-feature`)
 3. Make your changes
 4. **Add comprehensive tests** - All new functionality must include unit tests
-5. **Ensure all tests pass** - Run `dotnet test src/Castellan.Tests/` (currently 450+ tests, 98%+ success rate)
+5. **Ensure all tests pass** - Run `dotnet test src\Castellan.Tests\` (currently 393 tests, 100% success rate)
 6. **Follow testing standards** - Use XUnit, FluentAssertions, and Moq for consistency
 7. Commit with clear messages (`git commit -m 'Add amazing feature'`)
 8. Push to your branch (`git push origin feature/amazing-feature`)
@@ -37,11 +37,11 @@ Thank you for your interest in contributing to Castellan! We welcome contributio
 ### Getting Started
 ```powershell
 # Clone the repository
-git clone https://github.com/MLidstrom/castellan.git
-cd castellan
+git clone https://github.com/MLidstrom/Castellan.git
+cd Castellan
 
-# Start Qdrant
-.\scripts\run-qdrant-local.ps1
+# Start Qdrant (use Docker)
+docker run -p 6333:6333 qdrant/qdrant
 
 # Configure authentication (required)
 $env:AUTHENTICATION__JWT__SECRETKEY = "your-development-jwt-secret-key-minimum-64-characters"
@@ -93,9 +93,9 @@ npm start  # Runs on http://localhost:8080
 ## 🧪 Testing
 
 ### Current Test Status
-- **375 total tests** with **95.7% success rate** (359 passing, 16 failing)
-- **46 new critical tests** added with 100% success rate covering key services and controllers
+- **393 total tests** with **100% success rate** (all passing)
 - Comprehensive coverage for authentication, security events, notifications, and file operations
+- Recent additions include critical tests for connection pooling, vector operations, and pipeline processing
 
 ### Running Tests
 ```powershell
@@ -156,7 +156,7 @@ public void Method_Scenario_ExpectedBehavior()
 
 ### Reporting Security Issues
 - **DO NOT** open public issues for security vulnerabilities
-- Email security concerns to: security@castellan.com
+- Use GitHub Security Advisories or contact maintainers directly
 - Include detailed information about the vulnerability
 - Allow time for patches before public disclosure
 

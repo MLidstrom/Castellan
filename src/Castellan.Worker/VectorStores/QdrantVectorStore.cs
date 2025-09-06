@@ -103,6 +103,71 @@ public sealed class QdrantVectorStore : IVectorStore
         }
     }
 
+    public async Task BatchUpsertAsync(List<(LogEvent logEvent, float[] embedding)> items, CancellationToken ct)
+    {
+        if (items == null || items.Count == 0)
+        {
+            return;
+        }
+
+        var points = new List<UpsertPoint>(items.Count);
+        
+        foreach (var (logEvent, embedding) in items)
+        {
+            var pointId = GenerateConsistentUuid(logEvent.UniqueId);
+            
+            points.Add(new UpsertPoint
+            {
+                Id = pointId,
+                Vectors = new Dictionary<string, float[]>
+                {
+                    ["log_events"] = embedding
+                },
+                Payload = new Dictionary<string, object?>
+                {
+                    ["time"] = logEvent.Time.ToString("o"),
+                    ["host"] = logEvent.Host,
+                    ["channel"] = logEvent.Channel,
+                    ["eventId"] = logEvent.EventId,
+                    ["level"] = logEvent.Level,
+                    ["user"] = logEvent.User,
+                    ["message"] = logEvent.Message,
+                    ["uniqueId"] = logEvent.UniqueId
+                }
+            });
+        }
+
+        var req = new UpsertPointsRequest
+        {
+            Points = points
+        };
+
+        // Debug: Log batch upsert info
+        if (_logger.IsEnabled(LogLevel.Debug))
+        {
+            _logger.LogDebug("Sending batch upsert request to Qdrant with {Count} points", points.Count);
+        }
+
+        using var resp = await _http.PutAsJsonAsync($"collections/{C}/points", req, ct);
+        
+        if (!resp.IsSuccessStatusCode)
+        {
+            var errorContent = await resp.Content.ReadAsStringAsync(ct);
+            _logger.LogError("Qdrant batch upsert failed: {StatusCode} {ReasonPhrase} - {ErrorContent}", 
+                (int)resp.StatusCode, resp.ReasonPhrase, errorContent);
+            throw new HttpRequestException($"Qdrant batch upsert failed: {(int)resp.StatusCode} {resp.ReasonPhrase} - {errorContent}");
+        }
+        
+        if (_logger.IsEnabled(LogLevel.Debug))
+        {
+            _logger.LogDebug("Qdrant batch upsert successful for {Count} points", points.Count);
+        }
+        else
+        {
+            _logger.LogInformation("Successfully batch upserted {Count} vectors to Qdrant", points.Count);
+        }
+    }
+
     public async Task<bool> Has24HoursOfDataAsync(CancellationToken ct)
     {
         try

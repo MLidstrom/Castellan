@@ -212,7 +212,7 @@ For production environments:
 
 1. **Disable System Tray**: Set `"SystemTray": false` in production
 2. **Use Docker Compose**: Consider using Docker Compose for container orchestration
-3. **Service Manager**: Use Windows Service or systemd for Linux
+3. **Service Manager**: Use Windows Service
 4. **Health Checks**: Implement proper health check endpoints
 5. **Logging**: Configure appropriate log levels and retention
 
@@ -253,7 +253,7 @@ public class StartupOrchestratorService : BackgroundService
 2. **Better Error Handling**: Structured exception handling
 3. **Type Safety**: Compile-time checking of configuration
 4. **Testability**: Unit tests for startup logic
-5. **Cross-Platform Potential**: Future Linux/macOS support
+5. **Extensibility**: Future enhancements without changing startup scripts
 6. **Integrated Logging**: Uses same Serilog configuration
 
 ## Scripts Reference
