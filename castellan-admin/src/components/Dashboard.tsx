@@ -46,8 +46,7 @@ import {
   Scanner as ScannerIcon
 } from '@mui/icons-material';
 
-// Import notification quick setup component
-import { NotificationQuickSetup } from '../resources/NotificationSettings';
+import { ConnectionPoolMonitor } from './ConnectionPoolMonitor';
 
 export const Dashboard = () => {
   const [timeRange, setTimeRange] = useState('24h');
@@ -191,6 +190,11 @@ export const Dashboard = () => {
   const unhealthyComponents = (systemStatus?.filter(s => s.status?.toLowerCase() !== 'healthy') || []).length;
   const avgMemoryUsage = unhealthyComponents * 15 + 25; // Base memory usage
   const avgDiskUsage = (systemStatus?.reduce((sum, s) => sum + (s.errorCount || 0) + (s.warningCount || 0), 0) || 0) * 5 + 20; // Disk usage based on errors/warnings
+  
+  // Connection Pool metrics
+  const connectionPoolStatus = systemStatus?.find(s => s.component === 'Qdrant Connection Pool');
+  const connectionPoolHealthy = connectionPoolStatus?.status === 'Healthy';
+  const connectionPoolExists = connectionPoolStatus && connectionPoolStatus.status !== 'Disabled';
 
   return (
     <Box sx={{ padding: '20px' }}>
@@ -326,61 +330,29 @@ export const Dashboard = () => {
               </Typography>
               <Typography variant="body2" color="textSecondary">
                 {healthyComponents}/{totalComponents} components healthy
+                {connectionPoolExists && (
+                  <span>
+                    {' • Pool: '}
+                    <span style={{ color: connectionPoolHealthy ? '#4caf50' : '#f44336' }}>
+                      {connectionPoolHealthy ? 'Active' : 'Issues'}
+                    </span>
+                  </span>
+                )}
               </Typography>
             </CardContent>
           </Card>
         </Box>
       </Box>
 
-      {/* Quick Setup and Configuration Row */}
+      {/* Connection Pool Monitor - Phase 2A */}
       <Box sx={{ 
         display: 'flex', 
         flexWrap: 'wrap', 
         gap: 3,
         marginBottom: '30px'
       }}>
-        <Box sx={{ flex: '1 1 400px', minWidth: '400px' }}>
-          <NotificationQuickSetup />
-        </Box>
-        
-        {/* Add more quick setup cards here in the future */}
-        <Box sx={{ flex: '2 1 600px', minWidth: '600px' }}>
-          <Card>
-            <CardContent>
-              <Box display="flex" alignItems="center" mb={2}>
-                <SecurityIcon sx={{ mr: 1 }} />
-                <Typography variant="h6">Quick Actions</Typography>
-              </Box>
-              
-              <Typography variant="body2" color="text.secondary" gutterBottom>
-                Common security management tasks and configurations
-              </Typography>
-              
-              <Box display="flex" gap={1} mt={2} flexWrap="wrap">
-                <Button
-                  variant="outlined"
-                  size="small"
-                  onClick={() => window.location.href = '#/security-events'}
-                >
-                  View All Events
-                </Button>
-                <Button
-                  variant="outlined"
-                  size="small"
-                  onClick={() => window.location.href = '#/system-status'}
-                >
-                  System Status
-                </Button>
-                <Button
-                  variant="outlined"
-                  size="small"
-                  onClick={() => window.location.href = '#/notification-settings/create'}
-                >
-                  Configure Notifications
-                </Button>
-              </Box>
-            </CardContent>
-          </Card>
+        <Box sx={{ flex: '1 1 600px', minWidth: '600px' }}>
+          <ConnectionPoolMonitor systemStatus={systemStatus || []} />
         </Box>
       </Box>
 
