@@ -43,4 +43,14 @@ public interface IThreatScanner
     /// Gets threat scan history
     /// </summary>
     Task<IEnumerable<ThreatScanResult>> GetScanHistoryAsync(int count = 10);
+    
+    /// <summary>
+    /// Gets the current scan progress
+    /// </summary>
+    Task<ThreatScanProgress?> GetScanProgressAsync();
+    
+    /// <summary>
+    /// Event raised when scan progress is updated
+    /// </summary>
+    event EventHandler<ThreatScanProgress>? ProgressUpdated;
 }

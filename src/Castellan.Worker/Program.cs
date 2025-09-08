@@ -15,7 +15,9 @@ using Castellan.Worker.Embeddings;
 using Castellan.Worker.VectorStores;
 using Castellan.Worker.Llms;
 using Castellan.Worker.Models;
+using Castellan.Worker.Models.ThreatIntelligence;
 using Castellan.Worker.Services;
+using Castellan.Worker.Services.Interfaces;
 using Castellan.Worker.Services.NotificationChannels;
 using Castellan.Worker.Configuration;
 using Castellan.Worker.Configuration.Validation;
@@ -23,6 +25,7 @@ using Castellan.Worker.Data;
 using Castellan.Worker.Middleware;
 using Castellan.Worker.Services.ConnectionPools;
 using Castellan.Worker.Services.ConnectionPools.Interfaces;
+using Castellan.Worker.Hubs;
 using Serilog;
 
 // Enable HTTP/2 over cleartext (h2c) for local gRPC (Qdrant 6334)
@@ -146,11 +149,30 @@ builder.Services.AddSingleton<SystemHealthService>();
 
 // Register threat scanner service
 builder.Services.Configure<ThreatScanOptions>(builder.Configuration.GetSection("ThreatScanner"));
+// Configure threat intelligence services
+builder.Services.Configure<ThreatIntelligenceOptions>(builder.Configuration.GetSection("ThreatIntelligence"));
+// Register threat intelligence cache service
+builder.Services.AddSingleton<IThreatIntelligenceCacheService, ThreatIntelligenceCacheService>();
+
+// Register VirusTotal service with HttpClient
+builder.Services.AddHttpClient<IVirusTotalService, VirusTotalService>();
+
+// Register MalwareBazaar service with HttpClient
+builder.Services.AddHttpClient<IMalwareBazaarService, MalwareBazaarService>();
+
+// Register AlienVault OTX service with HttpClient
+builder.Services.AddHttpClient<IOtxService, OtxService>();
+
+// Register threat scanner service with threat intelligence
 builder.Services.AddSingleton<IThreatScanner>(provider =>
 {
     var options = provider.GetRequiredService<IOptions<ThreatScanOptions>>().Value;
     var logger = provider.GetRequiredService<ILogger<ThreatScannerService>>();
-    return new ThreatScannerService(logger, options);
+    var virusTotalService = provider.GetRequiredService<IVirusTotalService>();
+    var malwareBazaarService = provider.GetRequiredService<IMalwareBazaarService>();
+    var otxService = provider.GetRequiredService<IOtxService>();
+    var cacheService = provider.GetRequiredService<IThreatIntelligenceCacheService>();
+    return new ThreatScannerService(logger, options, virusTotalService, malwareBazaarService, otxService, cacheService);
 });
 
 var embedProvider = builder.Configuration["Embeddings:Provider"] ?? "Ollama";
@@ -182,7 +204,16 @@ builder.Services.AddHostedService<MitreImportStartupService>(); // Auto-import M
 // Add Web API services
 builder.Services.AddControllers();
 
-// Add CORS for frontend
+// Add SignalR for real-time updates
+builder.Services.AddSignalR();
+
+// Add SignalR progress broadcaster service
+builder.Services.AddSingleton<IScanProgressBroadcaster, ScanProgressBroadcaster>();
+
+// Add enhanced progress tracking service
+builder.Services.AddSingleton<IEnhancedProgressTrackingService, EnhancedProgressTrackingService>();
+
+// Add CORS for frontend and SignalR
 builder.Services.AddCors(options =>
 {
     options.AddDefaultPolicy(policy =>
@@ -190,7 +221,8 @@ builder.Services.AddCors(options =>
         policy.WithOrigins("http://localhost:8080", "http://localhost:3000", "http://localhost:3001", "http://localhost:3002", "http://localhost:3003", "http://localhost:3004")
               .AllowAnyHeader()
               .AllowAnyMethod()
-              .AllowCredentials();
+              .AllowCredentials() // Required for SignalR
+              .SetIsOriginAllowed(_ => true); // Allow SignalR negotiation
     });
 });
 
@@ -312,6 +344,9 @@ app.UseMiddleware<JwtValidationMiddleware>();
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
+
+// Map SignalR hub
+app.MapHub<ScanProgressHub>("/hubs/scan-progress");
 
 // Configure API to listen on port 5000
 app.Urls.Add("http://localhost:5000");

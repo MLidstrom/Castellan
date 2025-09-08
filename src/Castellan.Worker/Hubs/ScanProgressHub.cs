@@ -1,0 +1,268 @@
+using Microsoft.AspNetCore.SignalR;
+using Microsoft.AspNetCore.Authorization;
+using Castellan.Worker.Models;
+
+namespace Castellan.Worker.Hubs;
+
+/// <summary>
+/// SignalR Hub for broadcasting real-time scan progress and system metrics to connected clients.
+/// Provides live updates for threat scanning operations, system health, and performance metrics.
+/// </summary>
+[Authorize]
+public class ScanProgressHub : Hub
+{
+    private readonly ILogger<ScanProgressHub> _logger;
+
+    public ScanProgressHub(ILogger<ScanProgressHub> logger)
+    {
+        _logger = logger;
+    }
+
+    /// <summary>
+    /// Called when a client connects to the hub
+    /// </summary>
+    public override async Task OnConnectedAsync()
+    {
+        _logger.LogInformation("Client connected to ScanProgressHub: {ConnectionId}", Context.ConnectionId);
+        
+        // Add client to general progress updates group
+        await Groups.AddToGroupAsync(Context.ConnectionId, "ScanProgressUpdates");
+        
+        // Send initial connection confirmation
+        await Clients.Caller.SendAsync("Connected", new { 
+            message = "Connected to scan progress updates",
+            connectionId = Context.ConnectionId,
+            timestamp = DateTime.UtcNow
+        });
+
+        await base.OnConnectedAsync();
+    }
+
+    /// <summary>
+    /// Called when a client disconnects from the hub
+    /// </summary>
+    public override async Task OnDisconnectedAsync(Exception? exception)
+    {
+        _logger.LogInformation("Client disconnected from ScanProgressHub: {ConnectionId}", Context.ConnectionId);
+        
+        if (exception != null)
+        {
+            _logger.LogWarning(exception, "Client disconnected with exception: {ConnectionId}", Context.ConnectionId);
+        }
+
+        await base.OnDisconnectedAsync(exception);
+    }
+
+    /// <summary>
+    /// Join a specific scan updates group for targeted updates
+    /// </summary>
+    /// <param name="scanId">The scan ID to subscribe to</param>
+    public async Task JoinScanUpdates(string scanId)
+    {
+        var groupName = $"Scan_{scanId}";
+        await Groups.AddToGroupAsync(Context.ConnectionId, groupName);
+        
+        _logger.LogInformation("Client {ConnectionId} joined scan updates for {ScanId}", Context.ConnectionId, scanId);
+        
+        await Clients.Caller.SendAsync("JoinedScanUpdates", new { 
+            scanId,
+            message = $"Subscribed to updates for scan {scanId}",
+            timestamp = DateTime.UtcNow
+        });
+    }
+
+    /// <summary>
+    /// Leave a specific scan updates group
+    /// </summary>
+    /// <param name="scanId">The scan ID to unsubscribe from</param>
+    public async Task LeaveScanUpdates(string scanId)
+    {
+        var groupName = $"Scan_{scanId}";
+        await Groups.RemoveFromGroupAsync(Context.ConnectionId, groupName);
+        
+        _logger.LogInformation("Client {ConnectionId} left scan updates for {ScanId}", Context.ConnectionId, scanId);
+        
+        await Clients.Caller.SendAsync("LeftScanUpdates", new { 
+            scanId,
+            message = $"Unsubscribed from updates for scan {scanId}",
+            timestamp = DateTime.UtcNow
+        });
+    }
+
+    /// <summary>
+    /// Join system metrics updates group
+    /// </summary>
+    public async Task JoinSystemMetrics()
+    {
+        await Groups.AddToGroupAsync(Context.ConnectionId, "SystemMetrics");
+        
+        _logger.LogInformation("Client {ConnectionId} joined system metrics updates", Context.ConnectionId);
+        
+        await Clients.Caller.SendAsync("JoinedSystemMetrics", new { 
+            message = "Subscribed to system metrics updates",
+            timestamp = DateTime.UtcNow
+        });
+    }
+
+    /// <summary>
+    /// Leave system metrics updates group
+    /// </summary>
+    public async Task LeaveSystemMetrics()
+    {
+        await Groups.RemoveFromGroupAsync(Context.ConnectionId, "SystemMetrics");
+        
+        _logger.LogInformation("Client {ConnectionId} left system metrics updates", Context.ConnectionId);
+        
+        await Clients.Caller.SendAsync("LeftSystemMetrics", new { 
+            message = "Unsubscribed from system metrics updates",
+            timestamp = DateTime.UtcNow
+        });
+    }
+}
+
+/// <summary>
+/// Service interface for broadcasting updates through SignalR hub
+/// </summary>
+public interface IScanProgressBroadcaster
+{
+    Task BroadcastScanProgress(ScanProgressUpdate update);
+    Task BroadcastScanComplete(string scanId, object result);
+    Task BroadcastScanError(string scanId, string error);
+    Task BroadcastSystemMetrics(object metrics);
+    Task BroadcastThreatIntelligenceStatus(object status);
+}
+
+/// <summary>
+/// Service for broadcasting scan progress and system metrics via SignalR
+/// </summary>
+public class ScanProgressBroadcaster : IScanProgressBroadcaster
+{
+    private readonly IHubContext<ScanProgressHub> _hubContext;
+    private readonly ILogger<ScanProgressBroadcaster> _logger;
+
+    public ScanProgressBroadcaster(IHubContext<ScanProgressHub> hubContext, ILogger<ScanProgressBroadcaster> logger)
+    {
+        _hubContext = hubContext;
+        _logger = logger;
+    }
+
+    /// <summary>
+    /// Broadcast scan progress updates to all subscribed clients
+    /// </summary>
+    /// <param name="update">The progress update to broadcast</param>
+    public async Task BroadcastScanProgress(ScanProgressUpdate update)
+    {
+        try
+        {
+            var scanId = update.Progress.ScanId;
+            
+            // Send to general progress updates group
+            await _hubContext.Clients.Group("ScanProgressUpdates").SendAsync("ScanProgressUpdate", update);
+            
+            // Send to specific scan subscribers
+            if (!string.IsNullOrEmpty(scanId))
+            {
+                await _hubContext.Clients.Group($"Scan_{scanId}").SendAsync("ScanProgressUpdate", update);
+            }
+
+            _logger.LogDebug("Broadcasted scan progress update for {ScanId}: {PercentComplete}% complete", 
+                scanId, update.Progress.PercentComplete);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error broadcasting scan progress update");
+        }
+    }
+
+    /// <summary>
+    /// Broadcast scan completion notification
+    /// </summary>
+    /// <param name="scanId">The completed scan ID</param>
+    /// <param name="result">The scan result</param>
+    public async Task BroadcastScanComplete(string scanId, object result)
+    {
+        try
+        {
+            var notification = new
+            {
+                type = "scanComplete",
+                scanId,
+                result,
+                timestamp = DateTime.UtcNow
+            };
+
+            await _hubContext.Clients.Group("ScanProgressUpdates").SendAsync("ScanCompleted", notification);
+            await _hubContext.Clients.Group($"Scan_{scanId}").SendAsync("ScanCompleted", notification);
+
+            _logger.LogInformation("Broadcasted scan completion notification for {ScanId}", scanId);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error broadcasting scan completion for {ScanId}", scanId);
+        }
+    }
+
+    /// <summary>
+    /// Broadcast scan error notification
+    /// </summary>
+    /// <param name="scanId">The failed scan ID</param>
+    /// <param name="error">The error message</param>
+    public async Task BroadcastScanError(string scanId, string error)
+    {
+        try
+        {
+            var notification = new
+            {
+                type = "scanError",
+                scanId,
+                error,
+                timestamp = DateTime.UtcNow
+            };
+
+            await _hubContext.Clients.Group("ScanProgressUpdates").SendAsync("ScanError", notification);
+            await _hubContext.Clients.Group($"Scan_{scanId}").SendAsync("ScanError", notification);
+
+            _logger.LogWarning("Broadcasted scan error notification for {ScanId}: {Error}", scanId, error);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error broadcasting scan error for {ScanId}", scanId);
+        }
+    }
+
+    /// <summary>
+    /// Broadcast system metrics updates
+    /// </summary>
+    /// <param name="metrics">The system metrics to broadcast</param>
+    public async Task BroadcastSystemMetrics(object metrics)
+    {
+        try
+        {
+            await _hubContext.Clients.Group("SystemMetrics").SendAsync("SystemMetricsUpdate", metrics);
+
+            _logger.LogDebug("Broadcasted system metrics update");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error broadcasting system metrics");
+        }
+    }
+
+    /// <summary>
+    /// Broadcast threat intelligence service status updates
+    /// </summary>
+    /// <param name="status">The threat intelligence status to broadcast</param>
+    public async Task BroadcastThreatIntelligenceStatus(object status)
+    {
+        try
+        {
+            await _hubContext.Clients.Group("SystemMetrics").SendAsync("ThreatIntelligenceStatus", status);
+
+            _logger.LogDebug("Broadcasted threat intelligence status update");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error broadcasting threat intelligence status");
+        }
+    }
+}

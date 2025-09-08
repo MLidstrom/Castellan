@@ -2,7 +2,6 @@ import React from 'react';
 import {
   Card,
   CardContent,
-  CardHeader,
   Typography,
   Box,
   Chip,
@@ -38,12 +37,13 @@ export const ConnectionPoolMonitor: React.FC<ConnectionPoolMonitorProps> = ({ sy
   if (!connectionPoolStatus || connectionPoolStatus.status === 'Disabled') {
     return (
       <Card sx={{ opacity: 0.6 }}>
-        <CardHeader 
-          title="Connection Pool Monitor"
-          subheader="Phase 2A Enhancement"
-          avatar={<ConnectionIcon color="disabled" />}
-        />
-        <CardContent>
+        <CardContent sx={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', marginBottom: 1 }}>
+            <ConnectionIcon sx={{ marginRight: 1, color: 'disabled' }} />
+            <Typography variant="h6" color="textSecondary">
+              Connection Pool Monitor
+            </Typography>
+          </Box>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
             <InfoIcon color="info" sx={{ fontSize: 20 }} />
             <Typography variant="body2" color="textSecondary">
@@ -103,20 +103,21 @@ export const ConnectionPoolMonitor: React.FC<ConnectionPoolMonitorProps> = ({ sy
 
   return (
     <Card>
-      <CardHeader 
-        title="Connection Pool Monitor"
-        subheader="Phase 2A - Performance Enhancement"
-        avatar={<ConnectionIcon color="primary" />}
-        action={
-          <Chip 
-            icon={getStatusIcon(connectionPoolStatus.status)}
-            label={connectionPoolStatus.status}
-            color={getStatusColor(connectionPoolStatus.status) as any}
-            size="small"
-          />
-        }
-      />
-      <CardContent>
+      <CardContent sx={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', marginBottom: 1 }}>
+          <ConnectionIcon sx={{ marginRight: 1, color: 'primary.main' }} />
+          <Typography variant="h6" color="textSecondary">
+            Connection Pool Monitor
+          </Typography>
+          <Box sx={{ ml: 'auto' }}>
+            <Chip 
+              icon={getStatusIcon(connectionPoolStatus.status)}
+              label={connectionPoolStatus.status}
+              color={getStatusColor(connectionPoolStatus.status) as any}
+              size="small"
+            />
+          </Box>
+        </Box>
         <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' }, gap: 3, mb: 3 }}>
           {/* Instance Health */}
           <Box>
@@ -209,27 +210,6 @@ export const ConnectionPoolMonitor: React.FC<ConnectionPoolMonitorProps> = ({ sy
             </Box>
         </Box>
 
-        {/* Connection Pool Benefits */}
-        <Box>
-            <Box sx={{ 
-              mt: 2, 
-              p: 2, 
-              backgroundColor: 'rgba(76, 175, 80, 0.05)', 
-              borderRadius: 1,
-              border: '1px solid rgba(76, 175, 80, 0.2)'
-            }}>
-              <Typography variant="subtitle2" color="success.main" sx={{ mb: 1, display: 'flex', alignItems: 'center', gap: 1 }}>
-                <PerformanceIcon sx={{ fontSize: 16 }} />
-                Phase 2A Performance Benefits
-              </Typography>
-              <Typography variant="body2" color="textSecondary">
-                ✅ 15-25% I/O optimization through connection reuse<br/>
-                ✅ Automatic load balancing across multiple Qdrant instances<br/>
-                ✅ Health monitoring with automatic failover<br/>
-                ✅ Seamless integration with existing batch processing
-              </Typography>
-            </Box>
-        </Box>
 
         {/* Last updated */}
         <Typography variant="caption" color="textSecondary" sx={{ mt: 2, display: 'block' }}>

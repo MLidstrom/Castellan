@@ -1,0 +1,2 @@
+This is a test file for threat intelligence integration testing.
+It contains some benign text content to verify the scanning functionality.

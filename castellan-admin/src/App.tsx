@@ -18,10 +18,12 @@ import {
   SystemStatusShow,
 } from './resources/SystemStatus';
 
-// Import disabled Pro resource components
+// Import functional compliance reports components
 import {
-  DisabledComplianceReports,
-} from './resources/DisabledProResource';
+  ComplianceReportList,
+  ComplianceReportShow,
+  ComplianceReportCreate,
+} from './resources/ComplianceReports';
 
 // Import threat scanner resource
 import {
@@ -82,14 +84,14 @@ const App = () => (
       recordRepresentation={(record) => `${record.techniqueId} - ${record.name}`}
     />
     
-    {/* Compliance Reports Resource - Premium Feature (Disabled in CastellanProFree) */}
+    {/* Compliance Reports Resource - Now Available */}
     <Resource
       name="compliance-reports"
-      list={DisabledComplianceReports}
-      show={DisabledComplianceReports}
-      create={DisabledComplianceReports}
+      list={ComplianceReportList}
+      show={ComplianceReportShow}
+      create={ComplianceReportCreate}
       icon={ComplianceIcon}
-      recordRepresentation={() => 'Compliance Reports - Premium Feature'}
+      recordRepresentation={(record) => `${record.framework} - ${record.reportType}`}
     />
     
     {/* System Status Resource - Available in CastellanProFree */}

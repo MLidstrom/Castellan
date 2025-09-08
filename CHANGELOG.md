@@ -6,6 +6,32 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ## [Unreleased]
 
+### Planned *(Accelerated Timeline - Major Work Complete September 2025)*
+- **Database Architecture Consolidation (v0.9 - Late October 2025)**: PostgreSQL migration *(primary remaining work)*
+  - Migrating from SQLite to PostgreSQL for enhanced performance and JSON querying
+  - Eliminating JSON file storage duplication (FileBasedSecurityEventStore)
+  - Implementing unified retention policies across PostgreSQL and Qdrant
+  - Adding time-series partitioning for security events optimization
+  - Maintaining Qdrant for vector embeddings and similarity search operations
+  - **Status**: Only major technical work remaining after September 2025 completion of all other phases
+
+## [0.3.2] - 2025-09-08
+
+### Fixed
+- **🔧 React Admin Interface**: Fixed missing RealtimeSystemMetrics component compilation failure
+  - Root cause: Missing `RealtimeSystemMetrics.tsx` component referenced in Dashboard
+  - Impact: React Admin now compiles successfully and displays real-time system metrics
+  - Files: `castellan-admin/src/components/RealtimeSystemMetrics.tsx`
+  - Features: Real-time health overview, component metrics, auto-refresh every 10 seconds
+  - Result: Full dashboard functionality restored with Material UI integration
+
+- **📊 System Status Dashboard**: Enhanced real-time monitoring capabilities
+  - Added comprehensive system metrics visualization
+  - Integrated response time, uptime, and error rate monitoring
+  - System resource tracking (CPU, memory usage) when available
+  - Material UI components for consistent dashboard experience
+  - Error handling with retry functionality for failed metric requests
+
 ### Added
 - **Compiler Warning Cleanup**: Eliminated all CS1998 and CS0649 warnings for clean builds
   - Fixed async methods without await operators in multiple services

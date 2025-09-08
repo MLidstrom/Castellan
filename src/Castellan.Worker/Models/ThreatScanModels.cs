@@ -1,3 +1,5 @@
+using Castellan.Worker.Models.ThreatIntelligence;
+
 namespace Castellan.Worker.Models;
 
 public class ThreatScanResult
@@ -78,13 +80,6 @@ public enum ThreatType
     SuspiciousFile
 }
 
-public enum ThreatRiskLevel
-{
-    Low,
-    Medium,
-    High,
-    Critical
-}
 
 public class ThreatScanOptions
 {

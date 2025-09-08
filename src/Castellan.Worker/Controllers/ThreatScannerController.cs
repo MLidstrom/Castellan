@@ -40,17 +40,42 @@ public class ThreatScannerController : ControllerBase
     }
 
     [HttpPost("quick-scan")]
-    public async Task<IActionResult> StartQuickScan()
+    public async Task<IActionResult> StartQuickScan([FromQuery] bool async = true)
     {
         try
         {
-            _logger.LogInformation("Starting quick threat scan via API");
-            var result = await _threatScanner.PerformQuickScanAsync();
+            _logger.LogInformation("Starting quick threat scan via API (async: {Async})", async);
             
-            return Ok(new { 
-                message = "Quick scan completed", 
-                data = result 
-            });
+            if (async)
+            {
+                // Start scan asynchronously and return immediately
+                _ = Task.Run(async () =>
+                {
+                    try
+                    {
+                        await _threatScanner.PerformQuickScanAsync();
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogError(ex, "Error in background quick scan");
+                    }
+                });
+                
+                return Ok(new { 
+                    message = "Quick scan started",
+                    async = true,
+                    note = "Use /api/threat-scanner/progress to monitor scan progress"
+                });
+            }
+            else
+            {
+                // Wait for scan to complete (original behavior)
+                var result = await _threatScanner.PerformQuickScanAsync();
+                return Ok(new { 
+                    message = "Quick scan completed", 
+                    data = result 
+                });
+            }
         }
         catch (Exception ex)
         {
@@ -126,6 +151,47 @@ public class ThreatScannerController : ControllerBase
             return StatusCode(500, new { message = "Error getting scan status", error = ex.Message });
         }
     }
+    
+    [HttpGet("progress")]
+    public async Task<IActionResult> GetScanProgress()
+    {
+        try
+        {
+            var progress = await _threatScanner.GetScanProgressAsync();
+            if (progress == null)
+            {
+                return Ok(new { 
+                    progress = (object?)null,
+                    message = "No scan in progress"
+                });
+            }
+            
+            return Ok(new { 
+                progress = new
+                {
+                    scanId = progress.ScanId,
+                    status = progress.Status.ToString(),
+                    filesScanned = progress.FilesScanned,
+                    totalEstimatedFiles = progress.TotalEstimatedFiles,
+                    directoriesScanned = progress.DirectoriesScanned,
+                    threatsFound = progress.ThreatsFound,
+                    currentFile = progress.CurrentFile,
+                    currentDirectory = progress.CurrentDirectory,
+                    percentComplete = Math.Round(progress.PercentComplete, 1),
+                    startTime = progress.StartTime,
+                    elapsedTime = progress.ElapsedTime.ToString(@"mm\:ss"),
+                    estimatedTimeRemaining = progress.EstimatedTimeRemaining?.ToString(@"mm\:ss"),
+                    bytesScanned = progress.BytesScanned,
+                    scanPhase = progress.ScanPhase
+                }
+            });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error getting scan progress");
+            return StatusCode(500, new { message = "Error getting scan progress", error = ex.Message });
+        }
+    }
 
     [HttpPost("cancel")]
     public async Task<IActionResult> CancelScan()
@@ -179,6 +245,19 @@ public class ThreatScannerController : ControllerBase
             _logger.LogError(ex, "Error getting scan history");
             return StatusCode(500, new { message = "Error getting scan history", error = ex.Message });
         }
+    }
+
+    [HttpGet]
+    public async Task<IActionResult> Get(
+        [FromQuery] int page = 1,
+        [FromQuery] int? perPage = null,
+        [FromQuery] int? limit = null,
+        [FromQuery] string? sort = null,
+        [FromQuery] string? order = null,
+        [FromQuery] string? filter = null)
+    {
+        // This is the default GET endpoint that React-Admin expects
+        return await GetList(page, perPage, limit, sort, order, filter);
     }
 
     [HttpGet("list")]
@@ -250,8 +329,8 @@ public class ThreatScannerController : ControllerBase
         {
             ThreatScanStatus.NotStarted => "No scan in progress",
             ThreatScanStatus.Running => "Scan currently running",
-            ThreatScanStatus.Completed => "Scan completed successfully",
-            ThreatScanStatus.CompletedWithThreats => "Scan completed - threats detected",
+            ThreatScanStatus.Completed => "Scan completed successfully - system clean",
+            ThreatScanStatus.CompletedWithThreats => "Scan completed - security findings detected",
             ThreatScanStatus.Failed => "Scan failed",
             ThreatScanStatus.Cancelled => "Scan was cancelled",
             ThreatScanStatus.Paused => "Scan is paused",

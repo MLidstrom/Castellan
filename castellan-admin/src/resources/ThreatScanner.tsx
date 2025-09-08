@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   List,
   Datagrid,
@@ -26,7 +26,12 @@ import {
   CardContent,
   CardHeader,
   IconButton,
-  Alert
+  Alert,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  Paper
 } from '@mui/material';
 import { 
   Security as SecurityIcon,
@@ -56,7 +61,7 @@ const ScanStatusField = ({ source }: any) => {
   const getStatusColor = (status: string) => {
     switch (status?.toLowerCase()) {
       case 'completed': return 'success';
-      case 'completedwiththreats': return 'error';
+      case 'completedwiththreats': return 'warning'; // Changed from error to warning
       case 'running': return 'info';
       case 'failed': return 'error';
       case 'cancelled': return 'warning';
@@ -77,10 +82,23 @@ const ScanStatusField = ({ source }: any) => {
 
   const statusValue = record?.status || record?.Status || 'Unknown';
   
+  // Convert status to user-friendly text
+  const getDisplayText = (status: string) => {
+    switch (status?.toLowerCase()) {
+      case 'completed': return 'Clean';
+      case 'completedwiththreats': return 'Findings Detected';
+      case 'running': return 'Scanning';
+      case 'failed': return 'Failed';
+      case 'cancelled': return 'Cancelled';
+      case 'notstartedyet': return 'Pending';
+      default: return status;
+    }
+  };
+  
   return (
     <Chip 
       icon={getStatusIcon(statusValue)}
-      label={statusValue} 
+      label={getDisplayText(statusValue)} 
       color={getStatusColor(statusValue)}
       size="small"
     />
@@ -138,20 +156,23 @@ const RiskLevelField = ({ source }: any) => {
   );
 };
 
-// Custom component for threats summary
-const ThreatsSummaryField = ({ source }: any) => {
+// Custom component for security findings summary
+const FindingsSummaryField = ({ source }: any) => {
   const record = useRecordContext();
   
-  const threatsFound = record?.threatsFound || 0;
+  const findingsCount = record?.threatsFound || 0; // API still uses threatsFound
   const malware = record?.malwareDetected || 0;
   const backdoors = record?.backdoorsDetected || 0;
   const suspicious = record?.suspiciousFiles || 0;
+  
+  // Calculate actual threats (high-risk items)
+  const actualThreats = malware + backdoors;
 
-  if (threatsFound === 0) {
+  if (findingsCount === 0) {
     return (
       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
         <SafeIcon color="success" fontSize="small" />
-        <Typography variant="body2" color="success.main">No threats detected</Typography>
+        <Typography variant="body2" color="success.main">Clean - No issues found</Typography>
       </Box>
     );
   }
@@ -159,11 +180,22 @@ const ThreatsSummaryField = ({ source }: any) => {
   return (
     <Box>
       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.5 }}>
-        <ThreatIcon color="error" fontSize="small" />
-        <Typography variant="body2" fontWeight="bold">{threatsFound} threats found</Typography>
+        {actualThreats > 0 ? (
+          <ThreatIcon color="error" fontSize="small" />
+        ) : (
+          <WarningIcon color="warning" fontSize="small" />
+        )}
+        <Typography variant="body2" fontWeight="bold">
+          {findingsCount} security finding{findingsCount !== 1 ? 's' : ''}
+        </Typography>
       </Box>
       <Typography variant="caption" color="textSecondary">
-        {malware} malware, {backdoors} backdoors, {suspicious} suspicious
+        {actualThreats > 0 ? (
+          <><strong>{actualThreats} threat{actualThreats !== 1 ? 's' : ''}</strong> ({malware} malware, {backdoors} backdoors), </>
+        ) : (
+          'No actual threats, '
+        )}
+        {suspicious} flagged item{suspicious !== 1 ? 's' : ''}
       </Typography>
     </Box>
   );
@@ -187,10 +219,237 @@ const DurationField = ({ source }: any) => {
   );
 };
 
+// Progress tracking interface
+interface ScanProgress {
+  scanId: string;
+  status: string;
+  filesScanned: number;
+  totalEstimatedFiles: number;
+  directoriesScanned: number;
+  threatsFound: number; // API field name
+  findingsCount?: number; // Cleaner terminology
+  currentFile: string;
+  currentDirectory: string;
+  percentComplete: number;
+  startTime: string;
+  elapsedTime: string;
+  estimatedTimeRemaining?: string;
+  bytesScanned: number;
+  scanPhase: string;
+}
+
+// Progress Dialog Component
+const ScanProgressDialog = ({ open, onClose, scanType }: { open: boolean; onClose: () => void; scanType: string }) => {
+  const [progress, setProgress] = useState<ScanProgress | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const notify = useNotify();
+  const refresh = useRefresh();
+  
+  const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || 'http://localhost:5000';
+  
+  useEffect(() => {
+    if (!open) {
+      setProgress(null);
+      setError(null);
+      return;
+    }
+    
+    const pollProgress = async () => {
+      try {
+        const response = await fetch(`${API_BASE_URL}/api/threat-scanner/progress`, {
+          headers: {
+            'Authorization': `Bearer ${localStorage.getItem('auth_token')}`,
+          },
+        });
+        
+        if (response.ok) {
+          const data = await response.json();
+          if (data.progress) {
+            setProgress(data.progress);
+            
+            // Check if scan is completed
+            if (data.progress.status === 'Completed' || data.progress.status === 'CompletedWithThreats') {
+              const findings = data.progress.threatsFound;
+              notify(
+                `${scanType} completed! Found ${findings} security finding${findings !== 1 ? 's' : ''}.`,
+                { type: findings > 0 ? 'info' : 'success' }
+              );
+              setTimeout(() => {
+                refresh();
+                onClose();
+              }, 2000);
+              return;
+            }
+            
+            if (data.progress.status === 'Failed' || data.progress.status === 'Cancelled') {
+              setError(`Scan ${data.progress.status.toLowerCase()}`);
+              setTimeout(() => onClose(), 3000);
+              return;
+            }
+          } else {
+            setError('No scan in progress');
+            setTimeout(() => onClose(), 2000);
+            return;
+          }
+        } else {
+          setError('Failed to fetch progress');
+        }
+      } catch (err) {
+        setError('Error fetching progress');
+      }
+    };
+    
+    // Initial poll
+    pollProgress();
+    
+    // Set up polling interval
+    const interval = setInterval(pollProgress, 2000);
+    
+    return () => clearInterval(interval);
+  }, [open, API_BASE_URL, notify, refresh, onClose, scanType]);
+  
+  const handleCancel = async () => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/threat-scanner/cancel`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('auth_token')}`,
+        },
+      });
+      
+      if (response.ok) {
+        notify('Scan cancellation requested', { type: 'info' });
+      }
+    } catch (err) {
+      notify('Failed to cancel scan', { type: 'error' });
+    }
+  };
+  
+  return (
+    <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth>
+      <DialogTitle>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+          <ScanIcon color="primary" />
+          <Typography variant="h6">{scanType} Progress</Typography>
+        </Box>
+      </DialogTitle>
+      
+      <DialogContent>
+        {error ? (
+          <Alert severity="error" sx={{ mb: 2 }}>
+            {error}
+          </Alert>
+        ) : progress ? (
+          <Box sx={{ spacing: 2 }}>
+            {/* Progress Bar */}
+            <Paper elevation={1} sx={{ p: 2, mb: 2 }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1 }}>
+                <Typography variant="body2" color="textSecondary">
+                  {progress.scanPhase}
+                </Typography>
+                <Typography variant="body2" fontWeight="bold">
+                  {progress.percentComplete.toFixed(1)}%
+                </Typography>
+              </Box>
+              <LinearProgress 
+                variant="determinate" 
+                value={progress.percentComplete} 
+                sx={{ height: 8, borderRadius: 4, mb: 2 }}
+              />
+              
+              {/* Current File Info */}
+              <Box sx={{ mb: 2 }}>
+                <Typography variant="body2" color="textSecondary" noWrap>
+                  <strong>Current file:</strong> {progress.currentFile || 'Initializing...'}
+                </Typography>
+                <Typography variant="body2" color="textSecondary" noWrap>
+                  <strong>Directory:</strong> {progress.currentDirectory || 'N/A'}
+                </Typography>
+              </Box>
+            </Paper>
+            
+            {/* Statistics Grid */}
+            <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))', gap: 2, mb: 2 }}>
+              <Paper elevation={1} sx={{ p: 1.5, textAlign: 'center' }}>
+                <Typography variant="h6" color="primary">
+                  {progress.filesScanned.toLocaleString()}
+                </Typography>
+                <Typography variant="caption" color="textSecondary">
+                  Files Scanned
+                </Typography>
+                <Typography variant="caption" display="block">
+                  of {progress.totalEstimatedFiles.toLocaleString()}
+                </Typography>
+              </Paper>
+              
+              <Paper elevation={1} sx={{ p: 1.5, textAlign: 'center' }}>
+                <Typography variant="h6" color="info.main">
+                  {progress.directoriesScanned.toLocaleString()}
+                </Typography>
+                <Typography variant="caption" color="textSecondary">
+                  Directories
+                </Typography>
+              </Paper>
+              
+              <Paper elevation={1} sx={{ p: 1.5, textAlign: 'center' }}>
+                <Typography variant="h6" color={progress.threatsFound > 0 ? 'warning.main' : 'success.main'}>
+                  {progress.threatsFound.toLocaleString()}
+                </Typography>
+                <Typography variant="caption" color="textSecondary">
+                  Findings
+                </Typography>
+              </Paper>
+              
+              <Paper elevation={1} sx={{ p: 1.5, textAlign: 'center' }}>
+                <Typography variant="h6">
+                  {progress.elapsedTime}
+                </Typography>
+                <Typography variant="caption" color="textSecondary">
+                  Elapsed
+                </Typography>
+                {progress.estimatedTimeRemaining && (
+                  <Typography variant="caption" display="block">
+                    ~{progress.estimatedTimeRemaining} left
+                  </Typography>
+                )}
+              </Paper>
+            </Box>
+            
+            {/* Data Scanned */}
+            <Paper elevation={1} sx={{ p: 1.5 }}>
+              <Typography variant="body2" color="textSecondary">
+                <strong>Data Scanned:</strong> {(progress.bytesScanned / (1024 * 1024 * 1024)).toFixed(2)} GB
+              </Typography>
+            </Paper>
+          </Box>
+        ) : (
+          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', py: 4 }}>
+            <LinearProgress sx={{ width: '100%' }} />
+            <Typography variant="body2" sx={{ ml: 2 }}>Loading scan progress...</Typography>
+          </Box>
+        )}
+      </DialogContent>
+      
+      <DialogActions>
+        {progress && (progress.status === 'Running') && (
+          <Button onClick={handleCancel} color="error" variant="outlined">
+            Cancel Scan
+          </Button>
+        )}
+        <Button onClick={onClose} variant="contained">
+          {error || (progress && (progress.status === 'Completed' || progress.status === 'CompletedWithThreats')) ? 'Close' : 'Hide'}
+        </Button>
+      </DialogActions>
+    </Dialog>
+  );
+};
+
 // Scan Actions Component
 const ScanActions = () => {
   const notify = useNotify();
   const refresh = useRefresh();
+  const [progressOpen, setProgressOpen] = useState(false);
+  const [scanType, setScanType] = useState('');
   
   // Get API base URL from environment or default to localhost:5000
   const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || 'http://localhost:5000';
@@ -207,6 +466,8 @@ const ScanActions = () => {
       
       if (response.ok) {
         notify('Quick scan started successfully', { type: 'success' });
+        setScanType('Quick Scan');
+        setProgressOpen(true);
         setTimeout(() => refresh(), 1000);
       } else {
         notify('Failed to start quick scan', { type: 'error' });
@@ -228,6 +489,8 @@ const ScanActions = () => {
       
       if (response.ok) {
         notify('Full scan started successfully', { type: 'success' });
+        setScanType('Full Scan');
+        setProgressOpen(true);
         setTimeout(() => refresh(), 1000);
       } else {
         notify('Failed to start full scan', { type: 'error' });
@@ -238,25 +501,33 @@ const ScanActions = () => {
   };
 
   return (
-    <TopToolbar>
-      <Button
-        onClick={handleQuickScan}
-        startIcon={<ScanIcon />}
-        label="Quick Scan"
-        variant="outlined"
-        size="small"
+    <>
+      <TopToolbar>
+        <Button
+          onClick={handleQuickScan}
+          startIcon={<ScanIcon />}
+          label="Quick Scan"
+          variant="outlined"
+          size="small"
+        />
+        <Button
+          onClick={handleFullScan}
+          startIcon={<SecurityIcon />}
+          label="Full Scan"
+          variant="contained"
+          size="small"
+        />
+        <IconButton onClick={() => refresh()}>
+          <RefreshIcon />
+        </IconButton>
+      </TopToolbar>
+      
+      <ScanProgressDialog 
+        open={progressOpen} 
+        onClose={() => setProgressOpen(false)} 
+        scanType={scanType}
       />
-      <Button
-        onClick={handleFullScan}
-        startIcon={<SecurityIcon />}
-        label="Full Scan"
-        variant="contained"
-        size="small"
-      />
-      <IconButton onClick={() => refresh()}>
-        <RefreshIcon />
-      </IconButton>
-    </TopToolbar>
+    </>
   );
 };
 
@@ -277,9 +548,9 @@ const ThreatScannerFilters = [
     source="status" 
     label="Status"
     choices={[
-      { id: 'Completed', name: 'Completed' },
-      { id: 'CompletedWithThreats', name: 'Completed with Threats' },
-      { id: 'Running', name: 'Running' },
+      { id: 'Completed', name: 'Clean' },
+      { id: 'CompletedWithThreats', name: 'Findings Detected' },
+      { id: 'Running', name: 'Scanning' },
       { id: 'Failed', name: 'Failed' },
       { id: 'Cancelled', name: 'Cancelled' },
     ]}
@@ -313,7 +584,7 @@ export const ThreatScannerList = () => (
         <DateField source="startTime" showTime label="Started" />
         <DurationField source="duration" label="Duration" />
         <NumberField source="filesScanned" label="Files" />
-        <ThreatsSummaryField source="threatsFound" label="Threats" sortable={false} />
+        <FindingsSummaryField source="threatsFound" label="Results" sortable={false} />
         <RiskLevelField source="riskLevel" label="Risk" />
         <ShowButton />
       </Datagrid>
@@ -352,8 +623,8 @@ export const ThreatScannerShow = () => (
       </Box>
 
       <Box component="div" sx={{ mt: 2, mb: 2 }}>
-        <Typography variant="h6">Threat Analysis</Typography>
-        <ThreatsSummaryField source="threatsFound" />
+        <Typography variant="h6">Security Analysis</Typography>
+        <FindingsSummaryField source="threatsFound" />
         <RiskLevelField source="riskLevel" label="Overall Risk Level" />
       </Box>
 
@@ -362,9 +633,9 @@ export const ThreatScannerShow = () => (
       <TextField source="errorMessage" label="Error Details" />
       
       <Box component="div" sx={{ mt: 2 }}>
-        <Typography variant="h6">Threat Details</Typography>
+        <Typography variant="h6">Security Findings</Typography>
         <Typography variant="body2" color="textSecondary">
-          Detailed threat information would be displayed here
+          Detailed security analysis results would be displayed here
         </Typography>
       </Box>
     </SimpleShowLayout>

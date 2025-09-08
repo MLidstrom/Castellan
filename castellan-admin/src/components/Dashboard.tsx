@@ -39,14 +39,15 @@ import {
   Refresh as RefreshIcon,
   Download as DownloadIcon,
   Fullscreen as FullscreenIcon,
-  Lock as LockIcon,
-  Star as StarIcon,
-  BugReport as BugReportIcon,
   Shield as ShieldIcon,
   Scanner as ScannerIcon
 } from '@mui/icons-material';
 
+// Updated: Removed premium features - all functionality is now available in the free version
+
 import { ConnectionPoolMonitor } from './ConnectionPoolMonitor';
+import { RealtimeSystemMetrics } from './RealtimeSystemMetrics';
+import { GeographicThreatMap } from './GeographicThreatMap';
 
 export const Dashboard = () => {
   const [timeRange, setTimeRange] = useState('24h');
@@ -68,6 +69,11 @@ export const Dashboard = () => {
     pagination: { page: 1, perPage: 100 },
   });
 
+  const { data: threatScanner, refetch: refetchThreatScanner } = useGetList('threat-scanner', {
+    pagination: { page: 1, perPage: 20 },
+    sort: { field: 'timestamp', order: 'DESC' },
+  });
+
   // Auto-refresh every 30 seconds
   useEffect(() => {
     const interval = setInterval(() => {
@@ -83,7 +89,8 @@ export const Dashboard = () => {
       await Promise.all([
         refetchEvents(),
         refetchReports(),
-        refetchStatus()
+        refetchStatus(),
+        refetchThreatScanner()
       ]);
       setLastRefresh(new Date());
       if (showNotification) {
@@ -111,39 +118,31 @@ export const Dashboard = () => {
   
   const avgComplianceScore = complianceReports?.reduce((sum, r) => sum + (r.complianceScore || r.ComplianceScore || 0), 0) / (complianceReports?.length || 1) || 0;
 
-  // Dummy compliance data for premium feature display
-  const dummyComplianceData = [
-    { id: 1, framework: 'SOC 2 Type II', complianceScore: 87, reportType: 'Quarterly', createdDate: '2024-08-15' },
-    { id: 2, framework: 'ISO 27001', complianceScore: 92, reportType: 'Annual', createdDate: '2024-08-10' },
-    { id: 3, framework: 'HIPAA', complianceScore: 78, reportType: 'Monthly', createdDate: '2024-08-05' },
-    { id: 4, framework: 'FedRAMP', complianceScore: 95, reportType: 'Quarterly', createdDate: '2024-07-30' },
-    { id: 5, framework: 'GDPR', complianceScore: 83, reportType: 'Annual', createdDate: '2024-07-25' }
-  ];
-  const dummyAvgComplianceScore = 87.0;
-
-  // Dummy threat scanner data for premium feature display
-  const dummyThreatScanData = {
-    filesScanned: 2847,
-    threatsDetected: 15,
-    threatsBlocked: 13,
-    threatsQuarantined: 2,
-    lastFullScan: '2024-08-22 14:30:00',
-    scanProgress: 0,
-    realTimeProtection: true,
-    scanStatus: 'Idle',
-    threatsByType: [
-      { type: 'Malware', count: 8, severity: 'high' },
-      { type: 'Ransomware', count: 3, severity: 'critical' },
-      { type: 'Spyware', count: 2, severity: 'medium' },
-      { type: 'Adware', count: 2, severity: 'low' }
-    ],
-    protectionModules: [
-      { name: 'Real-time Protection', status: 'Active', lastUpdate: '2024-08-22' },
-      { name: 'Web Protection', status: 'Active', lastUpdate: '2024-08-22' },
-      { name: 'Email Protection', status: 'Active', lastUpdate: '2024-08-21' },
-      { name: 'Behavioral Analysis', status: 'Active', lastUpdate: '2024-08-22' }
-    ]
-  };
+  // Recent activity and trends
+  const recentEvents = securityEvents?.slice(0, 10) || [];
+  const recentComplianceReports = complianceReports?.slice(0, 5) || [];
+  const recentThreatScans = threatScanner?.slice(0, 10) || [];
+  
+  // Real-time metrics
+  const eventsInLastHour = securityEvents?.filter(e => 
+    new Date(e.timestamp) > new Date(Date.now() - 60 * 60 * 1000)
+  ).length || 0;
+  
+  const eventsInLast24Hours = securityEvents?.filter(e => 
+    new Date(e.timestamp) > new Date(Date.now() - 24 * 60 * 60 * 1000)
+  ).length || 0;
+  
+  // Event velocity (events per hour)
+  const eventVelocity = eventsInLast24Hours / 24;
+  
+  // Threat scanner metrics
+  const totalScans = threatScanner?.length || 0;
+  const activeScanners = threatScanner?.filter(s => s.status === 'running' || s.status === 'active').length || 0;
+  const completedScans = threatScanner?.filter(s => s.status === 'completed').length || 0;
+  const threatsDetected = threatScanner?.reduce((sum, scan) => sum + (scan.threatsFound || 0), 0) || 0;
+  const scansToday = threatScanner?.filter(s => 
+    new Date(s.timestamp || s.startTime) > new Date(Date.now() - 24 * 60 * 60 * 1000)
+  ).length || 0;
 
   // Risk distribution for pie chart
   const riskDistribution = [
@@ -356,6 +355,18 @@ export const Dashboard = () => {
         </Box>
       </Box>
 
+      {/* Real-time System Metrics - Phase 3 SignalR Integration */}
+      <Box sx={{ 
+        display: 'flex', 
+        flexWrap: 'wrap', 
+        gap: 3,
+        marginBottom: '30px'
+      }}>
+        <Box sx={{ flex: '1 1 100%', minWidth: '100%' }}>
+          <RealtimeSystemMetrics />
+        </Box>
+      </Box>
+
       {/* Charts Row 1 - Main Analytics */}
       <Box sx={{ 
         display: 'flex', 
@@ -547,218 +558,232 @@ export const Dashboard = () => {
             </CardContent>
           </Card>
 
-          {/* Compliance Status */}
-          <Card 
-            sx={{ 
-            position: 'relative',
-            opacity: 0.5,
-            filter: 'grayscale(100%)',
-            pointerEvents: 'none',
-            backgroundColor: '#f8f9fa',
-            border: '1px solid #dee2e6'
-          }}
-        >
-            {/* Premium Badge */}
-            <Box sx={{ position: 'absolute', top: 8, right: 8, zIndex: 1 }}>
-              <Chip 
-                icon={<LockIcon />}
-                label="PRO"
-                color="warning"
-                size="small"
-                variant="filled"
-                sx={{
-                  pointerEvents: 'auto',
-                  opacity: 1,
-                  filter: 'none'
-                }}
-              />
-            </Box>
-            
+          {/* Threat Scanners */}
+          <Card>
             <CardHeader 
-              title={`Compliance Status (${dummyAvgComplianceScore.toFixed(1)}% avg)`}
-              action={
-                <Button 
-                  size="small" 
-                  startIcon={<DownloadIcon />}
-                  disabled
-                  sx={{ opacity: 0.6 }}
-                >
-                  Export
-                </Button>
-              }
-            />
-            <CardContent>
-              {dummyComplianceData.slice(0, 6).map(report => (
-                <Box key={report.id} sx={{ marginBottom: 2 }}>
-                  <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 1 }}>
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                      <ComplianceIcon sx={{ fontSize: 16 }} />
-                      <Typography variant="subtitle2">{report.framework}</Typography>
-                    </Box>
-                    <Chip 
-                      label={`${report.complianceScore}%`}
-                      size="small"
-                      color={report.complianceScore >= 90 ? 'success' : 
-                             report.complianceScore >= 70 ? 'info' : 
-                             report.complianceScore >= 50 ? 'warning' : 'error'}
-                    />
-                  </Box>
-                  <LinearProgress 
-                    variant="determinate" 
-                    value={report.complianceScore} 
-                    color={report.complianceScore >= 90 ? 'success' : 
-                           report.complianceScore >= 70 ? 'info' : 
-                           report.complianceScore >= 50 ? 'warning' : 'error'}
-                    sx={{ height: 8, borderRadius: 4 }}
-                  />
-                  <Typography variant="caption" color="textSecondary">
-                    {report.reportType} • {new Date(report.createdDate).toLocaleDateString()}
-                  </Typography>
-                </Box>
-              ))}
-              
-            </CardContent>
-          </Card>
-        </Box>
-
-        {/* Right Column - Threat Scanner */}
-        <Box sx={{ flex: '1 1 50%' }}>
-          <Card 
-            sx={{ 
-            position: 'relative',
-            opacity: 0.5,
-            filter: 'grayscale(100%)',
-            pointerEvents: 'none',
-            backgroundColor: '#f8f9fa',
-            border: '1px solid #dee2e6'
-          }}
-        >
-            {/* Premium Badge */}
-            <Box sx={{ position: 'absolute', top: 8, right: 8, zIndex: 1 }}>
-              <Chip 
-                icon={<LockIcon />}
-                label="PRO"
-                color="warning"
-                size="small"
-                variant="filled"
-                sx={{
-                  pointerEvents: 'auto',
-                  opacity: 1,
-                  filter: 'none'
-                }}
-              />
-            </Box>
-            
-            <CardHeader 
-              title="Advanced Threat Scanner"
+              title="Threat Scanners"
               action={
                 <Button 
                   size="small" 
                   startIcon={<ScannerIcon />}
-                  disabled
-                  sx={{ opacity: 0.6 }}
+                  onClick={() => window.location.href = '#/threat-scanner'}
                 >
-                  Full Scan
+                  View All
                 </Button>
               }
             />
             <CardContent>
-              {/* Scan Statistics */}
               <Box sx={{ marginBottom: 3 }}>
                 <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 2 }}>
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                     <ShieldIcon sx={{ fontSize: 20, color: 'success.main' }} />
-                    <Typography variant="h6">Scan Summary</Typography>
+                    <Typography variant="h6">Scanner Status</Typography>
                   </Box>
                   <Chip 
-                    label={dummyThreatScanData.realTimeProtection ? 'Protected' : 'Unprotected'}
+                    label={activeScanners > 0 ? 'Active' : 'Idle'}
                     size="small"
-                    color={dummyThreatScanData.realTimeProtection ? 'success' : 'error'}
+                    color={activeScanners > 0 ? 'success' : 'default'}
                     icon={<ShieldIcon />}
                   />
                 </Box>
                 
-                <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 2, marginBottom: 2 }}>
+                <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))', gap: 2, marginBottom: 2 }}>
+                  <Box sx={{ textAlign: 'center', padding: 1, backgroundColor: 'rgba(33, 150, 243, 0.1)', borderRadius: 1 }}>
+                    <Typography variant="h4" color="info.main">{totalScans}</Typography>
+                    <Typography variant="caption">Total Scans</Typography>
+                  </Box>
                   <Box sx={{ textAlign: 'center', padding: 1, backgroundColor: 'rgba(76, 175, 80, 0.1)', borderRadius: 1 }}>
-                    <Typography variant="h4" color="success.main">{dummyThreatScanData.filesScanned.toLocaleString()}</Typography>
-                    <Typography variant="caption">Files Scanned</Typography>
+                    <Typography variant="h4" color="success.main">{activeScanners}</Typography>
+                    <Typography variant="caption">Active</Typography>
                   </Box>
                   <Box sx={{ textAlign: 'center', padding: 1, backgroundColor: 'rgba(244, 67, 54, 0.1)', borderRadius: 1 }}>
-                    <Typography variant="h4" color="error.main">{dummyThreatScanData.threatsDetected}</Typography>
-                    <Typography variant="caption">Threats Detected</Typography>
-                  </Box>
-                  <Box sx={{ textAlign: 'center', padding: 1, backgroundColor: 'rgba(33, 150, 243, 0.1)', borderRadius: 1 }}>
-                    <Typography variant="h4" color="info.main">{dummyThreatScanData.threatsBlocked}</Typography>
-                    <Typography variant="caption">Blocked</Typography>
+                    <Typography variant="h4" color="error.main">{threatsDetected}</Typography>
+                    <Typography variant="caption">Threats Found</Typography>
                   </Box>
                   <Box sx={{ textAlign: 'center', padding: 1, backgroundColor: 'rgba(255, 152, 0, 0.1)', borderRadius: 1 }}>
-                    <Typography variant="h4" color="warning.main">{dummyThreatScanData.threatsQuarantined}</Typography>
-                    <Typography variant="caption">Quarantined</Typography>
+                    <Typography variant="h4" color="warning.main">{scansToday}</Typography>
+                    <Typography variant="caption">Today</Typography>
                   </Box>
                 </Box>
-                
-                <Typography variant="body2" color="textSecondary">
-                  Last full scan: {new Date(dummyThreatScanData.lastFullScan).toLocaleString()}
-                </Typography>
               </Box>
               
-              {/* Threat Types */}
-              <Box sx={{ marginBottom: 3 }}>
-                <Typography variant="subtitle2" sx={{ marginBottom: 1, display: 'flex', alignItems: 'center', gap: 1 }}>
-                  <BugReportIcon sx={{ fontSize: 16 }} />
-                  Threat Types Detected
-                </Typography>
-                {dummyThreatScanData.threatsByType.map((threat, index) => (
-                  <Box key={index} sx={{ marginBottom: 1 }}>
-                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 0.5 }}>
-                      <Typography variant="body2">{threat.type}</Typography>
+              {recentThreatScans.length > 0 ? (
+                <>
+                  <Typography variant="subtitle2" sx={{ marginBottom: 1 }}>
+                    Recent Scans
+                  </Typography>
+                  {recentThreatScans.map((scan, index) => (
+                    <Box key={scan.id || index} sx={{ marginBottom: 1, paddingBottom: 1, borderBottom: index < recentThreatScans.length - 1 ? '1px solid #eee' : 'none' }}>
+                      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                          <ScannerIcon sx={{ fontSize: 16, color: 
+                            scan.status === 'running' ? '#2196f3' : 
+                            scan.status === 'completed' ? '#4caf50' : 
+                            scan.status === 'failed' ? '#f44336' : '#ff9800' 
+                          }} />
+                          <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                            {scan.scanType || scan.type || 'File System Scan'}
+                          </Typography>
+                          <Chip 
+                            label={scan.status || 'unknown'}
+                            size="small"
+                            color={
+                              scan.status === 'running' ? 'info' : 
+                              scan.status === 'completed' ? 'success' : 
+                              scan.status === 'failed' ? 'error' : 'default'
+                            }
+                          />
+                        </Box>
+                        <Typography variant="caption" color="textSecondary">
+                          {new Date(scan.timestamp || scan.startTime || Date.now()).toLocaleTimeString()}
+                        </Typography>
+                      </Box>
+                      <Typography variant="caption" color="textSecondary" sx={{ marginLeft: 3 }}>
+                        {scan.threatsFound ? `${scan.threatsFound} threats found` : 
+                         scan.filesScanned ? `${scan.filesScanned} files scanned` : 
+                         scan.path || scan.target || 'Scanning system files'}
+                      </Typography>
+                    </Box>
+                  ))}
+                </>
+              ) : (
+                <Box sx={{ textAlign: 'center', padding: 2 }}>
+                  <ScannerIcon sx={{ fontSize: 36, color: 'text.secondary', marginBottom: 1 }} />
+                  <Typography variant="body2" color="textSecondary" gutterBottom>
+                    No recent scans available
+                  </Typography>
+                  <Button 
+                    variant="outlined" 
+                    size="small" 
+                    onClick={() => window.location.href = '#/threat-scanner'}
+                    sx={{ marginTop: 1 }}
+                  >
+                    Start Scan
+                  </Button>
+                </Box>
+              )}
+            </CardContent>
+          </Card>
+        </Box>
+
+        {/* Right Column - Compliance Reports Status */}
+        <Box sx={{ flex: '1 1 50%' }}>
+          <Card>
+            <CardHeader 
+              title={`Compliance Reports (${avgComplianceScore.toFixed(1)}% avg)`}
+              action={
+                <Button 
+                  size="small" 
+                  startIcon={<DownloadIcon />}
+                  onClick={() => window.location.href = '#/compliance-reports'}
+                >
+                  View All
+                </Button>
+              }
+            />
+            <CardContent>
+              {recentComplianceReports.length > 0 ? (
+                <>
+                  <Box sx={{ marginBottom: 3 }}>
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 2 }}>
                       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                        <Chip 
-                          label={threat.count}
-                          size="small"
-                          color={threat.severity === 'critical' ? 'error' : 
-                                 threat.severity === 'high' ? 'warning' : 
-                                 threat.severity === 'medium' ? 'info' : 'default'}
-                        />
-                        <Chip 
-                          label={threat.severity}
-                          size="small"
-                          variant="outlined"
-                          color={threat.severity === 'critical' ? 'error' : 
-                                 threat.severity === 'high' ? 'warning' : 
-                                 threat.severity === 'medium' ? 'info' : 'default'}
-                        />
+                        <ComplianceIcon sx={{ fontSize: 20, color: 'info.main' }} />
+                        <Typography variant="h6">Report Summary</Typography>
+                      </Box>
+                      <Chip 
+                        label={`${recentComplianceReports.length} Reports`}
+                        size="small"
+                        color="info"
+                        icon={<ComplianceIcon />}
+                      />
+                    </Box>
+                    
+                    <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))', gap: 2, marginBottom: 2 }}>
+                      <Box sx={{ textAlign: 'center', padding: 1, backgroundColor: 'rgba(33, 150, 243, 0.1)', borderRadius: 1 }}>
+                        <Typography variant="h4" color="info.main">{recentComplianceReports.length}</Typography>
+                        <Typography variant="caption">Total Reports</Typography>
+                      </Box>
+                      <Box sx={{ textAlign: 'center', padding: 1, backgroundColor: 'rgba(76, 175, 80, 0.1)', borderRadius: 1 }}>
+                        <Typography variant="h4" color="success.main">
+                          {recentComplianceReports.filter(r => (r.complianceScore || r.ComplianceScore || 0) >= 80).length}
+                        </Typography>
+                        <Typography variant="caption">Compliant</Typography>
+                      </Box>
+                      <Box sx={{ textAlign: 'center', padding: 1, backgroundColor: 'rgba(255, 152, 0, 0.1)', borderRadius: 1 }}>
+                        <Typography variant="h4" color="warning.main">
+                          {avgComplianceScore.toFixed(0)}%
+                        </Typography>
+                        <Typography variant="caption">Avg Score</Typography>
                       </Box>
                     </Box>
                   </Box>
-                ))}
-              </Box>
-              
-              {/* Protection Modules Status */}
-              <Box sx={{ marginBottom: 2 }}>
-                <Typography variant="subtitle2" sx={{ marginBottom: 1 }}>
-                  Protection Modules
-                </Typography>
-                {dummyThreatScanData.protectionModules.map((module, index) => (
-                  <Box key={index} sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 1 }}>
-                    <Typography variant="body2">{module.name}</Typography>
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                      <Chip 
-                        label={module.status}
-                        size="small"
-                        color={module.status === 'Active' ? 'success' : 'error'}
-                        variant="filled"
-                      />
-                      <Typography variant="caption" color="textSecondary">
-                        {new Date(module.lastUpdate).toLocaleDateString()}
-                      </Typography>
-                    </Box>
+                  
+                  {/* Recent Reports */}
+                  <Box sx={{ marginBottom: 2 }}>
+                    <Typography variant="subtitle2" sx={{ marginBottom: 1 }}>
+                      Recent Compliance Reports
+                    </Typography>
+                    {recentComplianceReports.map((report, index) => (
+                      <Box key={report.id || index} sx={{ marginBottom: 1 }}>
+                        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 0.5 }}>
+                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                            <ComplianceIcon sx={{ fontSize: 16 }} />
+                            <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                              {report.framework}
+                            </Typography>
+                          </Box>
+                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                            <Chip 
+                              label={`${report.complianceScore || report.ComplianceScore || 0}%`}
+                              size="small"
+                              color={(report.complianceScore || report.ComplianceScore || 0) >= 80 ? 'success' : 
+                                     (report.complianceScore || report.ComplianceScore || 0) >= 60 ? 'warning' : 'error'}
+                            />
+                            <Typography variant="caption" color="textSecondary">
+                              {new Date(report.generated || report.createdDate || Date.now()).toLocaleDateString()}
+                            </Typography>
+                          </Box>
+                        </Box>
+                        <Typography variant="caption" color="textSecondary" sx={{ marginLeft: 3 }}>
+                          {report.reportType} • {report.controlsEvaluated || 'Multiple controls'} evaluated
+                        </Typography>
+                      </Box>
+                    ))}
                   </Box>
-                ))}
-              </Box>
-              
+                </>
+              ) : (
+                <Box sx={{ textAlign: 'center', padding: 3 }}>
+                  <ComplianceIcon sx={{ fontSize: 48, color: 'text.secondary', marginBottom: 1 }} />
+                  <Typography variant="h6" color="textSecondary" gutterBottom>
+                    No Compliance Reports
+                  </Typography>
+                  <Typography variant="body2" color="textSecondary" gutterBottom>
+                    Generate your first compliance report to see analysis here.
+                  </Typography>
+                  <Button 
+                    variant="contained" 
+                    size="small" 
+                    onClick={() => window.location.href = '#/compliance-reports/create'}
+                    sx={{ marginTop: 1 }}
+                  >
+                    Create Report
+                  </Button>
+                </Box>
+              )}
             </CardContent>
           </Card>
+        </Box>
+      </Box>
+
+      {/* Geographic Threat Analysis - Enhanced Analytics */}
+      <Box sx={{ 
+        display: 'flex', 
+        flexWrap: 'wrap', 
+        gap: 3,
+        marginBottom: '30px'
+      }}>
+        <Box sx={{ flex: '1 1 100%', minWidth: '100%' }}>
+          <GeographicThreatMap />
         </Box>
       </Box>
     </Box>

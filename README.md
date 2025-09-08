@@ -104,28 +104,33 @@
 
 ### 🔍 **Intelligent Log Analysis**
 - **Real-time Windows Event Log Collection** - Monitors security, application, and system events
-- **AI-Powered Triage** - LLM-based event classification and prioritization
-- **Vector Search** - Semantic similarity search using Qdrant vector database
-- **Advanced Correlation** - M4 correlation engine for threat pattern detection
+- **AI-Powered Threat Analysis** - LLM-based event classification with external threat intelligence
+- **Vector Search** - Semantic similarity search using Qdrant vector database for correlation
+- **Advanced Correlation** - M4 correlation engine with threat intelligence enrichment
+- **🆕 File Threat Scanning** - Real-time malware detection with VirusTotal integration and local heuristics
 
 ### 🛡️ **Security Detection**
-- **Threat Intelligence** - IP reputation feeds and geolocation enrichment
-- **MITRE ATT&CK Mapping** - Automatic threat technique classification
-- **Anomaly Detection** - Machine learning-based behavioral analysis
-- **Automated Response** - Real-time threat response with configurable actions
+- **✅ Tier 1 Threat Intelligence** - Fully operational VirusTotal, MalwareBazaar, and AlienVault OTX integration for enhanced malware detection
+- **IP Reputation & Geolocation** - MaxMind GeoLite2 databases for IP enrichment and threat correlation
+- **MITRE ATT&CK Mapping** - Automatic threat technique classification with 800+ techniques
+- **Anomaly Detection** - Machine learning-based behavioral analysis with vector similarity
+- **Automated Response** - Real-time threat response with configurable actions and escalation
 
 ### 📊 **Monitoring & Analysis**
+- **🆕 Real-time System Monitoring** - Live system health, performance metrics, and threat intelligence status via SignalR
 - **Security Event Correlation** - Pattern detection and event relationship analysis
 - **Threat Pattern Recognition** - AI-powered identification of attack sequences
-- **Performance Monitoring** - System health and security service status
-- **Event Timeline** - Chronological security event tracking
+- **Performance Monitoring** - System health and security service status with real-time dashboards
+- **Event Timeline** - Chronological security event tracking with live updates
 - **Persistent Storage** - 24-hour rolling window with automatic restart recovery
-- **Application Data Management** - SQLite database for applications, MITRE ATT&CK techniques, and security event persistence
+- **Application Data Management** - PostgreSQL database for enhanced performance, applications, MITRE ATT&CK techniques, and unified security event storage
 
 ### 🔔 **Notifications & Interface**
 - **🆕 Teams/Slack Integration** - Real-time security alerts in Microsoft Teams and Slack channels
+- **🆕 Real-time Web Dashboard** - Live system monitoring with SignalR-powered updates
 - **Desktop Notifications** - Real-time security alerts
-- **Web Admin Interface** - React-based management dashboard
+- **Web Admin Interface** - React-based management dashboard with live metrics
+- **WebSocket Integration** - Real-time scan progress, system health, and threat intelligence status
 - **Windows Native** - Optimized for Windows Event Log collection and analysis
 - **Local Deployment** - No cloud dependencies, runs entirely on your local infrastructure
 
@@ -191,6 +196,7 @@
 | **📈 Auto-scaling** | **✅ Built-in architecture** | Enterprise features | Enterprise features | Manual configuration | Good scaling |
 | **📊 Connection Pooling** | **✅ 15-25% I/O optimization** | Not documented | Not documented | Manual setup | Not available |
 | **🧠 Intelligent Caching** | **✅ 30-50% performance boost** | Basic caching | Basic caching | Manual setup | Limited caching |
+| **🔍 Threat Intelligence** | **✅ VirusTotal/MalwareBazaar/OTX** | Premium add-ons | Premium add-ons | Manual integration | Basic feeds |
 | **🆆 Windows Focus** | **✅ Native Windows optimization** | Generic approach | Generic approach | Manual setup | Cross-platform |
 
 ### 🎆 **Castellan's Technical Advantages**
@@ -252,6 +258,7 @@ Castellan processes Windows security events through **enterprise-grade AI/ML ana
 - **Pipeline Stability**: Production-ready with stable background operation and comprehensive monitoring
 - **MITRE Integration**: Full ATT&CK framework integration with 50+ techniques displayed in web interface
 - **Background Service Management**: Reliable PowerShell job-based startup with comprehensive monitoring
+- **🆕 Real-time Monitoring**: SignalR-powered live system health, scan progress, and threat intelligence status
 
 ```mermaid
 flowchart LR
@@ -259,13 +266,18 @@ flowchart LR
     B --> C[Parallel AI/ML Processing]
     C --> D[Qdrant Vector Database]
     B --> K[SQLite Database]
+    B --> N[Threat Intelligence Services]
+    N --> O[VirusTotal API]
+    N --> P[MalwareBazaar API]
+    N --> Q[AlienVault OTX API]
     B --> E[Notification Services]
     E --> F[Desktop Notifications]
     E --> G[Web Admin Interface]
     E --> M[Teams/Slack Channels]
     D --> H[Vector Search & Correlation]
     K --> L[Application & MITRE Data]
-    H --> I[Threat Detection Engine]
+    N --> I[Threat Detection Engine]
+    H --> I
     I --> J[Security Alerts]
     J --> E
     L --> I
@@ -282,6 +294,13 @@ flowchart LR
     subgraph "Data Storage"
         D
         K
+    end
+    
+    subgraph "Threat Intelligence"
+        N
+        O
+        P
+        Q
     end
     
     subgraph "Intelligence & Analysis"
@@ -311,6 +330,10 @@ flowchart LR
     style I fill:#ffebee,color:#000
     style J fill:#ffebee,color:#000
     style M fill:#e3f2fd,color:#000
+    style N fill:#fce4ec,color:#000
+    style O fill:#f3e5f5,color:#000
+    style P fill:#f3e5f5,color:#000
+    style Q fill:#f3e5f5,color:#000
 ```
 
 ## 🔐 Security Architecture
@@ -493,6 +516,18 @@ $env:EMBEDDINGS__PROVIDER = "OpenAI"
 $env:LLM__PROVIDER = "OpenAI"
 ```
 
+### 4.5. Configure Threat Intelligence (Recommended)
+```powershell
+# VirusTotal API (recommended for enhanced malware detection)
+$env:THREATINTELLIGENCE__VIRUSTOTAL__APIKEY = "your-virustotal-api-key"  # Get free API key from https://www.virustotal.com/gui/my-apikey
+
+# AlienVault OTX API (recommended for additional threat intelligence)
+$env:THREATINTELLIGENCE__ALIENVAULTOTX__APIKEY = "your-otx-api-key"      # Get free API key from https://otx.alienvault.com/api
+
+# MalwareBazaar is enabled by default (no API key required)
+```
+Without API keys, Castellan falls back to local heuristics with graceful degradation.
+
 ### 5. Install Ollama Models (if using local AI)
 ```powershell
 # Install Ollama first from https://ollama.com/download
@@ -527,7 +562,8 @@ This open source edition is Windows-only. Linux and macOS editions are in planni
 
 **🛡️ Automatic MITRE ATT&CK Import**: On first startup, Castellan automatically downloads and imports 800+ official MITRE ATT&CK techniques from GitHub. This provides rich intelligence for security event analysis and tooltip descriptions. The import runs in the background and requires internet connectivity.
 
-**✅ Recent Fixes (January 2025)**:
+**✅ Recent Fixes (September 2025)**:
+- **React Admin Interface**: Fixed missing RealtimeSystemMetrics component - dashboard now compiles and displays real-time system monitoring
 - **MITRE DataProvider Error**: Fixed response format transformation for MITRE ATT&CK techniques - "dataProvider error" resolved
 - **Worker API Stability**: Fixed SemaphoreFullException causing immediate crashes - services now run stable in background
 - **Authentication Flow**: Enhanced error handling for "No tokens found" scenarios - cleaner login experience
@@ -648,6 +684,14 @@ $env:PIPELINE__MEMORYHIGHWATERMARKMB = "1024"           # Memory cleanup thresho
 $env:PIPELINE__EVENTHISTORYRETENTIONMINUTES = "60"      # Event retention for correlation
 $env:PIPELINE__ENABLEDETAILEDMETRICS = "true"           # Enable detailed performance metrics
 
+# Threat Intelligence Configuration
+$env:THREATINTELLIGENCE__ENABLED = "true"                                    # Enable threat intelligence
+$env:THREATINTELLIGENCE__VIRUSTOTAL__ENABLED = "true"                       # Enable VirusTotal
+$env:THREATINTELLIGENCE__VIRUSTOTAL__APIKEY = "your-virustotal-api-key"     # Get from: https://www.virustotal.com/gui/my-apikey
+$env:THREATINTELLIGENCE__MALWAREBAZAAR__ENABLED = "true"                    # Enable MalwareBazaar (no API key required)
+$env:THREATINTELLIGENCE__ALIENVAULTOTX__ENABLED = "true"                    # Enable AlienVault OTX
+$env:THREATINTELLIGENCE__ALIENVAULTOTX__APIKEY = "your-otx-api-key"         # Get from: https://otx.alienvault.com/api
+
 # Connection Pool Configuration
 $env:CONNECTIONPOOLS__QDRANT__MAXCONNECTIONSPERINSTANCE = "10"      # Max connections per Qdrant instance
 $env:CONNECTIONPOOLS__QDRANT__CONNECTIONTIMEOUT = "00:00:10"         # Connection timeout (10 seconds)
@@ -683,6 +727,9 @@ dotnet build -c Release
 - **[Windows PowerShell Compatibility](docs/WINDOWS_POWERSHELL_COMPATIBILITY.md)** - Native Windows PowerShell 5.1 support guide
 - **[Windows Logging Hardening](scripts/enable-logging-hardening.md)** - Windows audit policy configuration guide
 - **[Troubleshooting Guide](docs/TROUBLESHOOTING.md)** - Common issues and solutions
+
+### Threat Intelligence & Security
+- **[Threat Intelligence Integration](docs/THREAT_INTELLIGENCE.md)** - VirusTotal, MalwareBazaar, and AlienVault OTX integration guide
 
 ### Additional Resources
 - **[Build Guide](docs/BUILD_GUIDE.md)** - Detailed build and deployment instructions
@@ -730,6 +777,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 - ✅ **Performance Optimization** - 12K+ events/second processing with 3-5x vector operation improvements
 - ✅ **Advanced Caching** - 30-50% performance improvements with semantic similarity detection
 - ✅ **Connection Pooling** - 15-25% I/O optimization with health monitoring 🎆 **LIVE & OPERATIONAL**
+- ✅ **Threat Intelligence** - Complete VirusTotal, MalwareBazaar, and AlienVault OTX integration
 - ✅ **Full MITRE Integration** - 800+ ATT&CK techniques with automatic mapping and rich web interface
 - ✅ **AI-Powered Detection** - LLM and vector search capabilities for advanced threat analysis
 - ✅ **Enterprise Security** - BCrypt hashing, JWT tokens, audit trails, and configuration validation

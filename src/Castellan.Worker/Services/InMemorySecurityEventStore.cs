@@ -1,6 +1,7 @@
 using System.Collections.Concurrent;
 using Castellan.Worker.Abstractions;
 using Castellan.Worker.Models;
+using Microsoft.Extensions.Options;
 
 namespace Castellan.Worker.Services;
 
@@ -8,12 +9,18 @@ public class InMemorySecurityEventStore : ISecurityEventStore
 {
     private readonly ConcurrentQueue<SecurityEvent> _events = new();
     private readonly ILogger<InMemorySecurityEventStore> _logger;
+    private readonly SecurityEventRetentionOptions _retentionOptions;
     private int _idCounter = 1;
-    private static readonly TimeSpan RetentionPeriod = TimeSpan.FromHours(24); // 24-hour rolling window only
 
-    public InMemorySecurityEventStore(ILogger<InMemorySecurityEventStore> logger)
+    public InMemorySecurityEventStore(
+        ILogger<InMemorySecurityEventStore> logger,
+        IOptions<SecurityEventRetentionOptions> retentionOptions)
     {
         _logger = logger;
+        _retentionOptions = retentionOptions.Value;
+        
+        _logger.LogInformation("Initialized InMemorySecurityEventStore with retention period: {RetentionPeriod}", 
+            _retentionOptions.GetRetentionPeriod());
     }
 
     public void AddSecurityEvent(SecurityEvent securityEvent)
@@ -125,10 +132,12 @@ public class InMemorySecurityEventStore : ISecurityEventStore
 
     private void CleanupOldEvents()
     {
-        var cutoffTime = DateTimeOffset.UtcNow - RetentionPeriod;
+        var retentionPeriod = _retentionOptions.GetRetentionPeriod();
+        var cutoffTime = DateTimeOffset.UtcNow - retentionPeriod;
         var removedByTime = 0;
+        var removedByCount = 0;
 
-        // Remove events older than 24-hour retention period
+        // Remove events older than retention period
         var eventsArray = _events.ToArray();
         var eventsToKeep = new List<SecurityEvent>();
 
@@ -144,7 +153,16 @@ public class InMemorySecurityEventStore : ISecurityEventStore
             }
         }
 
-        // Clear and rebuild queue with events from last 24 hours
+        // Also enforce maximum events in memory limit if configured
+        if (_retentionOptions.MaxEventsInMemory > 0 && eventsToKeep.Count > _retentionOptions.MaxEventsInMemory)
+        {
+            // Keep the most recent events
+            var orderedEvents = eventsToKeep.OrderByDescending(e => e.OriginalEvent.Time).ToList();
+            removedByCount = eventsToKeep.Count - _retentionOptions.MaxEventsInMemory;
+            eventsToKeep = orderedEvents.Take(_retentionOptions.MaxEventsInMemory).ToList();
+        }
+
+        // Clear and rebuild queue with events within retention period and count limits
         while (_events.TryDequeue(out _)) { }
         
         foreach (var evt in eventsToKeep.OrderBy(e => e.OriginalEvent.Time))
@@ -152,9 +170,10 @@ public class InMemorySecurityEventStore : ISecurityEventStore
             _events.Enqueue(evt);
         }
 
-        if (removedByTime > 0)
+        if (removedByTime > 0 || removedByCount > 0)
         {
-            _logger.LogDebug("Cleaned up {RemovedByTime} security events older than 24 hours", removedByTime);
+            _logger.LogDebug("Cleaned up security events: {RemovedByTime} expired (older than {RetentionPeriod}), {RemovedByCount} over limit (max: {MaxEvents})", 
+                removedByTime, retentionPeriod, removedByCount, _retentionOptions.MaxEventsInMemory);
         }
     }
 }

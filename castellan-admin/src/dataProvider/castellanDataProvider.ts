@@ -1,5 +1,8 @@
 import { DataProvider, fetchUtils, HttpError } from 'react-admin';
 
+// Castellan Open Source Data Provider - All features enabled
+// This is the free version with no premium restrictions
+
 // API Configuration
 const API_URL = process.env.REACT_APP_CASTELLANPRO_API_URL || 'http://localhost:5000/api';
 // WebSocket URL available for future use
@@ -126,7 +129,7 @@ export const castellanDataProvider: DataProvider = {
     // Get list of resources with pagination, sorting, and filtering
     getList: async (resource, params) => {
         // Handle disabled premium resources for CastellanFree
-        const premiumResources = ['compliance-reports', 'threat-scanner'];
+        const premiumResources: string[] = []; // All features enabled in open source version
         if (premiumResources.includes(resource)) {
             console.log(`[DataProvider] Returning empty data for disabled premium resource: ${resource}`);
             return {
@@ -176,7 +179,7 @@ export const castellanDataProvider: DataProvider = {
     // Get one resource by ID
     getOne: async (resource, params) => {
         // Handle disabled premium resources for CastellanFree
-        const premiumResources = ['compliance-reports', 'threat-scanner'];
+        const premiumResources: string[] = []; // All features enabled in open source version
         if (premiumResources.includes(resource)) {
             console.log(`[DataProvider] Returning null data for disabled premium resource: ${resource}/${params.id}`);
             throw new Error(`${resource} is a premium feature not available in CastellanFree`);
@@ -198,7 +201,7 @@ export const castellanDataProvider: DataProvider = {
     // Get many resources by IDs
     getMany: async (resource, params) => {
         // Handle disabled premium resources for CastellanFree
-        const premiumResources = ['compliance-reports', 'threat-scanner'];
+        const premiumResources: string[] = []; // All features enabled in open source version
         if (premiumResources.includes(resource)) {
             console.log(`[DataProvider] Returning empty data for disabled premium resource getMany: ${resource}`);
             return { data: [] };
@@ -224,7 +227,7 @@ export const castellanDataProvider: DataProvider = {
     // Get many resources with reference
     getManyReference: async (resource, params) => {
         // Handle disabled premium resources for CastellanFree
-        const premiumResources = ['compliance-reports', 'threat-scanner'];
+        const premiumResources: string[] = []; // All features enabled in open source version
         if (premiumResources.includes(resource)) {
             console.log(`[DataProvider] Returning empty data for disabled premium resource getManyReference: ${resource}`);
             return {
@@ -265,7 +268,7 @@ export const castellanDataProvider: DataProvider = {
     // Create new resource
     create: async (resource, params) => {
         // Handle disabled premium resources for CastellanFree
-        const premiumResources = ['compliance-reports', 'threat-scanner'];
+        const premiumResources: string[] = []; // All features enabled in open source version
         if (premiumResources.includes(resource)) {
             throw new Error(`${resource} is a premium feature not available in CastellanFree`);
         }
@@ -289,7 +292,7 @@ export const castellanDataProvider: DataProvider = {
     // Update existing resource
     update: async (resource, params) => {
         // Handle disabled premium resources for CastellanFree
-        const premiumResources = ['compliance-reports'];
+        const premiumResources: string[] = []; // All features enabled in open source version
         if (premiumResources.includes(resource)) {
             throw new Error(`${resource} is a premium feature not available in CastellanFree`);
         }
@@ -313,7 +316,7 @@ export const castellanDataProvider: DataProvider = {
     // Update many resources
     updateMany: async (resource, params) => {
         // Handle disabled premium resources for CastellanFree
-        const premiumResources = ['compliance-reports'];
+        const premiumResources: string[] = []; // All features enabled in open source version
         if (premiumResources.includes(resource)) {
             throw new Error(`${resource} is a premium feature not available in CastellanFree`);
         }
@@ -340,7 +343,7 @@ export const castellanDataProvider: DataProvider = {
     // Delete resource
     delete: async (resource, params) => {
         // Handle disabled premium resources for CastellanFree
-        const premiumResources = ['compliance-reports'];
+        const premiumResources: string[] = []; // All features enabled in open source version
         if (premiumResources.includes(resource)) {
             throw new Error(`${resource} is a premium feature not available in CastellanFree`);
         }
@@ -363,7 +366,7 @@ export const castellanDataProvider: DataProvider = {
     // Delete many resources
     deleteMany: async (resource, params) => {
         // Handle disabled premium resources for CastellanFree
-        const premiumResources = ['compliance-reports'];
+        const premiumResources: string[] = []; // All features enabled in open source version
         if (premiumResources.includes(resource)) {
             throw new Error(`${resource} is a premium feature not available in CastellanFree`);
         }

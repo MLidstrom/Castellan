@@ -4,6 +4,8 @@ using System.Security.Cryptography;
 using System.Text;
 using Castellan.Worker.Abstractions;
 using Castellan.Worker.Models;
+using Castellan.Worker.Models.ThreatIntelligence;
+using Castellan.Worker.Services.Interfaces;
 
 namespace Castellan.Worker.Services;
 
@@ -11,9 +13,18 @@ public class ThreatScannerService : IThreatScanner
 {
     private readonly ILogger<ThreatScannerService> _logger;
     private readonly ThreatScanOptions _options;
+    private readonly IVirusTotalService? _virusTotalService;
+    private readonly IMalwareBazaarService? _malwareBazaarService;
+    private readonly IOtxService? _otxService;
+    private readonly IThreatIntelligenceCacheService? _cacheService;
     private readonly ConcurrentQueue<ThreatScanResult> _scanHistory = new();
     private ThreatScanResult? _currentScan;
     private CancellationTokenSource? _currentScanCancellation;
+    private ThreatScanProgress? _currentProgress;
+    private readonly object _progressLock = new();
+    
+    // Progress tracking event
+    public event EventHandler<ThreatScanProgress>? ProgressUpdated;
 
     // Known threat signatures (simplified implementation)
     private readonly Dictionary<string, (ThreatType Type, string Name, ThreatRiskLevel Risk)> _threatSignatures = new()
@@ -50,10 +61,20 @@ public class ThreatScannerService : IThreatScanner
         ".com", ".pif", ".sys", ".drv", ".tmp"
     };
 
-    public ThreatScannerService(ILogger<ThreatScannerService> logger, ThreatScanOptions options)
+    public ThreatScannerService(
+        ILogger<ThreatScannerService> logger, 
+        ThreatScanOptions options,
+        IVirusTotalService? virusTotalService = null,
+        IMalwareBazaarService? malwareBazaarService = null,
+        IOtxService? otxService = null,
+        IThreatIntelligenceCacheService? cacheService = null)
     {
         _logger = logger;
         _options = options;
+        _virusTotalService = virusTotalService;
+        _malwareBazaarService = malwareBazaarService;
+        _otxService = otxService;
+        _cacheService = cacheService;
         
         // Ensure quarantine directory exists
         if (_options.QuarantineThreats && !string.IsNullOrEmpty(_options.QuarantineDirectory))
@@ -137,9 +158,17 @@ public class ThreatScannerService : IThreatScanner
 
         _currentScan = scanResult;
         _currentScanCancellation = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-
+        
+        // Initialize progress tracking
+        var scanId = scanResult.Id;
+        UpdateProgress(scanId, ThreatScanStatus.Running, phase: "Initializing Quick Scan");
+        
         try
         {
+            // Estimate total files to scan for progress calculation
+            UpdateProgress(scanId, ThreatScanStatus.Running, phase: "Calculating scan scope");
+            int totalEstimated = await EstimateFilesToScanAsync(_highRiskDirectories, maxDepth: 3);
+            
             // Quick scan focuses on high-risk directories
             foreach (var directory in _highRiskDirectories)
             {
@@ -149,11 +178,17 @@ public class ThreatScannerService : IThreatScanner
                 if (Directory.Exists(directory))
                 {
                     _logger.LogDebug("Quick scanning directory: {Directory}", directory);
-                    await ScanDirectoryRecursiveAsync(directory, scanResult, _currentScanCancellation.Token, maxDepth: 3);
+                    UpdateProgress(scanId, ThreatScanStatus.Running, 
+                        scanResult.FilesScanned, scanResult.DirectoriesScanned, scanResult.ThreatsFound,
+                        "", directory, "Scanning", totalEstimated);
+                    
+                    await ScanDirectoryRecursiveAsync(directory, scanResult, _currentScanCancellation.Token, maxDepth: 3, scanId: scanId, totalEstimated: totalEstimated);
                 }
             }
 
             scanResult.Status = scanResult.ThreatsFound > 0 ? ThreatScanStatus.CompletedWithThreats : ThreatScanStatus.Completed;
+            UpdateProgress(scanId, scanResult.Status, scanResult.FilesScanned, scanResult.DirectoriesScanned, 
+                scanResult.ThreatsFound, "", "", "Completed", totalEstimated);
         }
         catch (OperationCanceledException)
         {
@@ -170,6 +205,12 @@ public class ThreatScannerService : IThreatScanner
         {
             scanResult.EndTime = DateTime.UtcNow;
             _scanHistory.Enqueue(scanResult);
+            
+            // Clear progress
+            lock (_progressLock)
+            {
+                _currentProgress = null;
+            }
             
             _currentScan = null;
             _currentScanCancellation?.Dispose();
@@ -275,9 +316,127 @@ public class ThreatScannerService : IThreatScanner
         var history = _scanHistory.ToArray().TakeLast(count).Reverse();
         return await Task.FromResult(history);
     }
+    
+    public async Task<ThreatScanProgress?> GetScanProgressAsync()
+    {
+        lock (_progressLock)
+        {
+            return _currentProgress;
+        }
+    }
+    
+    private void UpdateProgress(string scanId, ThreatScanStatus status, int filesScanned = 0, 
+        int directoriesScanned = 0, int threatsFound = 0, string currentFile = "", 
+        string currentDirectory = "", string phase = "", int totalEstimated = 0)
+    {
+        lock (_progressLock)
+        {
+            if (_currentProgress == null || _currentProgress.ScanId != scanId)
+            {
+                _currentProgress = new ThreatScanProgress
+                {
+                    ScanId = scanId,
+                    StartTime = DateTime.UtcNow,
+                    Status = status
+                };
+            }
+            
+            _currentProgress.Status = status;
+            _currentProgress.FilesScanned = filesScanned;
+            _currentProgress.DirectoriesScanned = directoriesScanned;
+            _currentProgress.ThreatsFound = threatsFound;
+            _currentProgress.CurrentFile = currentFile;
+            _currentProgress.CurrentDirectory = currentDirectory;
+            _currentProgress.TotalEstimatedFiles = totalEstimated;
+            
+            if (!string.IsNullOrEmpty(phase))
+                _currentProgress.ScanPhase = phase;
+            
+            // Calculate percentage if we have an estimate
+            if (totalEstimated > 0)
+            {
+                _currentProgress.PercentComplete = Math.Min(100.0, (double)filesScanned / totalEstimated * 100);
+                
+                // Estimate remaining time
+                if (filesScanned > 0)
+                {
+                    var avgTimePerFile = _currentProgress.ElapsedTime.TotalSeconds / filesScanned;
+                    var remainingFiles = totalEstimated - filesScanned;
+                    _currentProgress.EstimatedTimeRemaining = TimeSpan.FromSeconds(avgTimePerFile * remainingFiles);
+                }
+            }
+        }
+        
+        // Fire progress event
+        ProgressUpdated?.Invoke(this, _currentProgress);
+    }
+    
+    private async Task<int> EstimateFilesToScanAsync(string[] directories, int maxDepth = int.MaxValue)
+    {
+        int totalEstimate = 0;
+        
+        foreach (var directory in directories)
+        {
+            if (Directory.Exists(directory))
+            {
+                totalEstimate += await EstimateDirectoryFilesAsync(directory, maxDepth);
+            }
+        }
+        
+        return totalEstimate;
+    }
+    
+    private async Task<int> EstimateDirectoryFilesAsync(string directoryPath, int maxDepth, int currentDepth = 0)
+    {
+        if (currentDepth > maxDepth)
+            return 0;
+            
+        try
+        {
+            // Skip excluded directories
+            if (_options.ExcludedDirectories.Any(excluded => 
+                directoryPath.StartsWith(excluded, StringComparison.OrdinalIgnoreCase)))
+            {
+                return 0;
+            }
+            
+            var directory = new DirectoryInfo(directoryPath);
+            if (!directory.Exists)
+                return 0;
+            
+            int count = 0;
+            
+            // Count files that would be scanned
+            var files = directory.GetFiles().Where(f => ShouldScanFile(f));
+            count += files.Count();
+            
+            // Recursively count subdirectories
+            if (currentDepth < maxDepth)
+            {
+                var subdirectories = directory.GetDirectories();
+                foreach (var subdirectory in subdirectories)
+                {
+                    count += await EstimateDirectoryFilesAsync(subdirectory.FullName, maxDepth, currentDepth + 1);
+                }
+            }
+            
+            return count;
+        }
+        catch (UnauthorizedAccessException)
+        {
+            // Skip directories we can't access
+            return 0;
+        }
+        catch (Exception)
+        {
+            // Skip directories with errors
+            return 0;
+        }
+    }
 
     private async Task ScanDirectoryRecursiveAsync(string directoryPath, ThreatScanResult scanResult, 
-        CancellationToken cancellationToken, int currentDepth = 0, int maxDepth = int.MaxValue)
+        CancellationToken cancellationToken, int currentDepth = 0, int maxDepth = int.MaxValue, 
+        string scanId = "", int totalEstimated = 0)
     {
         if (cancellationToken.IsCancellationRequested || currentDepth > maxDepth)
             return;
@@ -306,6 +465,14 @@ public class ThreatScannerService : IThreatScanner
                 await semaphore.WaitAsync(cancellationToken);
                 try
                 {
+                    // Update progress with current file being scanned
+                    if (!string.IsNullOrEmpty(scanId))
+                    {
+                        UpdateProgress(scanId, ThreatScanStatus.Running, scanResult.FilesScanned, 
+                            scanResult.DirectoriesScanned, scanResult.ThreatsFound, 
+                            file.Name, directoryPath, "Scanning", totalEstimated);
+                    }
+                    
                     var threat = await AnalyzeFileAsync(file, cancellationToken);
                     if (threat.ThreatType != ThreatType.Unknown)
                     {
@@ -331,7 +498,7 @@ public class ThreatScannerService : IThreatScanner
                                 break;
                         }
 
-                        _logger.LogWarning("Threat detected: {ThreatName} in {FilePath} (Risk: {RiskLevel})", 
+                        _logger.LogInformation("Security finding: {ThreatName} in {FilePath} (Risk: {RiskLevel})", 
                             threat.ThreatName, threat.FilePath, threat.RiskLevel);
                     }
                     
@@ -356,7 +523,7 @@ public class ThreatScannerService : IThreatScanner
                         break;
                         
                     await ScanDirectoryRecursiveAsync(subdirectory.FullName, scanResult, 
-                        cancellationToken, currentDepth + 1, maxDepth);
+                        cancellationToken, currentDepth + 1, maxDepth, scanId, totalEstimated);
                 }
             }
         }
@@ -397,13 +564,33 @@ public class ThreatScannerService : IThreatScanner
 
         try
         {
-            // Calculate file hash
+            // Calculate file hashes (MD5 for backward compatibility, SHA256 for threat intelligence)
             using var stream = file.OpenRead();
             using var md5 = MD5.Create();
-            var hashBytes = await md5.ComputeHashAsync(stream, cancellationToken);
-            result.FileHash = Convert.ToHexString(hashBytes).ToLowerInvariant();
+            var md5HashBytes = await md5.ComputeHashAsync(stream, cancellationToken);
+            result.FileHash = Convert.ToHexString(md5HashBytes).ToLowerInvariant();
+            
+            // Calculate SHA256 for threat intelligence services
+            stream.Position = 0;
+            using var sha256 = SHA256.Create();
+            var sha256HashBytes = await sha256.ComputeHashAsync(stream, cancellationToken);
+            var sha256Hash = Convert.ToHexString(sha256HashBytes).ToLowerInvariant();
 
-            // Check against known threat signatures
+            // First check external threat intelligence (higher confidence)
+            var threatIntelResult = await QueryThreatIntelligenceAsync(sha256Hash, cancellationToken);
+            if (threatIntelResult?.IsKnownThreat == true)
+            {
+                result.ThreatType = MapThreatIntelligenceType(threatIntelResult);
+                result.ThreatName = threatIntelResult.ThreatName;
+                result.RiskLevel = threatIntelResult.RiskLevel;
+                result.Confidence = threatIntelResult.ConfidenceScore;
+                result.Description = $"Threat Intelligence: {threatIntelResult.Description}";
+                _logger.LogInformation("External threat intelligence hit: {ThreatName} for {FilePath} (Confidence: {Confidence})",
+                    result.ThreatName, file.FullName, result.Confidence);
+                return result;
+            }
+
+            // Check against known local threat signatures (fallback)
             if (_threatSignatures.ContainsKey(result.FileHash))
             {
                 var signature = _threatSignatures[result.FileHash];
@@ -411,7 +598,7 @@ public class ThreatScannerService : IThreatScanner
                 result.ThreatName = signature.Name;
                 result.RiskLevel = signature.Risk;
                 result.Confidence = 0.95f;
-                result.Description = $"Known threat signature: {signature.Name}";
+                result.Description = $"Known local signature: {signature.Name}";
                 return result;
             }
 
@@ -496,6 +683,79 @@ public class ThreatScannerService : IThreatScanner
             ThreatType.Spyware => new[] { "T1056", "T1113" },
             ThreatType.Trojan => new[] { "T1055", "T1105" },
             _ => Array.Empty<string>()
+        };
+    }
+
+    /// <summary>
+    /// Query threat intelligence services for file hash information
+    /// </summary>
+    private async Task<ThreatIntelligenceResult?> QueryThreatIntelligenceAsync(string fileHash, CancellationToken cancellationToken)
+    {
+        try
+        {
+            // Query VirusTotal if available
+            if (_virusTotalService != null)
+            {
+                var vtResult = await _virusTotalService.GetFileReportAsync(fileHash, cancellationToken);
+                if (vtResult != null)
+                {
+                    _logger.LogDebug("VirusTotal result: {IsKnownThreat} threat for {Hash}", vtResult.IsKnownThreat, fileHash);
+                    return vtResult;
+                }
+            }
+
+            // Query MalwareBazaar if available
+            if (_malwareBazaarService != null)
+            {
+                var mbResult = await _malwareBazaarService.GetHashInfoAsync(fileHash, cancellationToken);
+                if (mbResult != null)
+                {
+                    _logger.LogDebug("MalwareBazaar result: {IsKnownThreat} threat for {Hash}", mbResult.IsKnownThreat, fileHash);
+                    return mbResult;
+                }
+            }
+
+            // Query AlienVault OTX if available
+            if (_otxService != null)
+            {
+                var otxResult = await _otxService.GetHashReputationAsync(fileHash, cancellationToken);
+                if (otxResult != null)
+                {
+                    _logger.LogDebug("AlienVault OTX result: {IsKnownThreat} threat for {Hash}", otxResult.IsKnownThreat, fileHash);
+                    return otxResult;
+                }
+            }
+
+            return null;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Error querying threat intelligence for hash: {Hash}", fileHash);
+            return null;
+        }
+    }
+
+    /// <summary>
+    /// Map threat intelligence result to local threat type
+    /// </summary>
+    private ThreatType MapThreatIntelligenceType(ThreatIntelligenceResult threatIntel)
+    {
+        if (!threatIntel.IsKnownThreat)
+            return ThreatType.Unknown;
+
+        var threatName = threatIntel.ThreatName?.ToLowerInvariant() ?? "";
+
+        return threatName switch
+        {
+            var name when name.Contains("trojan") => ThreatType.Trojan,
+            var name when name.Contains("virus") => ThreatType.Virus,
+            var name when name.Contains("backdoor") => ThreatType.Backdoor,
+            var name when name.Contains("rootkit") => ThreatType.Rootkit,
+            var name when name.Contains("spyware") => ThreatType.Spyware,
+            var name when name.Contains("adware") => ThreatType.Adware,
+            var name when name.Contains("ransomware") => ThreatType.Ransomware,
+            var name when name.Contains("worm") => ThreatType.Worm,
+            _ => ThreatType.Malware // Default to generic malware
         };
     }
 }

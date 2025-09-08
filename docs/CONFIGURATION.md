@@ -674,6 +674,14 @@ dotnet run --validate-config="Authentication,Qdrant"
 4. **Adjust batch processing parameters** for throughput
 5. **Configure appropriate timeouts** for your network
 
+### Database Architecture Evolution
+**Upcoming in v0.9 (Late October 2025)** *(Primary remaining technical work)*:
+- **PostgreSQL Migration**: Enhanced database performance and JSON querying capabilities
+- **Storage Consolidation**: Eliminating triple storage (JSON + SQLite + Qdrant) for unified data management
+- **Retention Optimization**: Unified retention policies across all storage systems
+- **Time-series Partitioning**: Optimized security event storage with automatic partitioning
+- **Development Status**: Only major work remaining after September 2025 completion of all other systems
+
 ## 📞 Configuration Support
 
 For configuration assistance:
