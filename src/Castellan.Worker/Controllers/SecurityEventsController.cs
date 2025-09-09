@@ -29,27 +29,76 @@ public class SecurityEventsController : ControllerBase
         [FromQuery] string? sort = null,
         [FromQuery] string? order = null,
         [FromQuery] string? filter = null,
+        
+        // Existing single-value filters (maintain compatibility)
         [FromQuery] string? riskLevel = null,
         [FromQuery] string? eventType = null,
         [FromQuery] string? machine = null,
         [FromQuery] string? user = null,
-        [FromQuery] string? source = null)
+        [FromQuery] string? source = null,
+        
+        // New advanced search parameters for v0.4.0
+        [FromQuery] DateTime? startDate = null,
+        [FromQuery] DateTime? endDate = null,
+        [FromQuery] string? eventTypes = null,           // CSV: "Failed Login,Malware"
+        [FromQuery] string? riskLevels = null,           // CSV: "high,critical"
+        [FromQuery] string? search = null,               // Full-text search
+        [FromQuery] float? minConfidence = null,
+        [FromQuery] float? maxConfidence = null,
+        [FromQuery] float? minCorrelationScore = null,
+        [FromQuery] float? maxCorrelationScore = null,
+        [FromQuery] string? status = null,
+        [FromQuery] string? mitreTechnique = null)
     {
         try
         {
             // Use limit parameter if perPage is not provided (for react-admin compatibility)
             int pageSize = perPage ?? limit ?? 10;
             
-            _logger.LogInformation("Getting security events list - page: {Page}, pageSize: {PageSize}, riskLevel: {RiskLevel}, eventType: {EventType}", 
-                page, pageSize, riskLevel, eventType);
+            _logger.LogInformation("Getting security events list - page: {Page}, pageSize: {PageSize}, riskLevel: {RiskLevel}, eventType: {EventType}, search: {Search}", 
+                page, pageSize, riskLevel, eventType, search);
 
-            // Build filter criteria
+            // Build filter criteria - v0.4.0 Advanced Search Enhancement
             var filterCriteria = new Dictionary<string, object>();
+            
+            // Backward compatibility: Single-value filters (existing)
             if (!string.IsNullOrEmpty(riskLevel)) filterCriteria["riskLevel"] = riskLevel;
             if (!string.IsNullOrEmpty(eventType)) filterCriteria["eventType"] = eventType;
             if (!string.IsNullOrEmpty(machine)) filterCriteria["machine"] = machine;
             if (!string.IsNullOrEmpty(user)) filterCriteria["user"] = user;
             if (!string.IsNullOrEmpty(source)) filterCriteria["source"] = source;
+            
+            // Advanced filters (new in v0.4.0)
+            if (startDate.HasValue) filterCriteria["startDate"] = startDate.Value;
+            if (endDate.HasValue) filterCriteria["endDate"] = endDate.Value;
+            
+            // Multi-select filters (comma-separated values)
+            if (!string.IsNullOrEmpty(eventTypes)) 
+            {
+                var eventTypeList = eventTypes.Split(',', StringSplitOptions.RemoveEmptyEntries)
+                    .Select(s => s.Trim()).Where(s => !string.IsNullOrEmpty(s)).ToArray();
+                if (eventTypeList.Any()) filterCriteria["eventTypes"] = eventTypeList;
+            }
+            
+            if (!string.IsNullOrEmpty(riskLevels))
+            {
+                var riskLevelList = riskLevels.Split(',', StringSplitOptions.RemoveEmptyEntries)
+                    .Select(s => s.Trim()).Where(s => !string.IsNullOrEmpty(s)).ToArray();
+                if (riskLevelList.Any()) filterCriteria["riskLevels"] = riskLevelList;
+            }
+            
+            // Full-text search
+            if (!string.IsNullOrEmpty(search)) filterCriteria["search"] = search;
+            
+            // Numeric range filters
+            if (minConfidence.HasValue) filterCriteria["minConfidence"] = minConfidence.Value;
+            if (maxConfidence.HasValue) filterCriteria["maxConfidence"] = maxConfidence.Value;
+            if (minCorrelationScore.HasValue) filterCriteria["minCorrelationScore"] = minCorrelationScore.Value;
+            if (maxCorrelationScore.HasValue) filterCriteria["maxCorrelationScore"] = maxCorrelationScore.Value;
+            
+            // Other filters
+            if (!string.IsNullOrEmpty(status)) filterCriteria["status"] = status;
+            if (!string.IsNullOrEmpty(mitreTechnique)) filterCriteria["mitreTechnique"] = mitreTechnique;
 
             // Get filtered security events from the store
             var securityEvents = _securityEventStore.GetSecurityEvents(page, pageSize, filterCriteria);

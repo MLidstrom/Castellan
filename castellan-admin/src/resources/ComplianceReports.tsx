@@ -45,7 +45,7 @@ const ComplianceReportsHeader = () => (
 const FrameworkField = ({ source }: any) => {
   const record = useRecordContext();
   const getFrameworkIcon = (framework: string) => {
-    switch (framework?.toUpperCase()) {
+    switch (framework?.toUpperCase?.() || '') {
       case 'HIPAA': return <HealthIcon fontSize="small" />;
       case 'FEDRAMP': return <GovIcon fontSize="small" />;
       case 'SOC2': return <BusinessIcon fontSize="small" />;
@@ -56,7 +56,7 @@ const FrameworkField = ({ source }: any) => {
   };
 
   const getFrameworkColor = (framework: string) => {
-    switch (framework?.toUpperCase()) {
+    switch (framework?.toUpperCase?.() || '') {
       case 'HIPAA': return 'success';
       case 'FEDRAMP': return 'primary';
       case 'SOC2': return 'info';

@@ -11,6 +11,8 @@ import {
   LinearProgress,
   Tooltip as MuiTooltip
 } from '@mui/material';
+import { useCachedApi } from '../hooks/useCachedApi';
+import { CACHE_KEYS, CACHE_TTL } from '../utils/cacheManager';
 
 interface SystemMetric {
   id: number;
@@ -38,43 +40,56 @@ interface SystemMetricsData {
 }
 
 export const RealtimeSystemMetrics: React.FC = () => {
-  const [metricsData, setMetricsData] = useState<SystemMetricsData | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const authToken = localStorage.getItem('auth_token');
 
-  const fetchSystemMetrics = async () => {
-    try {
-      const token = localStorage.getItem('authToken');
+  // Cached API call for system metrics
+  const systemMetricsApi = useCachedApi(
+    async () => {
+      console.log('🚀 Fetching System Metrics...');
       const response = await fetch('/api/system-status', {
         headers: {
-          'Authorization': `Bearer ${token}`,
+          'Authorization': `Bearer ${authToken}`,
           'Content-Type': 'application/json'
         }
       });
       
       if (!response.ok) {
+        console.error('❌ System Metrics API Error:', { status: response.status, statusText: response.statusText });
         throw new Error(`HTTP error! status: ${response.status}`);
       }
       
       const data = await response.json();
-      setMetricsData(data);
-      setError(null);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to fetch system metrics');
-      console.error('Error fetching system metrics:', err);
-    } finally {
-      setLoading(false);
+      console.log('🔍 System Metrics API Response:', { status: response.status, dataLength: data?.data?.length || 'no array', sample: data });
+      
+      // Transform the data to match expected structure if needed
+      if (Array.isArray(data.data) || Array.isArray(data)) {
+        // If API returns raw array, transform to expected structure
+        const metricsArray = data.data || data;
+        return {
+          data: metricsArray,
+          lastUpdated: new Date().toISOString(),
+          systemHealth: 'healthy',
+          overallStatus: 'healthy' as const
+        };
+      }
+      
+      return data;
+    },
+    {
+      cacheKey: CACHE_KEYS.REALTIME_METRICS,
+      cacheTtl: CACHE_TTL.FAST_REFRESH, // 30 seconds for real-time data
+      refreshInterval: 10000, // Refresh every 10 seconds
+      dependencies: []
     }
-  };
+  );
 
-  useEffect(() => {
-    fetchSystemMetrics();
-    
-    // Set up real-time updates every 10 seconds
-    const interval = setInterval(fetchSystemMetrics, 10000);
-    
-    return () => clearInterval(interval);
-  }, []);
+  const metricsData = systemMetricsApi.data;
+  const loading = systemMetricsApi.loading;
+  const error = systemMetricsApi.error;
+
+  const fetchSystemMetrics = () => {
+    systemMetricsApi.refetch();
+  };
 
   const getStatusColor = (status: string) => {
     switch (status?.toLowerCase()) {
@@ -86,20 +101,21 @@ export const RealtimeSystemMetrics: React.FC = () => {
     }
   };
 
-  if (loading) {
+  if (loading && !metricsData) {
     return (
       <Card sx={{ width: '100%' }}>
         <CardHeader title="System Metrics" />
         <CardContent>
           <Box sx={{ display: 'flex', justifyContent: 'center' }}>
             <CircularProgress />
+            <Typography sx={{ ml: 2 }}>Loading cached system metrics...</Typography>
           </Box>
         </CardContent>
       </Card>
     );
   }
 
-  if (error) {
+  if (error && !metricsData) {
     return (
       <Card sx={{ width: '100%' }}>
         <CardHeader title="System Metrics" />
@@ -138,19 +154,26 @@ export const RealtimeSystemMetrics: React.FC = () => {
         <CardHeader 
           title="System Health Overview" 
           action={
-            <Chip 
-              label={metricsData.overallStatus?.toUpperCase() || 'HEALTHY'} 
-              color={metricsData.overallStatus?.toLowerCase() === 'healthy' ? 'success' : 
-                metricsData.overallStatus?.toLowerCase() === 'warning' ? 'warning' : 'error'}
-            />
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+              <Chip 
+                label={systemMetricsApi.isStale ? 'Stale Data' : 'Fresh'}
+                color={systemMetricsApi.isStale ? 'warning' : 'success'}
+                size="small"
+              />
+              <Chip 
+                label={(metricsData.overallStatus?.toUpperCase?.() || 'HEALTHY')}
+                color={metricsData.overallStatus?.toLowerCase() === 'healthy' ? 'success' : 
+                  metricsData.overallStatus?.toLowerCase() === 'warning' ? 'warning' : 'error'}
+              />
+            </Box>
           }
-          subheader={`Last updated: ${new Date(metricsData.lastUpdated).toLocaleTimeString()}`}
+          subheader={`Last updated: ${systemMetricsApi.lastUpdated ? systemMetricsApi.lastUpdated.toLocaleTimeString() : 'Unknown'}`}
         />
       </Card>
 
       {/* Component Metrics Grid */}
       <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 1fr', lg: '1fr 1fr 1fr' }, gap: 2 }}>
-        {metricsData.data.map((metric) => (
+        {(metricsData.data || []).length > 0 ? (metricsData.data || []).map((metric: SystemMetric) => (
           <Card key={metric.id}>
             <CardHeader 
               title={metric.component}
@@ -232,7 +255,25 @@ export const RealtimeSystemMetrics: React.FC = () => {
               </Typography>
             </CardContent>
           </Card>
-        ))}
+        )) : (
+          <Card>
+            <CardContent>
+              <Box sx={{ textAlign: 'center', p: 2 }}>
+                <Typography color="textSecondary">
+                  No system metrics data available
+                </Typography>
+                <Button 
+                  variant="contained" 
+                  color="primary" 
+                  onClick={fetchSystemMetrics}
+                  sx={{ mt: 2 }}
+                >
+                  Refresh
+                </Button>
+              </Box>
+            </CardContent>
+          </Card>
+        )}
       </Box>
     </Box>
   );

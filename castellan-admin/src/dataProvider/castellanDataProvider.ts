@@ -1,4 +1,5 @@
 import { DataProvider, fetchUtils, HttpError } from 'react-admin';
+import { createCachedDataProvider, preloadDataProviderCache } from './cachedDataProvider';
 
 // Castellan Open Source Data Provider - All features enabled
 // This is the free version with no premium restrictions
@@ -49,6 +50,7 @@ const RESOURCE_MAP: Record<string, string> = {
     'system-status': 'system-status',
     'threat-scanner': 'threat-scanner',
     'notification-settings': 'notifications/config',
+    'configuration': 'settings/threat-intelligence',
     'users': 'users',
     'settings': 'settings',
     'analytics': 'analytics',
@@ -138,6 +140,18 @@ export const castellanDataProvider: DataProvider = {
             };
         }
 
+        // Special handling for configuration resource list
+        if (resource === 'configuration') {
+            return {
+                data: [{
+                    id: 'threat-intelligence',
+                    name: 'Threat Intelligence Configuration',
+                    description: 'Configure threat intelligence providers and settings'
+                }],
+                total: 1
+            };
+        }
+
         const backendResource = RESOURCE_MAP[resource] || resource;
         
         // Use smaller page sizes for MITRE resources to prevent timeouts
@@ -185,6 +199,22 @@ export const castellanDataProvider: DataProvider = {
             throw new Error(`${resource} is a premium feature not available in CastellanFree`);
         }
 
+        // Special handling for configuration resource
+        if (resource === 'configuration' && params.id === 'threat-intelligence') {
+            console.log('[DataProvider] Getting configuration from backend API');
+            const backendResource = RESOURCE_MAP[resource] || resource;
+            const url = `${API_URL}/${backendResource}`;
+            
+            try {
+                const { json } = await httpClient(url);
+                console.log('[DataProvider] Configuration loaded from backend:', json);
+                return { data: json.data || json };
+            } catch (error) {
+                console.error('[DataProvider] Error loading configuration from backend:', error);
+                throw error;
+            }
+        }
+
         const backendResource = RESOURCE_MAP[resource] || resource;
         const url = `${API_URL}/${backendResource}/${params.id}`;
         
@@ -193,7 +223,16 @@ export const castellanDataProvider: DataProvider = {
             // Backend returns { data: { id: "1", ... } }, we need to extract the nested data
             return { data: json.data || json };
         } catch (error) {
-            console.error(`Error fetching ${resource} ${params.id}:`, error);
+            // Enhanced error handling for specific cases
+            if (error instanceof HttpError && error.status === 404) {
+                if (resource === 'mitre/techniques') {
+                    console.warn(`MITRE technique ${params.id} not found in database - may need to import MITRE data`);
+                } else {
+                    console.warn(`${resource} with ID ${params.id} not found`);
+                }
+            } else {
+                console.error(`Error fetching ${resource} ${params.id}:`, error);
+            }
             throw error;
         }
     },
@@ -297,6 +336,26 @@ export const castellanDataProvider: DataProvider = {
             throw new Error(`${resource} is a premium feature not available in CastellanFree`);
         }
 
+        // Special handling for configuration resource
+        if (resource === 'configuration' && params.id === 'threat-intelligence') {
+            console.log('[DataProvider] Saving configuration to backend API:', params.data);
+            const backendResource = RESOURCE_MAP[resource] || resource;
+            const url = `${API_URL}/${backendResource}`;
+            
+            try {
+                const { json } = await httpClient(url, {
+                    method: 'PUT',
+                    body: JSON.stringify(params.data),
+                });
+                
+                console.log('[DataProvider] Configuration saved to backend:', json);
+                return { data: json.data || json };
+            } catch (error) {
+                console.error('[DataProvider] Error saving configuration to backend:', error);
+                throw error;
+            }
+        }
+
         const backendResource = RESOURCE_MAP[resource] || resource;
         const url = `${API_URL}/${backendResource}/${params.id}`;
         
@@ -388,8 +447,8 @@ export const castellanDataProvider: DataProvider = {
     },
 };
 
-// Enhanced data provider with additional methods for custom operations
-export const enhancedCastellanDataProvider = {
+// Base enhanced data provider with additional methods for custom operations
+const baseEnhancedCastellanDataProvider = {
     ...castellanDataProvider,
 
     // Custom method for dashboard metrics
@@ -565,6 +624,21 @@ export const enhancedCastellanDataProvider = {
             throw error;
         }
     }
+};
+
+// Create cached version of the enhanced data provider for instant navigation
+export const enhancedCastellanDataProvider = {
+    ...createCachedDataProvider(baseEnhancedCastellanDataProvider as DataProvider),
+    // Preserve custom methods that don't need caching
+    getDashboardMetrics: baseEnhancedCastellanDataProvider.getDashboardMetrics,
+    getSystemHealth: baseEnhancedCastellanDataProvider.getSystemHealth,
+    exportComplianceReport: baseEnhancedCastellanDataProvider.exportComplianceReport,
+    uploadFile: baseEnhancedCastellanDataProvider.uploadFile,
+    advancedSearch: baseEnhancedCastellanDataProvider.advancedSearch,
+    healthCheck: baseEnhancedCastellanDataProvider.healthCheck,
+    testNotificationConnection: baseEnhancedCastellanDataProvider.testNotificationConnection,
+    getNotificationHealth: baseEnhancedCastellanDataProvider.getNotificationHealth,
+    custom: baseEnhancedCastellanDataProvider.custom
 };
 
 export default enhancedCastellanDataProvider;

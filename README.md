@@ -9,782 +9,141 @@
 <div align="center">
 
 ![GitHub Tag](https://img.shields.io/github/v/tag/MLidstrom/Castellan)
-[![Open Source](https://img.shields.io/badge/Open%20Source-100%25-brightgreen.svg?logo=github)](#open-source--enterprise-grade)
+[![Open Source](https://img.shields.io/badge/Open%20Source-100%25-brightgreen.svg?logo=github)](#-open-source--enterprise-grade)
 [![.NET](https://img.shields.io/badge/.NET-8.0-512BD4?logo=.net)](https://dotnet.microsoft.com/)
 [![Windows](https://img.shields.io/badge/Windows-Native-blue.svg?logo=windows)](https://www.microsoft.com/windows)
 [![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
-[![Performance](https://img.shields.io/badge/Performance-Optimized-blue.svg?logo=lightning)](#performance--scale)
-[![Security](https://img.shields.io/badge/Security-BCrypt%20%7C%20JWT-green.svg)](https://auth0.com/blog/hashing-in-action-understanding-bcrypt/)
-[![Reliability](https://img.shields.io/badge/Reliability-Enterprise%20Grade-blue.svg)](#observability--reliability)
 [![AI](https://img.shields.io/badge/AI-Powered-orange.svg)](https://openai.com/)
 [![MITRE](https://img.shields.io/badge/MITRE-ATT%26CK-darkred.svg)](https://attack.mitre.org/)
 
+**AI-Powered Windows Security Monitoring**
+
 </div>
 
-## AI‑Powered Windows Security Monitoring
+---
 
-**Castellan** is a **100% open source**, enterprise-grade security monitoring and threat detection platform that transforms Windows event logs into actionable security intelligence using AI-powered analysis, vector search, and real-time correlation. Built under the MIT License with complete source code transparency and no vendor lock-in, Castellan delivers advanced threat detection capabilities with modern AI/ML integration. With enterprise-grade security features including BCrypt password hashing, JWT token management, and native Windows deployment, it provides comprehensive threat detection for Windows environments. **Linux and macOS editions are in planning and will be released as a separate cross-platform edition.**
+**Castellan** is a **100% open source**, enterprise-grade security monitoring platform that transforms Windows event logs into actionable security intelligence using AI-powered analysis, vector search, and real-time threat correlation.
 
-> **Castellan** (noun): A governor or warden of a castle or fortification; a person responsible for the defense and security of a stronghold. From the medieval Latin *castellanus*, meaning "pertaining to a castle." The name reflects our mission to provide vigilant security monitoring and defense for your digital infrastructure. ([Source: Merriam-Webster](https://www.merriam-webster.com/dictionary/castellan))
+🚀 **Enterprise Features**: 12K+ events/sec processing • Vector similarity search • Real-time Teams/Slack alerts • 800+ MITRE ATT&CK techniques • VirusTotal/MalwareBazaar integration
 
-<a href="https://github.com/MLidstrom/Castellan">
-<img width="100%" src="assets/images/Castellan_1280_640.png"></a>
+⚡ **5-Minute Setup**: `.\scripts\start.ps1` → Open `http://localhost:8080` → Start monitoring
 
-**TL;DR**: AI‑powered Windows security monitoring with vector search and real‑time correlation.  
-**Why**: Faster detection, transparent MIT code, zero vendor lock‑in.  
+## 🔥 Key Features
 
-### Quick start (60 seconds)
-1. `.\scripts\start.ps1`
-2. Open `http://localhost:8080`
-3. Login with the admin credentials you set via environment variables
+- **🧠 AI-Powered Analysis** - LLM-based threat classification with vector similarity search
+- **🛡️ Real-time Detection** - Live Windows Event Log monitoring with instant threat correlation  
+- **📊 Enterprise Scale** - 12K+ events/sec processing with intelligent caching (30-50% boost)
+- **🔔 Smart Notifications** - Rich Teams/Slack alerts with adaptive rate limiting
+- **🎯 MITRE Integration** - Auto-updated 800+ ATT&CK techniques with threat mapping
+- **🔍 Threat Intelligence** - VirusTotal, MalwareBazaar, AlienVault OTX integration
+- **📱 Real-time Dashboard** - React admin interface with SignalR live updates
+- **🔒 Enterprise Security** - BCrypt passwords, JWT tokens, audit trails
 
-**Security & Disclosure**: See `SECURITY.md` for security practices and responsible disclosure.
+## 🖼️ Screenshots
 
-## Table of Contents
-- [Screenshots](#screenshots)
-- [🌟 Open Source & Enterprise-Grade](#-open-source--enterprise-grade)
-- [🚀 Features](#-features)
-- [📊 Performance & Enterprise Scale](#-performance--enterprise-scale)
-- [⚖️ Castellan vs. Security Monitoring Alternatives](#-castellan-vs-security-monitoring-alternatives)
-- [🏢 Enterprise-Grade Architecture](#-enterprise-grade-architecture)
-- [🔐 Security Architecture](#-security-architecture)
-- [🔍 Observability & Reliability](#-observability--reliability)
-- [🔔 Notification Services](#-notification-services)
-- [🚀 Quick Start](#-quick-start)
-- [🗄️ Data Storage](#-data-storage)
-- [📦 License & Deployment](#-license--deployment)
-- [🔧 Configuration](#-configuration)
-- [📚 Documentation](#-documentation)
-- [🤝 Contributing](#-contributing)
-- [📄 License](#-license)
-- [🆘 Support](#-support)
-- [🙏 Acknowledgments](#-acknowledgments)
-- [🎆 Production-Ready Enterprise Platform](#-production-ready-enterprise-platform)
-
-## Screenshots
-<!-- Replace placeholders with real screenshots; ensure alt text is meaningful -->
-<p>
-  <img alt="Castellan web admin dashboard showing live security events" src="assets/images/readme/dashboard.png" width="800" />
-</p>
-<p>
-  <img alt="Microsoft Teams alert card generated by Castellan" src="assets/images/readme/teams-alert.png" width="600" />
-</p>
-<p>
-  <img alt="Windows system tray notification for critical security event" src="assets/images/readme/system-tray.png" width="400" />
+<p align="center">
+  <img alt="Castellan Dashboard" src="assets/images/readme/dashboard.png" width="800" />
+  <br><em>Real-time security monitoring dashboard with live threat intelligence</em>
 </p>
 
-## 🌟 Open Source & Enterprise-Grade
-
-**Castellan is 100% Open Source** under the MIT License, providing enterprise-grade security monitoring with complete source code transparency and community-driven development. Built with modern AI/ML capabilities and designed for rapid deployment, Castellan offers advanced threat detection without vendor lock-in.
-
-### 🆓 **Why Open Source Matters**
-- **🔍 Full Transparency**: Complete source code access for security auditing and customization
-- **🚫 No Vendor Lock-in**: Own your security infrastructure without dependence on proprietary solutions
-- **🌐 Community Driven**: Collaborative development with security professionals worldwide
-- **⚡ Rapid Innovation**: Fast feature development and bug fixes driven by community needs
-- **🔒 Security by Design**: Open source enables independent security verification and hardening
-- **🔧 Complete Control**: Fork, modify, and adapt to meet your specific security requirements
-
-### 🏢 **Enterprise Features & Capabilities**
-
-| **Capability** | **Castellan (Open Source)** | **Commercial SIEM** | **Advantage** |
-|----------------|------------------------------|----------------------|---------------|
-| **Core Platform** | ✅ MIT License - Full Access | Proprietary licensing | **Complete source control** |
-| **AI/ML Integration** | ✅ Advanced (LLM + Vector Search) | Often add-on modules | **Built-in from day one** |
-| **Teams/Slack Alerts** | ✅ Rich card integration | Basic webhook support | **Native rich formatting** |
-| **MITRE ATT&CK** | ✅ Auto-updated (800+ techniques) | Manual mapping required | **Automated intelligence** |
-| **Deployment** | ✅ 5-minute setup | Weeks to months | **Instant productivity** |
-| **Customization** | ✅ Fork & modify freely | Vendor-dependent | **Unlimited flexibility** |
-| **Windows Focus** | ✅ Native Windows optimization | Often generic approach | **Platform-specific expertise** |
-| **Performance** | ✅ Connection pooling & caching | Basic optimization | **Advanced engineering** |
-
-> **💡 Technical Advantage**: Castellan combines cutting-edge AI capabilities with enterprise-grade performance engineering, offering 5-minute deployment, advanced connection pooling (15-25% I/O improvement), and intelligent caching (30-50% performance boost) - features typically found only in premium solutions.
-
-## 🚀 Features
-
-### 🔍 **Intelligent Log Analysis**
-- **Real-time Windows Event Log Collection** - Monitors security, application, and system events
-- **AI-Powered Threat Analysis** - LLM-based event classification with external threat intelligence
-- **Vector Search** - Semantic similarity search using Qdrant vector database for correlation
-- **Advanced Correlation** - M4 correlation engine with threat intelligence enrichment
-- **🆕 File Threat Scanning** - Real-time malware detection with VirusTotal integration and local heuristics
-
-### 🛡️ **Security Detection**
-- **✅ Tier 1 Threat Intelligence** - Fully operational VirusTotal, MalwareBazaar, and AlienVault OTX integration for enhanced malware detection
-- **IP Reputation & Geolocation** - MaxMind GeoLite2 databases for IP enrichment and threat correlation
-- **MITRE ATT&CK Mapping** - Automatic threat technique classification with 800+ techniques
-- **Anomaly Detection** - Machine learning-based behavioral analysis with vector similarity
-- **Automated Response** - Real-time threat response with configurable actions and escalation
-
-### 📊 **Monitoring & Analysis**
-- **🆕 Real-time System Monitoring** - Live system health, performance metrics, and threat intelligence status via SignalR
-- **Security Event Correlation** - Pattern detection and event relationship analysis
-- **Threat Pattern Recognition** - AI-powered identification of attack sequences
-- **Performance Monitoring** - System health and security service status with real-time dashboards
-- **Event Timeline** - Chronological security event tracking with live updates
-- **Persistent Storage** - 24-hour rolling window with automatic restart recovery
-- **Application Data Management** - PostgreSQL database for enhanced performance, applications, MITRE ATT&CK techniques, and unified security event storage
-
-### 🔔 **Notifications & Interface**
-- **🆕 Teams/Slack Integration** - Real-time security alerts in Microsoft Teams and Slack channels
-- **🆕 Real-time Web Dashboard** - Live system monitoring with SignalR-powered updates
-- **Desktop Notifications** - Real-time security alerts
-- **Web Admin Interface** - React-based management dashboard with live metrics
-- **WebSocket Integration** - Real-time scan progress, system health, and threat intelligence status
-- **Windows Native** - Optimized for Windows Event Log collection and analysis
-- **Local Deployment** - No cloud dependencies, runs entirely on your local infrastructure
-
-### 🔒 **Enterprise Security**
-- **BCrypt Password Hashing** - Industry-standard password security with configurable work factors
-- **JWT Token Management** - Secure refresh token rotation and server-side invalidation
-- **Token Blacklisting** - Real-time token revocation with automatic cleanup
-- **Password Complexity Validation** - Comprehensive password strength requirements
-- **Audit Trail** - Complete authentication event logging for security monitoring
-- **Configuration Validation** - Startup validation prevents deployment with invalid security settings
-- **Error Handling** - Consistent security error responses with correlation tracking
-
-## 📊 Performance & Enterprise Scale
-
-### **Production-Ready Performance:**
-- **Event Processing**: 12,000+ events per second with parallel processing
-- **Vector Operations**: 3-5x performance improvement through intelligent batch processing
-- **AI Analysis**: <4 second response time for threat classification
-- **Resource Usage**: Optimized multi-core usage (<500MB RAM, <2GB disk)
-- **Storage**: 24-hour rolling window with automatic recovery
-- **Scalability**: From single endpoints to enterprise networks
-
-### **Intelligent Caching System**
-- **30-50% Performance Boost**: Semantic similarity detection with intelligent caching
-- **Cache-First Approach**: 95% similarity threshold with 60-minute TTL
-- **Memory Management**: 512MB cache with LRU eviction and pressure monitoring
-- **Hash Optimization**: Text normalization for repeated pattern recognition
-
-### **Connection Pooling Architecture**
-- **15-25% I/O Optimization**: Intelligent connection reuse and management
-- **Health Monitoring**: Production-ready pool management with real-time health checks
-- **Load Balancing**: Round-robin and weighted distribution across instances
-- **Automatic Failover**: HTTP-based monitoring with consecutive failure/recovery thresholds
-- **Batch Integration**: Seamless integration with vector batch processing
-
-### **Enterprise Scaling Architecture**
-- **Horizontal Scaling**: Complete architecture with fault tolerance and auto-scaling
-- **Event Queue System**: Priority-based processing with dead-letter handling
-- **Adaptive Load Balancing**: Weighted round-robin with performance optimization
-- **Background Health Monitoring**: HTTP checks with trend analysis
-- **Auto-Scaling Policies**: Target tracking, step scaling, and predictive scaling
-
-**🔮 Future Roadmap:**
-- Windows Integration Enhancements: Deeper Windows Event Log sources and advanced enrichment
-- Extended Log Sources: Additional Windows-native sources and parsers
-- Advanced Performance: Additional optimization targets for 50,000+ events per second
-- Multi-platform editions: Linux and macOS support are in planning
-
-## ⚖️ Castellan vs. Security Monitoring Alternatives
-
-### 🏆 **Technical Capability Comparison**
-
-| **Capability** | **Castellan** | **Splunk ES** | **IBM QRadar** | **ELK Stack** | **Wazuh** |
-|----------------|---------------|---------------|----------------|---------------|----------|
-| **🤖 AI/ML Integration** | **✅ Advanced (LLM + Vector)** | ⚠️ Add-on modules | ⚠️ Add-on modules | ❌ Manual setup | ⚠️ Basic rules |
-| **🔍 Vector Search** | **✅ Semantic similarity** | ❌ Not available | ❌ Not available | ⚠️ Manual setup | ❌ Not available |
-| **⏱️ Deployment Time** | **✅ 5 minutes** | Weeks to months | Weeks to months | Days to weeks | Days to weeks |
-| **📊 Real-time Processing** | **✅ 12K+ events/sec** | ✅ Enterprise scale | ✅ Enterprise scale | ⚠️ Configuration dependent | ✅ Good performance |
-| **📱 Rich Notifications** | **✅ Teams/Slack cards** | Basic integrations | Basic integrations | Manual webhooks | Manual setup |
-| **🎯 MITRE ATT&CK** | **✅ Auto-updated (800+)** | Manual mapping | Manual mapping | Not built-in | Good coverage |
-| **🔒 Source Access** | **✅ Full transparency** | Proprietary | Proprietary | Open components | Full access |
-| **⚙️ Customization** | **✅ Fork & modify** | Vendor-limited | Vendor-limited | High flexibility | Good flexibility |
-| **📈 Auto-scaling** | **✅ Built-in architecture** | Enterprise features | Enterprise features | Manual configuration | Good scaling |
-| **📊 Connection Pooling** | **✅ 15-25% I/O optimization** | Not documented | Not documented | Manual setup | Not available |
-| **🧠 Intelligent Caching** | **✅ 30-50% performance boost** | Basic caching | Basic caching | Manual setup | Limited caching |
-| **🔍 Threat Intelligence** | **✅ VirusTotal/MalwareBazaar/OTX** | Premium add-ons | Premium add-ons | Manual integration | Basic feeds |
-| **🆆 Windows Focus** | **✅ Native Windows optimization** | Generic approach | Generic approach | Manual setup | Cross-platform |
-
-### 🎆 **Castellan's Technical Advantages**
-
-#### 🤖 **AI-First Security Architecture**
-- **Large Language Models**: Advanced threat analysis using LLM reasoning
-- **Vector Similarity Search**: Semantic correlation using Qdrant vector database
-- **Automated Intelligence**: AI automatically maps events to MITRE ATT&CK techniques
-- **Behavioral Analytics**: Machine learning identifies complex attack patterns
-- **Context-Aware Detection**: Understanding beyond simple rule matching
-
-#### ⚡ **Advanced Performance Engineering**
-- **Connection Pooling**: 15-25% I/O performance optimization with health monitoring
-- **Intelligent Caching**: 30-50% performance boost with semantic similarity detection
-- **Parallel Processing**: 12,000+ events/second with optimized multi-core utilization
-- **Auto-scaling Architecture**: Dynamic resource allocation and load balancing
-- **Memory Management**: Advanced caching with LRU eviction and pressure monitoring
-
-#### 🌐 **Open Source Innovation**
-- **Community Development**: Rapid feature development driven by security professionals
-- **Security Transparency**: Complete code audit capability for compliance requirements
-- **No Vendor Dependencies**: Full control over security infrastructure and roadmap
-- **Unlimited Customization**: Fork, modify, and adapt to specific organizational needs
-- **Modern Architecture**: Built with latest technologies and best practices
-
-#### 🚀 **Operational Excellence**
-- **Instant Deployment**: 5-minute setup vs. weeks/months for traditional solutions
-- **Windows Native**: Deep integration with Windows Event Log system and services
-- **Container-Ready**: Native Docker support with orchestration capabilities
-- **Air-Gap Compatible**: Fully functional in disconnected environments
-- **Comprehensive Monitoring**: Built-in performance metrics and health dashboards
-
-### 🔍 **When to Choose Castellan**
-
-**Perfect For:**
-- Organizations requiring **advanced AI-powered threat detection**
-- Teams needing **rapid deployment** and **immediate value**
-- Environments requiring **full source code transparency**
-- Security teams wanting **cutting-edge vector search capabilities**
-- Windows-focused security monitoring **with deep Event Log integration**
-- Teams requiring **unlimited customization** and **no vendor lock-in**
-
-**Technical Requirements:**
-- Modern threat detection with AI/ML capabilities
-- High-performance event processing (10K+ events/sec)
-- Semantic correlation and similarity search
-- Automated MITRE ATT&CK technique mapping
-- Real-time alerting with rich notification formats
-- Native Windows Event Log integration and analysis
-
-## 🏢 Enterprise-Grade Architecture
-
-Castellan processes Windows security events through **enterprise-grade AI/ML analysis with comprehensive parallel processing, intelligent caching, and connection pooling**, stores enriched data in a vector database with scaling architecture, maintains application and MITRE data in SQLite, and provides multiple notification channels including desktop notifications, Teams/Slack integration, and a fully functional React Admin web interface.
-
-**✅ Current Enterprise Features (OPERATIONAL):**
-- **Connection Pooling**: 15-25% I/O optimization with health monitoring and automatic failover 🎆 **LIVE** - 2/2 instances healthy, HTTP monitoring active
-- **Intelligent Caching**: 30-50% performance improvement with semantic similarity detection and memory management
-- **Scaling Architecture**: Complete horizontal scaling with load balancing, event queues, and auto-scaling
-- **Pipeline Stability**: Production-ready with stable background operation and comprehensive monitoring
-- **MITRE Integration**: Full ATT&CK framework integration with 50+ techniques displayed in web interface
-- **Background Service Management**: Reliable PowerShell job-based startup with comprehensive monitoring
-- **🆕 Real-time Monitoring**: SignalR-powered live system health, scan progress, and threat intelligence status
-
-```mermaid
-flowchart LR
-    A[Windows Event Logs] --> B[Castellan Worker Service]
-    B --> C[Parallel AI/ML Processing]
-    C --> D[Qdrant Vector Database]
-    B --> K[SQLite Database]
-    B --> N[Threat Intelligence Services]
-    N --> O[VirusTotal API]
-    N --> P[MalwareBazaar API]
-    N --> Q[AlienVault OTX API]
-    B --> E[Notification Services]
-    E --> F[Desktop Notifications]
-    E --> G[Web Admin Interface]
-    E --> M[Teams/Slack Channels]
-    D --> H[Vector Search & Correlation]
-    K --> L[Application & MITRE Data]
-    N --> I[Threat Detection Engine]
-    H --> I
-    I --> J[Security Alerts]
-    J --> E
-    L --> I
-    
-    subgraph "Data Collection"
-        A
-    end
-    
-    subgraph "Core Processing"
-        B
-        C
-    end
-    
-    subgraph "Data Storage"
-        D
-        K
-    end
-    
-    subgraph "Threat Intelligence"
-        N
-        O
-        P
-        Q
-    end
-    
-    subgraph "Intelligence & Analysis"
-        H
-        L
-        I
-        J
-    end
-    
-    subgraph "Notifications & Interface"
-        F
-        G
-        M
-        E
-    end
-    
-    style A fill:#e1f5fe,color:#000
-    style B fill:#f3e5f5,color:#000
-    style C fill:#fff3e0,color:#000
-    style D fill:#e8f5e8,color:#000
-    style K fill:#e8f5e8,color:#000
-    style E fill:#fce4ec,color:#000
-    style F fill:#f1f8e9,color:#000
-    style G fill:#f1f8e9,color:#000
-    style H fill:#fff8e1,color:#000
-    style L fill:#fff8e1,color:#000
-    style I fill:#ffebee,color:#000
-    style J fill:#ffebee,color:#000
-    style M fill:#e3f2fd,color:#000
-    style N fill:#fce4ec,color:#000
-    style O fill:#f3e5f5,color:#000
-    style P fill:#f3e5f5,color:#000
-    style Q fill:#f3e5f5,color:#000
-```
-
-## 🔐 Security Architecture
-
-**Enterprise-Grade Authentication System:**
-```mermaid
-flowchart LR
-    A[Client Request] --> B[JWT Validation]
-    B --> C[Token Blacklist Check]
-    C --> D[API Access]
-    
-    E[Login/Register] --> F[BCrypt Hashing]
-    F --> G[Refresh Token]
-    G --> H[Secure Session]
-    
-    A -.-> E
-    B -.-> F
-    C -.-> G
-    D -.-> H
-    
-    subgraph "Request Flow"
-        A
-        B
-        C
-        D
-    end
-    
-    subgraph "Authentication Flow"
-        E
-        F
-        G
-        H
-    end
-    
-    style A fill:#e1f5fe,color:#000
-    style B fill:#fff3e0,color:#000
-    style C fill:#ffebee,color:#000
-    style D fill:#e8f5e8,color:#000
-    style E fill:#f3e5f5,color:#000
-    style F fill:#fff8e1,color:#000
-    style G fill:#fce4ec,color:#000
-    style H fill:#f1f8e9,color:#000
-```
-
-**Security Features:**
-- **Password Security**: BCrypt hashing with configurable work factors (4-12 rounds)
-- **Token Management**: JWT with secure refresh token rotation and automatic expiration
-- **Token Blacklisting**: Real-time token revocation with in-memory cache and cleanup
-- **Complexity Validation**: Enforced password strength requirements (length, character types)
-- **Audit Trail**: Comprehensive authentication event logging for security monitoring
-- **Session Security**: Automatic token expiration, renewal, and secure refresh handling
-- **Multi-layered Defense**: Multiple security checks at authentication, authorization, and session levels
-- **Request Tracing**: Every API request tracked with unique correlation IDs for security incident investigation
-- **Configuration Safety**: Startup validation prevents deployment with invalid security configurations
-
-## 🔍 Observability & Reliability
-
-**Enterprise-Grade Operations:**
-```mermaid
-flowchart LR
-    A[Request] --> B[Correlation ID]
-    B --> C[Structured Logging]
-    C --> D[Error Handling]
-    D --> E[Response]
-    
-    F[Tracing] --> G[Performance Metrics]
-    G --> H[Exception Context]
-    H --> I[Audit Trail]
-    
-    A -.-> F
-    B -.-> G
-    C -.-> H
-    D -.-> I
-    
-    subgraph "Request Processing"
-        A
-        B
-        C
-        D
-        E
-    end
-    
-    subgraph "Observability Layer"
-        F
-        G
-        H
-        I
-    end
-    
-    style A fill:#e1f5fe,color:#000
-    style B fill:#fff3e0,color:#000
-    style C fill:#ffebee,color:#000
-    style D fill:#e8f5e8,color:#000
-    style E fill:#f3e5f5,color:#000
-    style F fill:#fff8e1,color:#000
-    style G fill:#fce4ec,color:#000
-    style H fill:#f1f8e9,color:#000
-    style I fill:#e3f2fd,color:#000
-```
-
-**Reliability Features:**
-- **Correlation Tracking**: Unique request IDs for complete request lifecycle tracing
-- **Structured Logging**: JSON-formatted logs with contextual information for analysis
-- **Global Exception Handling**: Consistent error responses across all API endpoints
-- **Service Validation**: Startup checks ensure all critical services are properly configured
-- **Configuration Validation**: Prevents deployment with invalid system configurations
-- **Performance Monitoring**: Request duration tracking and service health metrics
-- **Fail-Fast Architecture**: Application stops startup on critical configuration errors
-- **Request Context**: Complete request information available for debugging and security analysis
-
-## 🔔 Notification Services
-
-Castellan provides multiple channels for real-time security alert delivery:
-
-### 🆕 Teams & Slack Integration
-- **Microsoft Teams**: Rich Adaptive Cards with detailed security event information
-- **Slack**: Block Kit formatted messages with user mentions and action buttons
-- **Webhook Management**: Full CRUD interface for webhook configuration
-- **Rate Limiting**: Configurable throttling per severity level (Critical: instant, High: 5min, Medium: 15min, Low: 60min)
-- **Testing**: Built-in webhook connectivity testing from admin interface
-- **Validation**: Only official Teams/Slack webhook domains accepted
-
-### Desktop & Web Notifications
-- **Desktop Alerts**: Real-time system tray notifications for critical events
-- **Web Dashboard**: React-based admin interface with live event monitoring
-- **Email Integration**: SMTP support for email alerts (configurable)
-
-### Configuration
-Access the admin interface at http://localhost:8080 → "Notification Settings" to:
-1. Add Teams/Slack webhook URLs
-2. Configure rate limiting per severity
-3. Test webhook connections
-4. Set up channel routing and user mentions
+<p align="center">
+  <img alt="Teams Alert" src="assets/images/readme/teams-alert.png" width="600" />
+  <br><em>Rich Microsoft Teams alert cards with actionable security context</em>
+</p>
 
 ## 🚀 Quick Start
 
 ### Prerequisites
-- **[.NET 8.0 SDK](https://dotnet.microsoft.com/download/dotnet/8.0)** or later
-- **[Qdrant](https://qdrant.tech/)** (local [Docker](https://www.docker.com/get-started/))
-- **AI Provider** ([Ollama](https://ollama.com/) or [OpenAI](https://openai.com/))
-- **MaxMind GeoLite2 Databases** (optional but recommended for IP enrichment - see step 2 below)
+- [.NET 8.0 SDK](https://dotnet.microsoft.com/download/dotnet/8.0) 
+- [Docker](https://www.docker.com/get-started/) (for Qdrant)
+- [Ollama](https://ollama.com/) or [OpenAI API key](https://platform.openai.com/api-keys)
 
-### 1. Clone the Repository
-```powershell
-git clone https://github.com/MLidstrom/castellan.git
-cd castellan
-```
+### Installation
 
-### 2. Download MaxMind GeoLite2 Databases (Optional but Recommended)
-For IP geolocation and enrichment features:
-1. **Register for a free account** at https://www.maxmind.com/en/geolite2/signup
-2. **Download databases** from https://www.maxmind.com/en/accounts/current/geoip/downloads:
-   - GeoLite2 City (Binary/gzip)
-   - GeoLite2 ASN (Binary/gzip)
-   - GeoLite2 Country (Binary/gzip)
-3. **Extract** the `.mmdb` files and place in `src/Castellan.Worker/data/`
+1. **Clone repository**
+   ```powershell
+   git clone https://github.com/MLidstrom/castellan.git
+   cd castellan
+   ```
 
-**Note**: The application will run without these files, but IP enrichment will be disabled. See [detailed instructions](src/Castellan.Worker/data/README.md).
+2. **Configure authentication**
+   ```powershell
+   $env:AUTHENTICATION__JWT__SECRETKEY = "your-secure-jwt-secret-key-minimum-64-characters"
+   $env:AUTHENTICATION__ADMINUSER__USERNAME = "admin"
+   $env:AUTHENTICATION__ADMINUSER__PASSWORD = "your-secure-password"
+   ```
 
-### 3. Configure Authentication
-```powershell
-# IMPORTANT: Copy template and configure your credentials
-cd src\Castellan.Worker
-Copy-Item appsettings.template.json appsettings.json
+3. **Install AI models** (if using Ollama)
+   ```powershell
+   ollama pull nomic-embed-text
+   ollama pull llama3.1:8b-instruct-q8_0
+   ```
 
-# Edit appsettings.json with your secure credentials
-# Or use environment variables:
-$env:AUTHENTICATION__JWT__SECRETKEY = "your-secure-jwt-secret-key-minimum-64-characters"
-$env:AUTHENTICATION__ADMINUSER__USERNAME = "admin"
-$env:AUTHENTICATION__ADMINUSER__PASSWORD = "your-secure-password"
-```
+4. **Start services**
+   ```powershell
+   .\scripts\start.ps1
+   ```
 
-**⚠️ Security Note:** See [CONFIGURATION_SETUP.md](docs/CONFIGURATION_SETUP.md) for detailed configuration instructions.
+5. **Access dashboard**: Open `http://localhost:8080`
 
-### 4. Configure AI Providers (Optional)
-```powershell
-# For OpenAI (if not using Ollama) - Get API key from https://platform.openai.com/api-keys
-$env:OPENAI_API_KEY = "your-openai-key"
-$env:EMBEDDINGS__PROVIDER = "OpenAI"
-$env:LLM__PROVIDER = "OpenAI"
-```
+> **⚠️ Security Note**: See [Configuration Setup](docs/CONFIGURATION_SETUP.md) for detailed setup instructions.
 
-### 4.5. Configure Threat Intelligence (Recommended)
-```powershell
-# VirusTotal API (recommended for enhanced malware detection)
-$env:THREATINTELLIGENCE__VIRUSTOTAL__APIKEY = "your-virustotal-api-key"  # Get free API key from https://www.virustotal.com/gui/my-apikey
+## 🔥 Why Castellan?
 
-# AlienVault OTX API (recommended for additional threat intelligence)
-$env:THREATINTELLIGENCE__ALIENVAULTOTX__APIKEY = "your-otx-api-key"      # Get free API key from https://otx.alienvault.com/api
+### 🎆 **Production-Ready Enterprise Platform**
+- **MIT Licensed** - 100% open source with complete transparency
+- **5-Minute Setup** - From clone to monitoring in minutes
+- **Enterprise Scale** - 12K+ events/sec with intelligent caching
+- **AI-First** - Vector search + LLM analysis built-in
+- **Zero Vendor Lock-in** - Fork, modify, deploy anywhere
 
-# MalwareBazaar is enabled by default (no API key required)
-```
-Without API keys, Castellan falls back to local heuristics with graceful degradation.
-
-### 5. Install Ollama Models (if using local AI)
-```powershell
-# Install Ollama first from https://ollama.com/download
-# Then pull the required models:
-ollama pull nomic-embed-text    # Embedding model: https://ollama.com/library/nomic-embed-text
-ollama pull llama3.1:8b-instruct-q8_0    # LLM model: https://ollama.com/library/llama3.1
-```
-
-### 6. Start All Services
-
-**Windows (PowerShell) - Primary Platform:**
-```powershell
-# Start everything (Worker handles all orchestration)
-.\scripts\start.ps1
-
-# Enhanced startup options:
-.\scripts\start.ps1                    # Standard start with build (runs in background by default)
-.\scripts\start.ps1 -NoBuild          # Skip build step (runs in background by default)
-.\scripts\start.ps1 -Foreground       # Run in foreground (interactive mode)
-
-# Check service status:
-.\scripts\status.ps1                  # Basic status check
-.\scripts\status.ps1 -Detailed       # Detailed component info
-
-# Stop all services:
-.\scripts\stop.ps1                    # Graceful stop
-.\scripts\stop.ps1 -Force            # Force stop all
-```
-
-**Edition Scope:**
-This open source edition is Windows-only. Linux and macOS editions are in planning; cross-platform support will be delivered as a separate edition.
-
-**🛡️ Automatic MITRE ATT&CK Import**: On first startup, Castellan automatically downloads and imports 800+ official MITRE ATT&CK techniques from GitHub. This provides rich intelligence for security event analysis and tooltip descriptions. The import runs in the background and requires internet connectivity.
-
-**✅ Recent Fixes (September 2025)**:
-- **React Admin Interface**: Fixed missing RealtimeSystemMetrics component - dashboard now compiles and displays real-time system monitoring
-- **MITRE DataProvider Error**: Fixed response format transformation for MITRE ATT&CK techniques - "dataProvider error" resolved
-- **Worker API Stability**: Fixed SemaphoreFullException causing immediate crashes - services now run stable in background
-- **Authentication Flow**: Enhanced error handling for "No tokens found" scenarios - cleaner login experience
-
-**What gets started automatically:**
-- Qdrant vector database (Docker container)
-- Castellan Worker service (main API on port 5000)
-- React Admin interface (port 8080)
-- System Tray application
-
-**Alternative: Manual Start (Advanced Users)**
-<details>
-<summary>Click to see manual startup steps</summary>
-
-```powershell
-# Start Qdrant manually (requires Docker: https://www.docker.com/get-started/)
-docker run -d --name qdrant -p 6333:6333 qdrant/qdrant
-
-# Start Worker service (disable auto-start first)
-cd src\Castellan.Worker
-dotnet run
-
-# Start React Admin (new terminal, requires Node.js: https://nodejs.org/)
-cd castellan-admin
-npm install
-npm start
-```
-
-Note: Set `"Startup:AutoStart:Enabled": false` in `src/Castellan.Worker/appsettings.json` for manual control.
-</details>
-
-### 7. Access Web Interface
-Open your browser to `http://localhost:8080` to access the React admin interface.
-
-**Note:** Use the credentials you configured in step 3 for authentication.
-
-### 8. Configure Teams/Slack Notifications (Optional)
-Set up real-time security alerts in your team channels:
-
-1. **Get Webhook URLs**:
-   - **Teams**: Create an Incoming Webhook in your channel → Copy URL
-   - **Slack**: Create an Incoming Webhook in your workspace → Copy URL
-
-2. **Configure in Castellan**:
-   - Go to `http://localhost:8080` → "Notification Settings"
-   - Add your webhook URLs
-   - Test connections to verify setup
-   - Configure rate limiting per severity level
-
-3. **Start Receiving Alerts**:
-   - Critical alerts: Instant delivery with user mentions
-   - High alerts: 5-minute throttling
-   - Medium/Low alerts: 15/60-minute throttling
-
-## 🗄️ Data Storage
-
-Castellan uses a hybrid data storage approach for optimal performance and functionality:
-
-### **Qdrant Vector Database**
-- **Purpose**: AI/ML embeddings and vector similarity search
-- **Data**: Event embeddings, semantic search, correlation analysis
-- **Location**: Docker container (localhost:6333)
-
-### **SQLite Database** 
-- **Purpose**: Application metadata and MITRE ATT&CK techniques
-- **Data**: Application inventory, security configurations, MITRE techniques, security event persistence
-- **Location**: `src/Castellan.Worker/data/castellan.db` (automatically created)
-- **Schema**: Applications, MITRE techniques, security events, system configuration
-
-## 📦 License & Deployment
-
-### 🌟 **Open Source**
-- **License**: MIT License (full source code access)
-- **Deployment**: Self-hosted, full control
-- **Features**: Complete security monitoring platform
-- **Support**: Community support via GitHub
-- **Perfect for**: Developers, security researchers, organizations wanting full control
-
-## 🔧 Configuration
-
-**⚠️ Configuration Validation**: Castellan automatically validates all configuration settings at startup. Invalid configurations will prevent the application from starting with clear error messages indicating what needs to be fixed.
-
-### Environment Variables
-```powershell
-# Authentication Configuration (REQUIRED)
-$env:AUTHENTICATION__JWT__SECRETKEY = "your-secure-jwt-secret-key-minimum-64-characters"
-$env:AUTHENTICATION__ADMINUSER__USERNAME = "admin"
-$env:AUTHENTICATION__ADMINUSER__PASSWORD = "your-secure-password"
-
-# Qdrant Configuration (https://qdrant.tech/)
-$env:QDRANT__HOST = "localhost"
-$env:QDRANT__PORT = "6333"
-$env:QDRANT__HTTPS = "false"
-$env:QDRANT__APIKEY = "your-api-key"   # For Qdrant Cloud: https://cloud.qdrant.io/
-
-# AI Provider Configuration
-$env:EMBEDDINGS__PROVIDER = "Ollama"   # Ollama (https://ollama.com/) or OpenAI
-$env:LLM__PROVIDER = "Ollama"          # Ollama (https://ollama.com/) or OpenAI
-$env:OPENAI_API_KEY = "your-openai-key"   # Get from: https://platform.openai.com/api-keys
-
-# Performance Configuration
-$env:PIPELINE__ENABLEPARALLELPROCESSING = "true"        # Enable parallel processing
-$env:PIPELINE__MAXCONCURRENCY = "4"                     # Concurrent operations limit
-$env:PIPELINE__PARALLELOPERATIONTIMEOUTMS = "30000"     # Parallel operation timeout
-$env:PIPELINE__ENABLEPARALLELVECTOROPERATIONS = "true"  # Enable parallel vector operations
-
-# Batch Processing Configuration
-$env:PIPELINE__ENABLEVECTORBATCHING = "true"            # Enable vector batch processing
-$env:PIPELINE__VECTORBATCHSIZE = "50"                   # Batch size (vectors per batch)
-$env:PIPELINE__VECTORBATCHTIMEOUTMS = "5000"            # Batch flush timeout
-$env:PIPELINE__VECTORBATCHPROCESSINGTIMEOUTMS = "30000" # Batch processing timeout
-
-# Advanced Performance Features
-$env:PIPELINE__ENABLESEMAPHORETHROTTLING = "true"       # Enable semaphore-based throttling
-$env:PIPELINE__MAXCONCURRENTTASKS = "8"                 # Max concurrent tasks with semaphore
-$env:PIPELINE__SEMAPHORETIMEOUTMS = "15000"             # Semaphore acquisition timeout
-$env:PIPELINE__MEMORYHIGHWATERMARKMB = "1024"           # Memory cleanup threshold (MB)
-$env:PIPELINE__EVENTHISTORYRETENTIONMINUTES = "60"      # Event retention for correlation
-$env:PIPELINE__ENABLEDETAILEDMETRICS = "true"           # Enable detailed performance metrics
-
-# Threat Intelligence Configuration
-$env:THREATINTELLIGENCE__ENABLED = "true"                                    # Enable threat intelligence
-$env:THREATINTELLIGENCE__VIRUSTOTAL__ENABLED = "true"                       # Enable VirusTotal
-$env:THREATINTELLIGENCE__VIRUSTOTAL__APIKEY = "your-virustotal-api-key"     # Get from: https://www.virustotal.com/gui/my-apikey
-$env:THREATINTELLIGENCE__MALWAREBAZAAR__ENABLED = "true"                    # Enable MalwareBazaar (no API key required)
-$env:THREATINTELLIGENCE__ALIENVAULTOTX__ENABLED = "true"                    # Enable AlienVault OTX
-$env:THREATINTELLIGENCE__ALIENVAULTOTX__APIKEY = "your-otx-api-key"         # Get from: https://otx.alienvault.com/api
-
-# Connection Pool Configuration
-$env:CONNECTIONPOOLS__QDRANT__MAXCONNECTIONSPERINSTANCE = "10"      # Max connections per Qdrant instance
-$env:CONNECTIONPOOLS__QDRANT__CONNECTIONTIMEOUT = "00:00:10"         # Connection timeout (10 seconds)
-$env:CONNECTIONPOOLS__QDRANT__REQUESTTIMEOUT = "00:01:00"            # Request timeout (1 minute)
-$env:CONNECTIONPOOLS__QDRANT__ENABLEFAILOVER = "true"                # Enable automatic failover
-$env:CONNECTIONPOOLS__QDRANT__MINHEALTHYINSTANCES = "1"              # Minimum healthy instances required
-$env:CONNECTIONPOOLS__HEALTHMONITORING__CHECKINTERVAL = "00:00:30"   # Health check interval (30 seconds)
-$env:CONNECTIONPOOLS__HEALTHMONITORING__CONSECUTIVEFAILURETHRESHOLD = "3"  # Failures before marking unhealthy
-$env:CONNECTIONPOOLS__LOADBALANCING__ALGORITHM = "WeightedRoundRobin" # Load balancing algorithm
-
-```
-
-### Build
-```powershell
-# Build Castellan
-dotnet build -c Release
-```
+### 🔄 **vs. Traditional SIEM Solutions**
+| Feature | Castellan | Splunk/QRadar/ELK |
+|---------|-----------|-------------------|
+| **Deployment** | 5 minutes | Weeks to months |
+| **AI/ML** | Built-in LLM + Vector | Add-on modules |
+| **Customization** | Full source access | Vendor limited |
+| **Cost** | Free + self-hosted | $$$$ + licensing |
+| **Windows Focus** | Native optimization | Generic approach |
 
 ## 📚 Documentation
 
-### Getting Started
-- **[Configuration Setup](docs/CONFIGURATION_SETUP.md)** - **START HERE** - Initial configuration required
-- **[Authentication Setup](docs/AUTHENTICATION_SETUP.md)** - Security configuration and credential setup
-- **[Getting Started](docs/GETTING_STARTED.md)** - Quick start guide for development
-- **[Startup Configuration](docs/STARTUP_CONFIGURATION.md)** - Service orchestration and startup management
-- **[Test Suite](src/Castellan.Tests/)** - Comprehensive test coverage with 375 tests (97.6% success rate - 366 passing, 9 functional tests pending fixes) with clean output
-
-### Architecture & Quality
-- **[Performance & Roadmap](docs/PERFORMANCE_ROADMAP.md)** - Current performance metrics, architecture overview, and development roadmap
-- **[Performance Tuning Guide](docs/PERFORMANCE_TUNING.md)** - Comprehensive performance optimization and tuning guide
-
-### Development & Operations
-- **[Windows PowerShell Compatibility](docs/WINDOWS_POWERSHELL_COMPATIBILITY.md)** - Native Windows PowerShell 5.1 support guide
-- **[Windows Logging Hardening](scripts/enable-logging-hardening.md)** - Windows audit policy configuration guide
-- **[Troubleshooting Guide](docs/TROUBLESHOOTING.md)** - Common issues and solutions
-
-### Threat Intelligence & Security
-- **[Threat Intelligence Integration](docs/THREAT_INTELLIGENCE.md)** - VirusTotal, MalwareBazaar, and AlienVault OTX integration guide
+| Topic | Description |
+|-------|-------------|
+| **[🚀 Quick Start Guide](docs/GETTING_STARTED.md)** | Complete installation and setup instructions |
+| **[🔧 Configuration](docs/CONFIGURATION_SETUP.md)** | Authentication, AI providers, threat intelligence setup |
+| **[🔥 Features](docs/FEATURES.md)** | Comprehensive feature overview and capabilities |
+| **[🏢 Architecture](docs/ARCHITECTURE.md)** | System architecture, security, and observability |
+| **[📈 Performance](docs/PERFORMANCE.md)** | Performance metrics, benchmarks, and optimization |
+| **[🔔 Notifications](docs/NOTIFICATIONS.md)** | Teams/Slack integration and alert configuration |
+| **[🛡️ Threat Intelligence](docs/THREAT_INTELLIGENCE.md)** | VirusTotal, MalwareBazaar, AlienVault OTX setup |
+| **[⚖️ Comparison](docs/COMPARISON.md)** | Castellan vs traditional SIEM solutions |
+| **[🔐 Security](docs/AUTHENTICATION_SETUP.md)** | BCrypt, JWT, and enterprise security features |
+| **[🚑 Troubleshooting](docs/TROUBLESHOOTING.md)** | Common issues and solutions |
 
 ### Additional Resources
-- **[Build Guide](docs/BUILD_GUIDE.md)** - Detailed build and deployment instructions
-- **[Compliance Guide](docs/COMPLIANCE.md)** - Compliance framework implementation
 - **[API Documentation](docs/API.md)** - REST API reference
-- **[Configuration Guide](docs/CONFIGURATION.md)** - Advanced configuration options
-- **[Changelog](CHANGELOG.md)** - Complete release notes and upgrade information
+- **[Build Guide](docs/BUILD_GUIDE.md)** - Development and deployment
+- **[Performance Tuning](docs/PERFORMANCE_TUNING.md)** - Optimization guide
+- **[Windows PowerShell](docs/WINDOWS_POWERSHELL_COMPATIBILITY.md)** - Native Windows support
 
-## 🤝 Contributing
+## 🤝 Community & Support
 
-We welcome contributions! Please see our [Contributing Guidelines](CONTRIBUTING.md) for details.
-
-### Development Setup
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Add tests
-5. Submit a pull request
+- **[GitHub Issues](https://github.com/MLidstrom/Castellan/issues)** - Bug reports and feature requests
+- **[GitHub Discussions](https://github.com/MLidstrom/Castellan/discussions)** - Community support and questions  
+- **[Contributing Guide](CONTRIBUTING.md)** - How to contribute to the project
+- **[Security Policy](SECURITY.md)** - Security practices and responsible disclosure
 
 ## 📄 License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
-## 🆘 Support
-
-- **Community Support**: [GitHub Discussions](https://github.com/MLidstrom/Castellan/discussions)
-- **Bug Reports**: [GitHub Issues](https://github.com/MLidstrom/Castellan/issues)
-- **Feature Requests**: [GitHub Issues](https://github.com/MLidstrom/Castellan/issues)
-
-## 🙏 Acknowledgments
-
-- **Qdrant** for the vector database
-- **OpenAI** and **Ollama** for AI capabilities
-- **MITRE** for ATT&CK framework
+This project is licensed under the **MIT License** - see the [LICENSE](LICENSE) file for details.
 
 ---
 
-## 🎆 **Production-Ready Enterprise Platform**
-
-🎉 **Castellan Enterprise-Grade Security Monitoring - FULLY OPERATIONAL!**
-
-**Key Achievements:**
-- ✅ **Production Stability** - Stable background operation with comprehensive monitoring and zero crashes
-- ✅ **Complete Enterprise Architecture** - Connection pooling, intelligent caching, and scaling architecture
-- ✅ **Performance Optimization** - 12K+ events/second processing with 3-5x vector operation improvements
-- ✅ **Advanced Caching** - 30-50% performance improvements with semantic similarity detection
-- ✅ **Connection Pooling** - 15-25% I/O optimization with health monitoring 🎆 **LIVE & OPERATIONAL**
-- ✅ **Threat Intelligence** - Complete VirusTotal, MalwareBazaar, and AlienVault OTX integration
-- ✅ **Full MITRE Integration** - 800+ ATT&CK techniques with automatic mapping and rich web interface
-- ✅ **AI-Powered Detection** - LLM and vector search capabilities for advanced threat analysis
-- ✅ **Enterprise Security** - BCrypt hashing, JWT tokens, audit trails, and configuration validation
-
-**Current Status**: **Production-ready enterprise-grade security monitoring platform**  
-**Future Development**: Continued performance optimizations and multi-platform expansion
-
----
+<div align="center">
 
 **Castellan** - Your digital fortress guardian. 🏰🛡️
+
+Built with ❤️ by the open source community
+
+</div>

@@ -4,6 +4,40 @@ This guide covers common issues you might encounter while using Castellan and th
 
 ## React Admin Interface Issues
 
+### Dashboard Security Events Count Discrepancy
+
+**Symptom**: Dashboard shows incorrect total security events count (e.g., 10 instead of 2000+)
+
+✅ **FIXED (September 2025)**: This issue has been resolved. If you still encounter count discrepancies:
+
+1. **Verify Dashboard Data Source**: The dashboard should display the full total count from the API
+   ```javascript
+   // Fixed implementation uses API total field
+   const securityEventsData = securityEventsApi.data as { events: SecurityEvent[], total: number };
+   const totalEvents = securityEventsData?.total || 0; // Correct
+   // Instead of: securityEvents?.length || 0; // Incorrect - only page length
+   ```
+
+2. **Check API Response Structure**: Verify the API returns data in the expected format
+   ```powershell
+   # Test security events endpoint directly
+   $headers = @{ "Authorization" = "Bearer YOUR_TOKEN" }
+   Invoke-WebRequest -Uri "http://localhost:5000/api/security-events?sort=timestamp&order=desc" -Headers $headers
+   ```
+   Expected response: `{ data: [...], total: 2168 }`
+
+3. **Force Dashboard Refresh**: Clear any cached data
+   - Use the "Force Refresh" button in the dashboard
+   - Or restart the React admin interface
+
+4. **Compare with Security Events Page**: The detailed Security Events page should show the same total
+   - Dashboard KPI card should match the count shown in the Security Events list page
+   - Both use the same API endpoint but parse the response differently
+
+**Root Cause**: The dashboard was incorrectly using the length of the paginated data array (`data.length` = 10) instead of the total count field (`total` = 2168) from the API response. This has been fixed by properly parsing the API response structure.
+
+**Technical Fix**: Modified Dashboard.tsx to extract both `events` array and `total` count from the API response, then use `total` for the dashboard KPI display.
+
 ### MITRE ATT&CK Techniques Page Issues
 
 **"dataProvider error. Check the console for details."**
@@ -56,6 +90,71 @@ If the "Quick Scan" or "Full Scan" buttons in the React Admin interface don't wo
 - **React Admin Interface**: Always runs on `http://localhost:8080`
 - **CORS Errors**: Make sure the React app uses full URLs (`http://localhost:5000/api/...`) not relative paths
 - **Custom API URL**: Set `REACT_APP_API_BASE_URL` environment variable to override default backend URL
+
+## Startup Script Issues
+
+### start.ps1 Hangs at "Checking Qdrant vector database..."
+
+**Symptom**: The start.ps1 script hangs indefinitely when checking Docker/Qdrant status
+
+**Cause**: Docker Desktop CLI commands become unresponsive, causing the script to hang even though services are running properly.
+
+**Solutions**:
+
+1. **Quick Fix - Kill the hanging script and verify services are running**:
+   ```powershell
+   # Press Ctrl+C to stop the hanging script
+   # Then check if services are actually running:
+   .\scripts\status.ps1
+   ```
+
+2. **Restart Docker Desktop**:
+   - Exit Docker Desktop completely
+   - Restart Docker Desktop
+   - Wait for it to fully initialize
+   - Try running start.ps1 again
+
+3. **Start services manually without Docker checks**:
+   ```powershell
+   # Start Worker API directly
+   Start-Process powershell -ArgumentList "-NoProfile", "-Command", "cd C:\Users\matsl\Castellan\src\Castellan.Worker; dotnet run" -WindowStyle Hidden
+   
+   # Start React Admin
+   Start-Process powershell -ArgumentList "-NoProfile", "-Command", "cd C:\Users\matsl\Castellan\castellan-admin; npm start" -WindowStyle Hidden
+   ```
+
+4. **Verify services are running despite the hang**:
+   - Qdrant: http://localhost:6333 (should return status 200)
+   - Worker API: http://localhost:5000/api/security-events (returns 401 if working)
+   - React Admin: http://localhost:8080 (should show login page)
+
+**Note**: Even if the script hangs, all services may still be running correctly. Check the status before assuming failure.
+
+### Worker API Shows "Not Accessible" But Is Actually Running
+
+**Symptom**: status.ps1 reports "Worker API is not accessible (port 5000)" even though the API is running
+
+**Cause**: The status script checks the /api/health endpoint which doesn't exist. The API returns 404 for this endpoint, which the script interprets as "not accessible".
+
+**Verification**: The Worker API is actually running if:
+```powershell
+# This returns 401 Unauthorized (which means the API is working)
+Invoke-WebRequest -Uri "http://localhost:5000/api/security-events" -UseBasicParsing
+```
+
+**Solutions**:
+
+1. **Ignore the false negative**: If you get a 401 response, the API is working correctly
+2. **Check process is running**:
+   ```powershell
+   Get-Process Castellan.Worker -ErrorAction SilentlyContinue
+   ```
+3. **Login to confirm API access**:
+   - Navigate to http://localhost:8080
+   - Login with your configured credentials
+   - If the dashboard loads data, the API is working
+
+**Note**: The 401 Unauthorized response indicates the API is functioning properly but requires authentication. This is expected behavior.
 
 ## System Tray Application Issues
 
@@ -146,6 +245,43 @@ If the system tray application doesn't start automatically:
   ```
 - **Collection Not Found**: The application will automatically create collections on first run
 - **Disk Space**: Ensure sufficient disk space for vector storage (vectors are cleaned up after 24 hours)
+
+## MITRE ATT&CK Import Issues
+
+### Import Dialog Not Working
+
+✅ **FIXED (September 2025)**: MITRE import functionality has been restored and enhanced.
+
+**Problem**: "Import Techniques" button on MITRE-techniques page was not functioning properly.
+
+**Solution Applied**:
+1. **Enhanced Error Handling**: Added comprehensive debugging and error reporting
+2. **Authentication Verification**: Confirmed JWT tokens are properly passed
+3. **Backend Validation**: Verified API endpoints are functional
+
+**Testing Steps**:
+```powershell
+# 1. Login to the application
+# URL: http://localhost:8080
+# Username: admin
+# Password: CastellanAdmin2024!
+
+# 2. Navigate to MITRE ATT&CK Techniques
+# Click "Import Techniques" button
+
+# 3. Monitor browser console (F12) for detailed logs:
+# Look for: [MITRE Import] Starting import request...
+# Check: Token status (Present/Missing)
+```
+
+**Expected Behavior**:
+- If techniques already imported (823+): "No new techniques to import" or similar success message
+- If new techniques available: Progress dialog with import statistics
+- Any errors: Detailed error messages with debugging information
+
+**Current Status**: ✅ **FULLY OPERATIONAL**
+
+---
 
 ## Authentication Issues
 

@@ -13,7 +13,9 @@ import {
   IconButton,
   Tooltip as MuiTooltip
 } from '@mui/material';
-import { useGetList, useNotify } from 'react-admin';
+import { useNotify } from 'react-admin';
+import { useCachedApi } from '../hooks/useCachedApi';
+import { CACHE_KEYS, CACHE_TTL } from '../utils/cacheManager';
 import { 
   XAxis, 
   YAxis, 
@@ -48,6 +50,56 @@ import {
 import { ConnectionPoolMonitor } from './ConnectionPoolMonitor';
 import { RealtimeSystemMetrics } from './RealtimeSystemMetrics';
 import { GeographicThreatMap } from './GeographicThreatMap';
+import { PerformanceDashboard } from './PerformanceDashboard';
+import { ThreatIntelligenceHealthDashboard } from './ThreatIntelligenceHealthDashboard';
+import { CacheStatusIndicator } from './CacheStatusIndicator';
+import { ApiDiagnostic } from './ApiDiagnostic';
+import '../utils/debugCache'; // Import debug utilities
+import '../utils/cacheDebugger'; // Import cache performance monitor
+
+// Type interfaces for dashboard data
+interface SecurityEvent {
+  id: string;
+  timestamp: string;
+  riskLevel?: 'critical' | 'high' | 'medium' | 'low' | number;
+  correlationScore?: number;
+  confidence?: number;
+  eventType: string;
+  severity?: 'critical' | 'high' | 'medium' | 'low';
+  description?: string;
+  message?: string;
+  source?: string;
+  [key: string]: any;
+}
+
+interface ComplianceReport {
+  id: string;
+  complianceScore?: number;
+  ComplianceScore?: number;
+  [key: string]: any;
+}
+
+interface SystemStatus {
+  id: string;
+  status: string;
+  component: string;
+  responseTime: number;
+  errorCount: number;
+  warningCount: number;
+  lastCheck: string;
+  uptime: string;
+  details: string;
+  [key: string]: any;
+}
+
+interface ThreatScan {
+  id: string;
+  status: string;
+  threatsFound?: number;
+  timestamp?: string;
+  startTime?: string;
+  [key: string]: any;
+}
 
 export const Dashboard = () => {
   const [timeRange, setTimeRange] = useState('24h');
@@ -55,42 +107,242 @@ export const Dashboard = () => {
   const [lastRefresh, setLastRefresh] = useState(new Date());
   const notify = useNotify();
 
-  const { data: securityEvents, refetch: refetchEvents } = useGetList('security-events', {
-    pagination: { page: 1, perPage: 10000 }, // Get all events in rolling window (max 1000 from backend)
-    sort: { field: 'timestamp', order: 'DESC' },
-  });
-
-  const { data: complianceReports, refetch: refetchReports } = useGetList('compliance-reports', {
-    pagination: { page: 1, perPage: 50 },
-    sort: { field: 'generated', order: 'DESC' },
-  });
-
-  const { data: systemStatus, refetch: refetchStatus } = useGetList('system-status', {
-    pagination: { page: 1, perPage: 100 },
-  });
-
-  const { data: threatScanner, refetch: refetchThreatScanner } = useGetList('threat-scanner', {
-    pagination: { page: 1, perPage: 20 },
-    sort: { field: 'timestamp', order: 'DESC' },
-  });
-
-  // Auto-refresh every 30 seconds
+  const authToken = localStorage.getItem('auth_token');
+  
+  // Debug authentication
+  console.log('🔐 Auth Token:', authToken ? 'Present (' + authToken.substring(0, 20) + '...)' : 'Missing');
+  
+  if (!authToken) {
+    console.warn('⚠️ No authentication token found! API calls may fail.');
+  }
+  
+  // Test backend connectivity
   useEffect(() => {
-    const interval = setInterval(() => {
-      handleRefresh(false);
-    }, 30000);
-    return () => clearInterval(interval);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    const testBackend = async () => {
+      try {
+        console.log('🔧 Testing backend connectivity...');
+        const response = await fetch('http://localhost:5000/api/system-status', { method: 'GET' });
+        console.log('🚑 Backend health check:', response.status);
+      } catch (error) {
+        console.error('🚨 Backend connectivity failed:', error);
+      }
+    };
+    testBackend();
+    
+    // Add cache debugging commands to window for manual testing
+    (window as any).debugCache = {
+      checkCache: () => {
+        console.log('🔍 Cache Debug Commands Available:');
+        console.log('  debugCache.stats() - Show cache statistics');
+        console.log('  debugCache.clear() - Clear all cache');
+        console.log('  debugCache.keys() - Show all cache keys');
+      },
+      stats: () => {
+        const { dashboardCache } = require('../utils/cacheManager');
+        const stats = dashboardCache.getStats();
+        console.log('📊 Cache Statistics:', stats);
+        return stats;
+      },
+      clear: () => {
+        const { dashboardCache } = require('../utils/cacheManager');
+        dashboardCache.clear();
+        console.log('🗑️ Cache cleared');
+      },
+      keys: () => {
+        const { dashboardCache } = require('../utils/cacheManager');
+        console.log('🔑 Cache Keys Available:', {
+          SECURITY_EVENTS: 'security_events',
+          COMPLIANCE_REPORTS: 'compliance_reports',
+          SYSTEM_STATUS: 'system_status',
+          THREAT_SCANNER: 'threat_scanner'
+        });
+      }
+    };
+    console.log('🔍 Cache debugging available - type debugCache.checkCache() in console');
   }, []);
+
+  // Cached API calls for dashboard data
+  const securityEventsApi = useCachedApi(
+    async () => {
+      try {
+        console.log('🚀 Fetching Security Events...');
+        const response = await fetch('/api/security-events?sort=timestamp&order=desc', {
+          headers: {
+            'Authorization': `Bearer ${authToken}`,
+            'Content-Type': 'application/json'
+          }
+        });
+        console.log('📡 Security Events Response Status:', response.status);
+        if (!response.ok) {
+          console.error('❌ Security Events API Error:', { status: response.status, statusText: response.statusText });
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        const data = await response.json();
+        const result = {
+          events: data.data || data || [],
+          total: data.total || 0
+        };
+        console.log('🔍 Security Events API Response:', { 
+          status: response.status, 
+          dataLength: Array.isArray(result.events) ? result.events.length : 'not array',
+          totalCount: result.total,
+          sample: Array.isArray(result.events) ? result.events.slice(0, 2) : result.events,
+          sampleKeys: Array.isArray(result.events) && result.events.length > 0 ? Object.keys(result.events[0]) : 'no data',
+          rawDataStructure: data
+        });
+        return result;
+      } catch (error) {
+        console.error('💥 Security Events API Failed:', error);
+        throw error;
+      }
+    },
+    {
+      cacheKey: `${CACHE_KEYS.SECURITY_EVENTS}_${timeRange}`,
+      cacheTtl: CACHE_TTL.SLOW_REFRESH, // Increase cache time for better persistence 
+      refreshInterval: 60000, // Refresh every minute
+      dependencies: [] // Remove timeRange dependency to prevent cache invalidation
+    }
+  );
+
+  const complianceReportsApi = useCachedApi(
+    async () => {
+      const response = await fetch('/api/compliance-reports?sort=generated&order=desc', {
+        headers: {
+          'Authorization': `Bearer ${authToken}`,
+          'Content-Type': 'application/json'
+        }
+      });
+      if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+      const data = await response.json();
+      const result = data.data || data || [];
+      console.log('🔍 Compliance Reports API Response:', { status: response.status, dataLength: Array.isArray(result) ? result.length : 'not array', sample: Array.isArray(result) ? result.slice(0, 2) : result });
+      return result;
+    },
+    {
+      cacheKey: `${CACHE_KEYS.COMPLIANCE_REPORTS}_${timeRange}`,
+      cacheTtl: CACHE_TTL.VERY_SLOW, // Longer cache for better persistence
+      refreshInterval: 5 * 60000, // Refresh every 5 minutes
+      dependencies: [] // Remove dependency to prevent cache invalidation
+    }
+  );
+
+  const systemStatusApi = useCachedApi(
+    async () => {
+      const response = await fetch('/api/system-status', {
+        headers: {
+          'Authorization': `Bearer ${authToken}`,
+          'Content-Type': 'application/json'
+        }
+      });
+      if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+      const data = await response.json();
+      const result = data.data || data || [];
+      console.log('🔍 System Status API Response:', { status: response.status, dataLength: Array.isArray(result) ? result.length : 'not array', sample: Array.isArray(result) ? result.slice(0, 2) : result });
+      return result;
+    },
+    {
+      cacheKey: `${CACHE_KEYS.SYSTEM_STATUS}_${timeRange}`,
+      cacheTtl: CACHE_TTL.SLOW_REFRESH, // Better cache persistence
+      refreshInterval: 2 * 60000, // Refresh every 2 minutes
+      dependencies: [] // Remove dependency to prevent cache invalidation
+    }
+  );
+
+  const threatScannerApi = useCachedApi(
+    async () => {
+      const response = await fetch('/api/threat-scanner?sort=timestamp&order=desc', {
+        headers: {
+          'Authorization': `Bearer ${authToken}`,
+          'Content-Type': 'application/json'
+        }
+      });
+      if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+      const data = await response.json();
+      const result = data.data || data || [];
+      console.log('🔍 Threat Scanner API Response:', { status: response.status, dataLength: Array.isArray(result) ? result.length : 'not array', sample: Array.isArray(result) ? result.slice(0, 2) : result });
+      return result;
+    },
+    {
+      cacheKey: `${CACHE_KEYS.THREAT_SCANNER}_${timeRange}`,
+      cacheTtl: CACHE_TTL.SLOW_REFRESH, // Better cache persistence
+      refreshInterval: 3 * 60000, // Refresh every 3 minutes
+      dependencies: [] // Remove dependency to prevent cache invalidation
+    }
+  );
+
+  // Extract data from cached API responses
+  const securityEventsData = securityEventsApi.data as { events: SecurityEvent[], total: number } | undefined;
+  const securityEvents = securityEventsData?.events;
+  const securityEventsTotal = securityEventsData?.total || 0;
+  
+  
+  const complianceReports = complianceReportsApi.data as ComplianceReport[] | undefined;
+  const systemStatus = systemStatusApi.data as SystemStatus[] | undefined;
+  const threatScanner = threatScannerApi.data as ThreatScan[] | undefined;
+  
+  // Enhanced cache debugging
+  useEffect(() => {
+    console.group('💾 Dashboard Cache Status Report');
+    console.log('Security Events:', {
+      hasData: !!securityEventsData,
+      loading: securityEventsApi.loading,
+      lastUpdated: securityEventsApi.lastUpdated,
+      cacheKey: `${CACHE_KEYS.SECURITY_EVENTS}_${timeRange}`
+    });
+    console.log('Compliance Reports:', {
+      hasData: !!complianceReports,
+      loading: complianceReportsApi.loading,
+      lastUpdated: complianceReportsApi.lastUpdated,
+      cacheKey: `${CACHE_KEYS.COMPLIANCE_REPORTS}_${timeRange}`
+    });
+    console.log('System Status:', {
+      hasData: !!systemStatus,
+      loading: systemStatusApi.loading,
+      lastUpdated: systemStatusApi.lastUpdated,
+      cacheKey: `${CACHE_KEYS.SYSTEM_STATUS}_${timeRange}`
+    });
+    console.log('Threat Scanner:', {
+      hasData: !!threatScanner,
+      loading: threatScannerApi.loading,
+      lastUpdated: threatScannerApi.lastUpdated,
+      cacheKey: `${CACHE_KEYS.THREAT_SCANNER}_${timeRange}`
+    });
+    console.groupEnd();
+  }, [securityEventsData, complianceReports, systemStatus, threatScanner, 
+      securityEventsApi.loading, complianceReportsApi.loading, 
+      systemStatusApi.loading, threatScannerApi.loading, 
+      securityEventsApi.lastUpdated, complianceReportsApi.lastUpdated,
+      systemStatusApi.lastUpdated, threatScannerApi.lastUpdated, timeRange]);
+  
+  // Analyze data structure (debug)
+  useEffect(() => {
+    if (securityEvents && securityEvents.length > 0) {
+      console.group('📊 Security Events Data Analysis');
+      console.log('Total Events:', securityEvents.length);
+      console.log('Sample Event:', securityEvents[0]);
+      console.log('Available Fields:', Object.keys(securityEvents[0]));
+      
+      // Check what risk/severity fields exist
+      const riskLevels = securityEvents.slice(0, 10).map(e => e.riskLevel).filter(r => r !== undefined);
+      const severityLevels = securityEvents.slice(0, 10).map(e => e.severity).filter(s => s !== undefined);
+      console.log('Risk Levels (sample):', riskLevels);
+      console.log('Severity Levels (sample):', severityLevels);
+      
+      // Check event types
+      const eventTypes = securityEvents.slice(0, 10).map(e => e.eventType).filter(et => et !== undefined);
+      console.log('Event Types (sample):', eventTypes);
+      console.groupEnd();
+    }
+  }, [securityEvents]);
 
   const handleRefresh = async (showNotification = true) => {
     setRefreshing(true);
     try {
       await Promise.all([
-        refetchEvents(),
-        refetchReports(),
-        refetchStatus(),
-        refetchThreatScanner()
+        securityEventsApi.refetch(),
+        complianceReportsApi.refetch(),
+        systemStatusApi.refetch(),
+        threatScannerApi.refetch()
       ]);
       setLastRefresh(new Date());
       if (showNotification) {
@@ -103,20 +355,76 @@ export const Dashboard = () => {
     }
   };
 
-  // Enhanced metrics calculations
-  const totalEvents = securityEvents?.length || 0;
-  const criticalEvents = securityEvents?.filter(e => e.riskLevel === 'critical').length || 0;
-  const highRiskEvents = securityEvents?.filter(e => e.riskLevel === 'high' || e.riskLevel === 'critical').length || 0;
-  const mediumRiskEvents = securityEvents?.filter(e => e.riskLevel === 'medium').length || 0;
-  const lowRiskEvents = securityEvents?.filter(e => e.riskLevel === 'low').length || 0;
-  const avgCorrelationScore = securityEvents?.reduce((sum, e) => sum + (e.correlationScore || 0), 0) / totalEvents || 0;
-  const avgConfidenceScore = securityEvents?.reduce((sum, e) => sum + (e.confidence || 0), 0) / totalEvents || 0;
+  const handleForceRefresh = async () => {
+    // Clear all cache first
+    securityEventsApi.clearCache();
+    complianceReportsApi.clearCache();
+    systemStatusApi.clearCache();
+    threatScannerApi.clearCache();
+    
+    await handleRefresh(true);
+    notify('Cache cleared and dashboard refreshed', { type: 'success' });
+  };
+
+  // Enhanced metrics calculations with flexible field mapping
+  const totalEvents = securityEventsTotal;
   
-  const healthyComponents = systemStatus?.filter(s => s.status?.toLowerCase() === 'healthy').length || 0;
+  
+  // Helper function to extract risk level with flexible field mapping
+  const getRiskLevel = (event: any): string => {
+    // Check various possible field names for risk/severity
+    const riskLevel = event.riskLevel || event.risk_level || event.severity || 
+                     event.level || event.priority || event.criticality || 
+                     event.threat_level || event.alert_level;
+    
+    if (typeof riskLevel === 'string') {
+      return riskLevel.toLowerCase();
+    } else if (typeof riskLevel === 'number') {
+      // Convert numeric risk to string (common patterns)
+      if (riskLevel >= 4) return 'critical';
+      if (riskLevel >= 3) return 'high';
+      if (riskLevel >= 2) return 'medium';
+      return 'low';
+    }
+    return 'unknown';
+  };
+  
+  // Helper function to extract event type with flexible field mapping
+  const getEventType = (event: any): string => {
+    return event.eventType || event.event_type || event.type || 
+           event.category || event.alert_type || event.rule_name || 
+           event.detection_type || 'Unknown Event';
+  };
+  
+  const criticalEvents = securityEvents?.filter((e: SecurityEvent) => {
+    const risk = getRiskLevel(e);
+    return risk === 'critical';
+  }).length || 0;
+  
+  const highRiskEvents = securityEvents?.filter((e: SecurityEvent) => {
+    const risk = getRiskLevel(e);
+    return risk === 'high' || risk === 'critical';
+  }).length || 0;
+  
+  const mediumRiskEvents = securityEvents?.filter((e: SecurityEvent) => {
+    const risk = getRiskLevel(e);
+    return risk === 'medium';
+  }).length || 0;
+  
+  const lowRiskEvents = securityEvents?.filter((e: SecurityEvent) => {
+    const risk = getRiskLevel(e);
+    return risk === 'low';
+  }).length || 0;
+  
+  
+  const avgCorrelationScore = (securityEvents?.reduce((sum: number, e: SecurityEvent) => sum + (e.correlationScore || 0), 0) || 0) / totalEvents || 0;
+  const avgConfidenceScore = (securityEvents?.reduce((sum: number, e: SecurityEvent) => sum + (e.confidence || 0), 0) || 0) / totalEvents || 0;
+  
+  const healthyComponents = systemStatus?.filter((s: SystemStatus) => s.status?.toLowerCase() === 'healthy').length || 0;
   const totalComponents = systemStatus?.length || 0;
   const systemHealthPercentage = totalComponents > 0 ? (healthyComponents / totalComponents) * 100 : 0;
   
-  const avgComplianceScore = complianceReports?.reduce((sum, r) => sum + (r.complianceScore || r.ComplianceScore || 0), 0) / (complianceReports?.length || 1) || 0;
+  const avgComplianceScore = (complianceReports?.reduce((sum: number, r: ComplianceReport) => sum + (r.complianceScore || r.ComplianceScore || 0), 0) || 0) / (complianceReports?.length || 1) || 0;
 
   // Recent activity and trends
   const recentEvents = securityEvents?.slice(0, 10) || [];
@@ -124,11 +432,11 @@ export const Dashboard = () => {
   const recentThreatScans = threatScanner?.slice(0, 10) || [];
   
   // Real-time metrics
-  const eventsInLastHour = securityEvents?.filter(e => 
+  const eventsInLastHour = securityEvents?.filter((e: SecurityEvent) => 
     new Date(e.timestamp) > new Date(Date.now() - 60 * 60 * 1000)
   ).length || 0;
   
-  const eventsInLast24Hours = securityEvents?.filter(e => 
+  const eventsInLast24Hours = securityEvents?.filter((e: SecurityEvent) => 
     new Date(e.timestamp) > new Date(Date.now() - 24 * 60 * 60 * 1000)
   ).length || 0;
   
@@ -137,11 +445,11 @@ export const Dashboard = () => {
   
   // Threat scanner metrics
   const totalScans = threatScanner?.length || 0;
-  const activeScanners = threatScanner?.filter(s => s.status === 'running' || s.status === 'active').length || 0;
-  const completedScans = threatScanner?.filter(s => s.status === 'completed').length || 0;
-  const threatsDetected = threatScanner?.reduce((sum, scan) => sum + (scan.threatsFound || 0), 0) || 0;
-  const scansToday = threatScanner?.filter(s => 
-    new Date(s.timestamp || s.startTime) > new Date(Date.now() - 24 * 60 * 60 * 1000)
+  const activeScanners = threatScanner?.filter((s: ThreatScan) => s.status === 'running' || s.status === 'active').length || 0;
+  const completedScans = threatScanner?.filter((s: ThreatScan) => s.status === 'completed').length || 0;
+  const threatsDetected = threatScanner?.reduce((sum: number, scan: ThreatScan) => sum + (scan.threatsFound || 0), 0) || 0;
+  const scansToday = threatScanner?.filter((s: ThreatScan) => 
+    new Date(s.timestamp || s.startTime || '') > new Date(Date.now() - 24 * 60 * 60 * 1000)
   ).length || 0;
 
   // Risk distribution for pie chart
@@ -153,17 +461,25 @@ export const Dashboard = () => {
   ].filter(item => item.value > 0);
 
   // Time series data for trend analysis
-  const timeSeriesData = securityEvents?.slice(0, 50).reverse().map((event) => ({
+  const timeSeriesData = securityEvents?.slice(0, 50).reverse().map((event: SecurityEvent) => ({
     time: new Date(event.timestamp).toLocaleTimeString(),
     correlationScore: event.correlationScore || 0,
     confidenceScore: event.confidence || 0,
-    riskValue: event.riskLevel === 'critical' ? 4 : event.riskLevel === 'high' ? 3 : event.riskLevel === 'medium' ? 2 : 1,
+    riskValue: (() => {
+      if (typeof event.riskLevel === 'string') {
+        return event.riskLevel === 'critical' ? 4 : event.riskLevel === 'high' ? 3 : event.riskLevel === 'medium' ? 2 : 1;
+      } else if (typeof event.riskLevel === 'number') {
+        return event.riskLevel;
+      } else {
+        return event.severity === 'critical' ? 4 : event.severity === 'high' ? 3 : event.severity === 'medium' ? 2 : 1;
+      }
+    })(),
     eventType: event.eventType,
     hour: new Date(event.timestamp).getHours()
   })) || [];
 
   // Event type distribution
-  const eventTypeStats = securityEvents?.reduce((acc: Record<string, number>, event) => {
+  const eventTypeStats = securityEvents?.reduce((acc: Record<string, number>, event: SecurityEvent) => {
     acc[event.eventType] = (acc[event.eventType] || 0) + 1;
     return acc;
   }, {}) || {};
@@ -174,7 +490,7 @@ export const Dashboard = () => {
     .slice(0, 8);
 
   // Detection method effectiveness (using Source field as detection method)
-  const detectionMethodStats = securityEvents?.reduce((acc: Record<string, number>, event) => {
+  const detectionMethodStats = securityEvents?.reduce((acc: Record<string, number>, event: SecurityEvent) => {
     const method = event.source || 'Unknown';
     acc[method] = (acc[method] || 0) + 1;
     return acc;
@@ -184,14 +500,14 @@ export const Dashboard = () => {
     .map(([method, count]) => ({ name: method, value: count as number }));
 
   // System performance metrics - using response time and component health as performance indicators
-  const avgResponseTime = systemStatus?.reduce((sum, s) => sum + (s.responseTime || 0), 0) / (systemStatus?.length || 1) || 0;
+  const avgResponseTime = (systemStatus?.reduce((sum: number, s: SystemStatus) => sum + (s.responseTime || 0), 0) || 0) / (systemStatus?.length || 1) || 0;
   const avgCpuUsage = Math.min(avgResponseTime * 2, 100); // Simulate CPU based on response time
-  const unhealthyComponents = (systemStatus?.filter(s => s.status?.toLowerCase() !== 'healthy') || []).length;
+  const unhealthyComponents = (systemStatus?.filter((s: SystemStatus) => s.status?.toLowerCase() !== 'healthy') || []).length;
   const avgMemoryUsage = unhealthyComponents * 15 + 25; // Base memory usage
-  const avgDiskUsage = (systemStatus?.reduce((sum, s) => sum + (s.errorCount || 0) + (s.warningCount || 0), 0) || 0) * 5 + 20; // Disk usage based on errors/warnings
+  const avgDiskUsage = (systemStatus?.reduce((sum: number, s: SystemStatus) => sum + (s.errorCount || 0) + (s.warningCount || 0), 0) || 0) * 5 + 20; // Disk usage based on errors/warnings
   
   // Connection Pool metrics
-  const connectionPoolStatus = systemStatus?.find(s => s.component === 'Qdrant Connection Pool');
+  const connectionPoolStatus = systemStatus?.find((s: SystemStatus) => s.component === 'Qdrant Connection Pool');
   const connectionPoolHealthy = connectionPoolStatus?.status === 'Healthy';
   const connectionPoolExists = connectionPoolStatus && connectionPoolStatus.status !== 'Disabled';
 
@@ -203,6 +519,7 @@ export const Dashboard = () => {
           🛡️ Castellan Dashboard
         </Typography>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+          <CacheStatusIndicator />
           <ButtonGroup variant="outlined" size="small">
             <Button 
               variant={timeRange === '1h' ? 'contained' : 'outlined'}
@@ -238,8 +555,32 @@ export const Dashboard = () => {
               {refreshing ? <CircularProgress size={20} /> : <RefreshIcon />}
             </IconButton>
           </MuiTooltip>
+          <MuiTooltip title="Clear cache and refresh">
+            <Button 
+              onClick={handleForceRefresh}
+              disabled={refreshing}
+              variant="outlined"
+              size="small"
+              sx={{ ml: 1 }}
+            >
+              Force Refresh
+            </Button>
+          </MuiTooltip>
         </Box>
       </Box>
+      
+      
+      {/* API Diagnostic */}
+      <ApiDiagnostic 
+        securityEventsData={securityEvents}
+        complianceReportsData={complianceReports}
+        systemStatusData={systemStatus}
+        threatScannerData={threatScanner}
+        securityEventsError={securityEventsApi.error}
+        complianceReportsError={complianceReportsApi.error}
+        systemStatusError={systemStatusApi.error}
+        threatScannerError={threatScannerApi.error}
+      />
       
       {/* KPI Cards Row */}
       <Box sx={{ 
@@ -534,7 +875,7 @@ export const Dashboard = () => {
               <Box sx={{ marginBottom: 3 }}>
                 <Box sx={{ display: 'flex', justifyContent: 'space-between', marginBottom: 1 }}>
                   <Typography variant="body2">Memory Usage</Typography>
-                  <Typography variant="body2" fontWeight="bold">{avgMemoryUsage.toFixed(1)}%</Typography>
+                  <Typography variant="body2" fontWeight="bold">{typeof avgMemoryUsage === 'number' ? avgMemoryUsage.toFixed(1) : 'N/A'}%</Typography>
                 </Box>
                 <LinearProgress 
                   variant="determinate" 
@@ -546,7 +887,7 @@ export const Dashboard = () => {
               <Box>
                 <Box sx={{ display: 'flex', justifyContent: 'space-between', marginBottom: 1 }}>
                   <Typography variant="body2">Disk Usage</Typography>
-                  <Typography variant="body2" fontWeight="bold">{avgDiskUsage.toFixed(1)}%</Typography>
+                  <Typography variant="body2" fontWeight="bold">{typeof avgDiskUsage === 'number' ? avgDiskUsage.toFixed(1) : 'N/A'}%</Typography>
                 </Box>
                 <LinearProgress 
                   variant="determinate" 
@@ -612,7 +953,7 @@ export const Dashboard = () => {
                   <Typography variant="subtitle2" sx={{ marginBottom: 1 }}>
                     Recent Scans
                   </Typography>
-                  {recentThreatScans.map((scan, index) => (
+                  {recentThreatScans.map((scan: ThreatScan, index: number) => (
                     <Box key={scan.id || index} sx={{ marginBottom: 1, paddingBottom: 1, borderBottom: index < recentThreatScans.length - 1 ? '1px solid #eee' : 'none' }}>
                       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
@@ -670,7 +1011,7 @@ export const Dashboard = () => {
         <Box sx={{ flex: '1 1 50%' }}>
           <Card>
             <CardHeader 
-              title={`Compliance Reports (${avgComplianceScore.toFixed(1)}% avg)`}
+              title={`Compliance Reports (${typeof avgComplianceScore === 'number' ? avgComplianceScore.toFixed(1) : 'N/A'}% avg)`}
               action={
                 <Button 
                   size="small" 
@@ -705,13 +1046,13 @@ export const Dashboard = () => {
                       </Box>
                       <Box sx={{ textAlign: 'center', padding: 1, backgroundColor: 'rgba(76, 175, 80, 0.1)', borderRadius: 1 }}>
                         <Typography variant="h4" color="success.main">
-                          {recentComplianceReports.filter(r => (r.complianceScore || r.ComplianceScore || 0) >= 80).length}
+                          {recentComplianceReports.filter((r: ComplianceReport) => (r.complianceScore || r.ComplianceScore || 0) >= 80).length}
                         </Typography>
                         <Typography variant="caption">Compliant</Typography>
                       </Box>
                       <Box sx={{ textAlign: 'center', padding: 1, backgroundColor: 'rgba(255, 152, 0, 0.1)', borderRadius: 1 }}>
                         <Typography variant="h4" color="warning.main">
-                          {avgComplianceScore.toFixed(0)}%
+                          {typeof avgComplianceScore === 'number' ? avgComplianceScore.toFixed(0) : 'N/A'}%
                         </Typography>
                         <Typography variant="caption">Avg Score</Typography>
                       </Box>
@@ -723,7 +1064,7 @@ export const Dashboard = () => {
                     <Typography variant="subtitle2" sx={{ marginBottom: 1 }}>
                       Recent Compliance Reports
                     </Typography>
-                    {recentComplianceReports.map((report, index) => (
+                    {recentComplianceReports.map((report: ComplianceReport, index: number) => (
                       <Box key={report.id || index} sx={{ marginBottom: 1 }}>
                         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 0.5 }}>
                           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
@@ -772,6 +1113,30 @@ export const Dashboard = () => {
               )}
             </CardContent>
           </Card>
+        </Box>
+      </Box>
+
+      {/* Enhanced Performance Dashboard - Phase 3 Implementation */}
+      <Box sx={{ 
+        display: 'flex', 
+        flexWrap: 'wrap', 
+        gap: 3,
+        marginBottom: '30px'
+      }}>
+        <Box sx={{ flex: '1 1 100%', minWidth: '100%' }}>
+          <PerformanceDashboard />
+        </Box>
+      </Box>
+
+      {/* Threat Intelligence Health Dashboard - Phase 3 Implementation */}
+      <Box sx={{ 
+        display: 'flex', 
+        flexWrap: 'wrap', 
+        gap: 3,
+        marginBottom: '30px'
+      }}>
+        <Box sx={{ flex: '1 1 100%', minWidth: '100%' }}>
+          <ThreatIntelligenceHealthDashboard />
         </Box>
       </Box>
 

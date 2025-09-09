@@ -112,6 +112,7 @@ public class FileBasedSecurityEventStore : ISecurityEventStore, IDisposable
         {
             switch (filter.Key.ToLower())
             {
+                // Existing single-value filters (backward compatibility)
                 case "risklevel":
                     var riskLevel = filter.Value.ToString()?.ToLower();
                     if (!string.IsNullOrEmpty(riskLevel))
@@ -140,6 +141,85 @@ public class FileBasedSecurityEventStore : ISecurityEventStore, IDisposable
                     var source = filter.Value.ToString();
                     if (!string.IsNullOrEmpty(source))
                         filtered = filtered.Where(e => e.OriginalEvent.Channel != null && e.OriginalEvent.Channel.Contains(source, StringComparison.OrdinalIgnoreCase));
+                    break;
+
+                // New v0.4.0 Advanced Search filters
+                case "startdate":
+                    if (filter.Value is DateTime startDate)
+                        filtered = filtered.Where(e => e.OriginalEvent.Time.DateTime >= startDate);
+                    break;
+
+                case "enddate":
+                    if (filter.Value is DateTime endDate)
+                        filtered = filtered.Where(e => e.OriginalEvent.Time.DateTime <= endDate);
+                    break;
+
+                case "eventtypes": // Multi-select event types
+                    if (filter.Value is string[] eventTypes && eventTypes.Any())
+                    {
+                        filtered = filtered.Where(e => eventTypes.Any(et => 
+                            e.EventType.ToString().Contains(et, StringComparison.OrdinalIgnoreCase)));
+                    }
+                    break;
+
+                case "risklevels": // Multi-select risk levels
+                    if (filter.Value is string[] riskLevels && riskLevels.Any())
+                    {
+                        filtered = filtered.Where(e => riskLevels.Any(rl => 
+                            e.RiskLevel.Equals(rl, StringComparison.OrdinalIgnoreCase)));
+                    }
+                    break;
+
+                case "search": // Full-text search
+                    var searchTerm = filter.Value.ToString();
+                    if (!string.IsNullOrEmpty(searchTerm))
+                    {
+                        filtered = filtered.Where(e => 
+                            (e.Summary != null && e.Summary.Contains(searchTerm, StringComparison.OrdinalIgnoreCase)) ||
+                            (e.OriginalEvent.Message != null && e.OriginalEvent.Message.Contains(searchTerm, StringComparison.OrdinalIgnoreCase)) ||
+                            e.EventType.ToString().Contains(searchTerm, StringComparison.OrdinalIgnoreCase) ||
+                            (e.OriginalEvent.User != null && e.OriginalEvent.User.Contains(searchTerm, StringComparison.OrdinalIgnoreCase)) ||
+                            (e.OriginalEvent.Host != null && e.OriginalEvent.Host.Contains(searchTerm, StringComparison.OrdinalIgnoreCase)));
+                    }
+                    break;
+
+                case "minconfidence":
+                    if (filter.Value is float minConfidence)
+                        filtered = filtered.Where(e => e.Confidence >= minConfidence);
+                    break;
+
+                case "maxconfidence":
+                    if (filter.Value is float maxConfidence)
+                        filtered = filtered.Where(e => e.Confidence <= maxConfidence);
+                    break;
+
+                case "mincorrelationscore":
+                    if (filter.Value is float minCorrelationScore)
+                        filtered = filtered.Where(e => e.CorrelationScore >= minCorrelationScore);
+                    break;
+
+                case "maxcorrelationscore":
+                    if (filter.Value is float maxCorrelationScore)
+                        filtered = filtered.Where(e => e.CorrelationScore <= maxCorrelationScore);
+                    break;
+
+                case "status":
+                    var status = filter.Value.ToString();
+                    if (!string.IsNullOrEmpty(status))
+                    {
+                        // Note: Current SecurityEvent model doesn't have a Status field
+                        // This would need to be added to the model or mapped to another field
+                        // For now, we'll skip this filter
+                    }
+                    break;
+
+                case "mitretechnique":
+                    var mitreTechnique = filter.Value.ToString();
+                    if (!string.IsNullOrEmpty(mitreTechnique))
+                    {
+                        filtered = filtered.Where(e => e.MitreTechniques != null && 
+                            e.MitreTechniques.Any(technique => technique.Contains(mitreTechnique, StringComparison.OrdinalIgnoreCase)));
+                    }
                     break;
             }
         }

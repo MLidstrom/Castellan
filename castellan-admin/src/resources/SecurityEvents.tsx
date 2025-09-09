@@ -33,6 +33,24 @@ interface MitreTechnique {
   createdAt: string;
 }
 
+// Helper function to provide friendly names for common MITRE techniques
+function getTechniqueDisplayName(techniqueId: string): string {
+  const commonTechniques: { [key: string]: string } = {
+    'T1552.6': 'Unsecured Credentials: Group Policy Preferences',
+    'T1552': 'Unsecured Credentials',
+    'T1059': 'Command and Scripting Interpreter',
+    'T1059.001': 'PowerShell',
+    'T1059.003': 'Windows Command Shell',
+    'T1078': 'Valid Accounts',
+    'T1055': 'Process Injection',
+    'T1003': 'OS Credential Dumping',
+    'T1021': 'Remote Services',
+    'T1547': 'Boot or Logon Autostart Execution'
+  };
+  
+  return commonTechniques[techniqueId] || techniqueId;
+}
+
 // Hook to fetch MITRE technique data from the database
 const useMitreTechniques = () => {
   const [techniques, setTechniques] = useState<{ [key: string]: MitreTechnique }>({});
@@ -54,19 +72,27 @@ const useMitreTechniques = () => {
       // Fetch techniques from the MITRE API
       const promises = missingTechniques.map(async (techniqueId) => {
         try {
+          // Skip API call if backend is not available or technique ID is invalid
+          if (!techniqueId || techniqueId === 'undefined') {
+            return null;
+          }
+          
           const response = await dataProvider.getOne('mitre/techniques', { id: techniqueId });
           return { [techniqueId]: response.data };
-        } catch (err) {
+        } catch (err: any) {
           // If technique not found in database, return a fallback
-          console.warn(`Failed to fetch MITRE technique ${techniqueId}:`, err);
+          // Don't log network errors as warnings, they're expected when backend is down
+          if (err.status !== 0 && err.status !== 500) {
+            console.warn(`MITRE technique ${techniqueId} not found - using fallback data`);
+          }
           return { 
             [techniqueId]: {
               id: 0,
               techniqueId,
-              name: techniqueId,
-              description: `MITRE ATT&CK Technique: ${techniqueId} (Not found in database)`,
-              tactic: 'Not Available',
-              platform: 'Not Available',
+              name: getTechniqueDisplayName(techniqueId),
+              description: `MITRE ATT&CK Technique: ${techniqueId}`,
+              tactic: 'Unknown',
+              platform: 'Multiple',
               createdAt: new Date().toISOString()
             }
           };
@@ -74,7 +100,9 @@ const useMitreTechniques = () => {
       });
 
       const results = await Promise.all(promises);
-      const newTechniques = results.reduce((acc, curr) => ({ ...acc, ...curr }), {});
+      // Filter out null results before merging
+      const validResults = results.filter(r => r !== null);
+      const newTechniques = validResults.reduce((acc, curr) => ({ ...acc, ...curr }), {});
       
       setTechniques(prev => ({ ...prev, ...newTechniques }));
     } catch (err) {
@@ -133,14 +161,56 @@ const MitreTechniquesField = ({ source }: any) => {
   // Extract technique IDs and fetch data when component mounts or techniques change
   useEffect(() => {
     if (techniques.length > 0) {
-      const techniqueIds = techniques.map((t: string) => t.trim().toUpperCase());
-      fetchTechniques(techniqueIds);
+      // Filter out tactic IDs (TA*) and only fetch technique IDs (T*)
+      const techniqueIds = techniques
+        .map((t: string) => t?.trim().toUpperCase())
+        .filter(Boolean)
+        .filter((id: string) => id.startsWith('T') && !id.startsWith('TA')); // Only techniques, not tactics
+      
+      if (techniqueIds.length > 0) {
+        fetchTechniques(techniqueIds);
+      }
     }
   }, [techniques.join(','), fetchTechniques]);
 
-  // Helper function to get description for a technique from database
+  // Helper function to get description for a technique/tactic from database
   const getTechniqueTooltip = (technique: string): React.ReactNode => {
-    const cleanTechnique = technique.trim().toUpperCase();
+    const cleanTechnique = technique?.trim().toUpperCase() || '';
+    
+    // Check if this is a tactic (TA*) or technique (T*)
+    if (cleanTechnique.startsWith('TA')) {
+      // Handle tactic IDs - provide static information
+      const tacticNames: { [key: string]: string } = {
+        'TA0001': 'Initial Access',
+        'TA0002': 'Execution', 
+        'TA0003': 'Persistence',
+        'TA0004': 'Privilege Escalation',
+        'TA0005': 'Defense Evasion',
+        'TA0006': 'Credential Access',
+        'TA0007': 'Discovery',
+        'TA0008': 'Lateral Movement',
+        'TA0009': 'Collection',
+        'TA0010': 'Exfiltration',
+        'TA0011': 'Command and Control',
+        'TA0040': 'Impact',
+        'TA0042': 'Resource Development',
+        'TA0043': 'Reconnaissance'
+      };
+      
+      const tacticName = tacticNames[cleanTechnique] || 'Unknown Tactic';
+      return (
+        <Box>
+          <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }}>
+            {tacticName}
+          </Typography>
+          <Typography variant="body2" sx={{ mt: 0.5 }}>
+            MITRE ATT&CK Tactic: {cleanTechnique}
+          </Typography>
+        </Box>
+      );
+    }
+    
+    // Handle technique IDs
     const mitreInfo = mitreData[cleanTechnique];
     
     if (loading) {
@@ -183,10 +253,35 @@ const MitreTechniquesField = ({ source }: any) => {
   };
 
   const getAdditionalTechniquesTooltip = (additionalTechniques: string[]): React.ReactNode => {
+    const tacticNames: { [key: string]: string } = {
+      'TA0001': 'Initial Access',
+      'TA0002': 'Execution', 
+      'TA0003': 'Persistence',
+      'TA0004': 'Privilege Escalation',
+      'TA0005': 'Defense Evasion',
+      'TA0006': 'Credential Access',
+      'TA0007': 'Discovery',
+      'TA0008': 'Lateral Movement',
+      'TA0009': 'Collection',
+      'TA0010': 'Exfiltration',
+      'TA0011': 'Command and Control',
+      'TA0040': 'Impact',
+      'TA0042': 'Resource Development',
+      'TA0043': 'Reconnaissance'
+    };
+    
     const techniquesList = additionalTechniques.map((t: string) => {
-      const cleanTechnique = t.trim().toUpperCase();
-      const mitreInfo = mitreData[cleanTechnique];
-      return mitreInfo ? `${cleanTechnique}: ${mitreInfo.name}` : cleanTechnique;
+      const cleanTechnique = t?.trim().toUpperCase() || '';
+      
+      if (cleanTechnique.startsWith('TA')) {
+        // Handle tactics
+        const tacticName = tacticNames[cleanTechnique] || 'Unknown Tactic';
+        return `${cleanTechnique}: ${tacticName}`;
+      } else {
+        // Handle techniques
+        const mitreInfo = mitreData[cleanTechnique];
+        return mitreInfo ? `${cleanTechnique}: ${mitreInfo.name}` : cleanTechnique;
+      }
     });
 
     return (

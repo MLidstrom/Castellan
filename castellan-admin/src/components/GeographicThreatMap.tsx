@@ -247,7 +247,7 @@ export const GeographicThreatMap: React.FC = () => {
                 icon={<TrendingUpIcon />}
               />
               <Chip
-                label={selectedThreat.riskLevel.toUpperCase()}
+                label={(selectedThreat.riskLevel?.toUpperCase?.() || 'UNKNOWN')}
                 color={getRiskChipColor(selectedThreat.riskLevel)}
               />
             </Box>
@@ -330,7 +330,7 @@ export const GeographicThreatMap: React.FC = () => {
                       </Typography>
                       <Chip
                         size="small"
-                        label={threat.riskLevel.toUpperCase()}
+                        label={(threat.riskLevel?.toUpperCase?.() || 'UNKNOWN')}
                         color={getRiskChipColor(threat.riskLevel)}
                       />
                     </Box>

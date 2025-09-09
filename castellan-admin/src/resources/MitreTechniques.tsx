@@ -145,11 +145,17 @@ const ImportDialog = ({
     setResult(null);
 
     try {
+      console.log('[MITRE Import] Starting import request...', {
+        token: localStorage.getItem('auth_token') ? 'Present' : 'Missing',
+        url: 'mitre/import'
+      });
+      
       const response = await dataProvider.custom({
         url: 'mitre/import',
         method: 'POST',
       });
       
+      console.log('[MITRE Import] Import response received:', response);
       setResult(response.data);
       notify(`Successfully imported ${response.data.result?.techniquesImported || 0} techniques`, { 
         type: 'success' 
@@ -162,13 +168,33 @@ const ImportDialog = ({
       }, 2000);
       
     } catch (error: any) {
-      console.error('Import error:', error);
+      console.error('[MITRE Import] Import error details:', {
+        error,
+        message: error.message,
+        status: error.status,
+        body: error.body,
+        stack: error.stack
+      });
+      
+      // Extract detailed error message
+      let errorMessage = 'Import failed';
+      let errorDetails = '';
+      
+      if (error.body) {
+        errorDetails = error.body.details || error.body.message || JSON.stringify(error.body);
+        errorMessage = error.body.message || errorMessage;
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+      
       setResult({
         success: false,
-        message: error.message || 'Import failed',
+        message: errorMessage,
+        details: errorDetails,
         result: null
       });
-      notify('Import failed', { type: 'error' });
+      
+      notify(`Import failed: ${errorMessage}`, { type: 'error' });
     } finally {
       setImporting(false);
     }
@@ -206,7 +232,12 @@ const ImportDialog = ({
           sx={{ mt: 2 }}
         >
           <Typography variant="h6" gutterBottom>Import Failed</Typography>
-          <Typography variant="body2">{result.message}</Typography>
+          <Typography variant="body2" sx={{ mb: 1 }}>{result.message}</Typography>
+          {result.details && (
+            <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.85em', fontFamily: 'monospace', bgcolor: 'grey.100', p: 1, borderRadius: 1 }}>
+              Details: {result.details}
+            </Typography>
+          )}
         </Alert>
       );
     }
@@ -415,6 +446,7 @@ export const MitreTechniquesShow = () => (
 export const MitreStatisticsDashboard = () => {
   const [statistics, setStatistics] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [cacheHit, setCacheHit] = useState(false);
   const dataProvider = useDataProvider();
   const notify = useNotify();
 
@@ -422,14 +454,32 @@ export const MitreStatisticsDashboard = () => {
     const fetchStatistics = async () => {
       try {
         setLoading(true);
+        setCacheHit(false);
+        
+        console.log('📊 Fetching MITRE statistics (using cached data provider)...');
+        const startTime = Date.now();
+        
         const [statsResponse, countResponse] = await Promise.all([
           dataProvider.custom({ url: 'mitre/statistics', method: 'GET' }),
           dataProvider.custom({ url: 'mitre/count', method: 'GET' })
         ]);
         
+        const endTime = Date.now();
+        const fetchTime = endTime - startTime;
+        
+        // If fetch was very fast (< 100ms), it was likely from cache
+        if (fetchTime < 100) {
+          setCacheHit(true);
+          console.log('⚡ MITRE statistics loaded from cache in', fetchTime, 'ms');
+        } else {
+          console.log('🌐 MITRE statistics fetched from API in', fetchTime, 'ms');
+        }
+        
         setStatistics({
           ...statsResponse.data,
-          ...countResponse.data
+          ...countResponse.data,
+          _fetchTime: fetchTime,
+          _fromCache: fetchTime < 100
         });
       } catch (error) {
         console.error('Failed to fetch MITRE statistics:', error);
@@ -458,7 +508,27 @@ export const MitreStatisticsDashboard = () => {
       <MitreTechniquesHeader />
       
       <Card sx={{ mb: 2 }}>
-        <CardHeader title="MITRE ATT&CK Database Statistics" />
+        <CardHeader 
+          title="MITRE ATT&CK Database Statistics" 
+          action={
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+              {cacheHit && (
+                <Chip 
+                  icon={<SuccessIcon />} 
+                  label="Cached" 
+                  color="success" 
+                  size="small" 
+                  variant="outlined"
+                />
+              )}
+              {statistics?._fetchTime && (
+                <Typography variant="caption" color="text.secondary">
+                  {statistics._fetchTime}ms
+                </Typography>
+              )}
+            </Box>
+          }
+        />
         <CardContent>
           <Typography variant="h3" color="primary" gutterBottom>
             {statistics?.totalTechniques || 0}
@@ -470,6 +540,12 @@ export const MitreStatisticsDashboard = () => {
           {statistics?.lastUpdated && (
             <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
               Last updated: {new Date(statistics.lastUpdated).toLocaleString()}
+            </Typography>
+          )}
+          
+          {statistics?._fromCache && (
+            <Typography variant="caption" color="success.main" sx={{ mt: 1, display: 'block' }}>
+              ⚡ Instant load from cache
             </Typography>
           )}
           

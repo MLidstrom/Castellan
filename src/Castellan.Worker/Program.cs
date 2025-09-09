@@ -137,6 +137,10 @@ builder.Services.AddScoped<MitreAttackImportService>();
 builder.Services.Configure<PerformanceMonitorOptions>(builder.Configuration.GetSection("PerformanceMonitoring"));
 builder.Services.AddSingleton<IPerformanceMonitor, PerformanceMonitorService>();
 
+// Register enhanced performance services for dashboard
+builder.Services.AddScoped<PerformanceMetricsService>();
+builder.Services.AddScoped<PerformanceAlertService>();
+
 // Register IP enrichment service based on configuration
 var ipEnrichmentProvider = builder.Configuration["IPEnrichment:Provider"] ?? "MaxMind";
 if (ipEnrichmentProvider.Equals("MaxMind", StringComparison.OrdinalIgnoreCase))
@@ -197,6 +201,9 @@ builder.Services.AddSingleton<SecurityEventDetector>();
 builder.Services.AddSingleton<RulesEngine>(); // M4: Add RulesEngine for correlation and fusion
 builder.Services.AddSingleton<ISecurityEventStore, FileBasedSecurityEventStore>(); // Persistent store for API access
 builder.Services.AddSingleton<IAutomatedResponseService, AutomatedResponseService>(); // Automated threat response
+
+// Register YARA services
+builder.Services.AddSingleton<IYaraRuleStore, FileBasedYaraRuleStore>();
 builder.Services.AddHostedService<Pipeline>();
 builder.Services.AddHostedService<StartupOrchestratorService>(); // Automatically start all required services
 builder.Services.AddHostedService<MitreImportStartupService>(); // Auto-import MITRE data if needed

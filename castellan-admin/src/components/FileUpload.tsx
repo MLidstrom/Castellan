@@ -247,7 +247,7 @@ export const FileUpload: React.FC<FileUploadProps> = ({
             Drop files here or click to browse
           </Typography>
           <Typography variant="body2" color="textSecondary" paragraph>
-            Accepted formats: {accept.replace(/\./g, '').toUpperCase()}
+            Accepted formats: {accept?.replace?.(/\./g, '')?.toUpperCase?.() || 'ALL'}
           </Typography>
           <Typography variant="body2" color="textSecondary" paragraph>
             Max file size: {maxSize}MB • Max files: {maxFiles}

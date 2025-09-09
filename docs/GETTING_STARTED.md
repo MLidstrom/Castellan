@@ -49,6 +49,8 @@ Open your browser to http://localhost:8080 to access the admin interface.
 
 **Login Credentials:** Use the username and password you configured in step 1.
 
+**Performance Note:** After login, the dashboard uses advanced caching for instant navigation. See [Caching Improvements](CACHING_IMPROVEMENTS.md) for details on the enhanced performance features.
+
 ### 4. Stop All Services
 
 ```powershell
@@ -57,6 +59,14 @@ Open your browser to http://localhost:8080 to access the admin interface.
 ```
 
 ## Troubleshooting
+
+**Common Issues:** For comprehensive troubleshooting including startup script hanging and API status issues, see the full [Troubleshooting Guide](TROUBLESHOOTING.md).
+
+### Known Issues
+
+1. **start.ps1 hangs at "Checking Qdrant"**: Docker CLI may become unresponsive. Services are likely running despite the hang. Press Ctrl+C and check status with `.\scripts\status.ps1`.
+
+2. **Worker API shows "not accessible"**: The status script may report false negatives. If you get a 401 response from `http://localhost:5000/api/security-events`, the API is working correctly.
 
 ### System Tray Icon Issues
 

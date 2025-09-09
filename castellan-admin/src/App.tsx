@@ -1,10 +1,12 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Admin, Resource } from 'react-admin';
 // Using production providers with real backend API
 import { enhancedCastellanDataProvider } from './dataProvider/castellanDataProvider';
 import { enhancedAuthProvider } from './auth/authProvider';
 import { Layout } from './components/Layout';
 import { Dashboard } from './components/Dashboard';
+import { initializeCachePreloader } from './utils/cachePreloader';
+import './utils/cacheInspector'; // Load cache debugging tools
 
 // Import resources
 import {
@@ -12,7 +14,7 @@ import {
   SecurityEventShow,
   SecurityEventEdit,
   SecurityEventCreate,
-} from './resources/SecurityEvents';
+} from './resources/SecurityEvents'; // Reverted to original for stability
 import {
   SystemStatusList,
   SystemStatusShow,
@@ -45,6 +47,12 @@ import {
   NotificationSettingsEdit,
 } from './resources/NotificationSettings';
 
+// Import configuration resource
+import {
+  ConfigurationList,
+  ConfigurationShow,
+} from './resources/Configuration';
+
 // CastellanProFree - No edition detection needed
 
 // Import Material-UI icons for resources
@@ -55,15 +63,22 @@ import {
   BugReport as ThreatScannerIcon,
   Notifications as NotificationsIcon,
   Gavel as MitreIcon,
+  Settings as ConfigurationIcon,
 } from '@mui/icons-material';
 
-const App = () => (
-  <Admin
-    dataProvider={enhancedCastellanDataProvider}
-    authProvider={enhancedAuthProvider}
-    layout={Layout}
-    dashboard={Dashboard}
-  >
+const App = () => {
+  // Initialize cache preloader for immediate data availability
+  useEffect(() => {
+    initializeCachePreloader();
+  }, []);
+
+  return (
+    <Admin
+      dataProvider={enhancedCastellanDataProvider}
+      authProvider={enhancedAuthProvider}
+      layout={Layout}
+      dashboard={Dashboard}
+    >
     {/* Security Events Resource - Available in CastellanProFree */}
     <Resource
       name="security-events"
@@ -122,7 +137,17 @@ const App = () => (
       icon={NotificationsIcon}
       recordRepresentation={(record) => `${record.name || 'Notification Config'}`}
     />
+    
+    {/* Configuration Resource - Available in CastellanProFree */}
+    <Resource
+      name="configuration"
+      list={ConfigurationList}
+      show={ConfigurationShow}
+      icon={ConfigurationIcon}
+      recordRepresentation={() => 'System Configuration'}
+    />
   </Admin>
-);
+  );
+};
 
 export default App;

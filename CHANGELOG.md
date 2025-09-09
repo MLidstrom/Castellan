@@ -1,10 +1,55 @@
 # Changelog
 
-All notable changes to this project will be documented in this file.
+All notable changes to the Castellan Security Platform will be documented in this file.
 
-The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
+and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.0.1] - 2025-09-09
+
+### Added
+- **Cache Inspector Tool**: Comprehensive debugging tool for monitoring cache behavior in browser console
+- **localStorage Persistence**: Cache now persists across page refreshes for better user experience
+- **Troubleshooting Documentation**: Added known issues for start.ps1 hanging and Worker API status false negatives
+
+### Changed
+- **Optimized Cache TTLs**: Increased cache retention times for better performance
+  - FAST_REFRESH: 10s → 30s
+  - NORMAL_REFRESH: 20s → 2 minutes
+  - SLOW_REFRESH: 1 minute → 5 minutes
+  - VERY_SLOW: 2 minutes → 10 minutes
+- **Cache Storage**: Enabled localStorage for persistent caching (was memory-only)
+
+### Fixed
+- **MITRE Technique Fetch Errors**: Better error handling for missing MITRE data
+- **Cache Key Matching**: Improved cache key generation for better hit rates
+
+### Documentation
+- Created comprehensive caching improvements guide (docs/CACHING_IMPROVEMENTS.md)
+- Updated troubleshooting guide with startup script issues
+- Added Cache Inspector usage instructions
 ## [Unreleased]
+
+## [0.4.0] - 2025-09-XX *(In Progress - Phase 3 UI/UX Completion)*
+
+### Added
+- **✅ Configuration Backend API**: Complete threat intelligence settings management
+  - **Backend API**: ThreatIntelligenceConfigController with RESTful endpoints
+    - `GET /api/settings/threat-intelligence` - Retrieve current configuration with defaults
+    - `PUT /api/settings/threat-intelligence` - Update configuration with validation
+  - **Persistent Storage**: File-based JSON storage in `data/threat-intelligence-config.json`
+  - **Comprehensive Validation**: Rate limits (1-1000/min), cache TTL (1-1440min), API key management
+  - **Multi-Provider Support**: VirusTotal, MalwareBazaar, AlienVault OTX configuration
+  - **React Admin Integration**: Enhanced dataProvider with configuration resource mapping
+  - **Default Fallbacks**: Sensible defaults when no configuration file exists
+  - **Error Handling**: Comprehensive validation with detailed error messages
+
+### Planned *(Phase 3 Remaining Tasks)*
+- **🔄 Frontend Configuration UI**: React Admin interface for threat intelligence settings
+- **🔄 Advanced Search & Filtering**: Enhanced security event search capabilities
+- **🔄 YARA Rule Engine Integration**: Advanced malware detection with custom rules
+- **🔄 Export Capabilities**: CSV, JSON, PDF export for security data
+- **🔄 Security Event Timeline**: Visualization component for event chronology
 
 ### Planned *(Accelerated Timeline - Major Work Complete September 2025)*
 - **Database Architecture Consolidation (v0.9 - Late October 2025)**: PostgreSQL migration *(primary remaining work)*
@@ -17,7 +62,62 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ## [0.3.2] - 2025-09-08
 
+### Added
+- **✅ Enhanced Performance Metrics Dashboard**: Complete full-stack monitoring implementation
+  - **Backend API**: PerformanceController with 7 comprehensive API endpoints
+    - `/api/performance/dashboard-summary` - Overall system health and metrics summary
+    - `/api/performance/metrics` - Historical performance data with time range support (1h-7d)
+    - `/api/performance/alerts` - Performance alerts and alert history management
+    - `/api/performance/cache-stats` - Cache performance statistics and effectiveness
+    - `/api/performance/database` - Database and Qdrant performance metrics
+    - `/api/performance/system-resources` - System resource utilization (CPU, memory, disk, network)
+    - `/api/performance/alert-thresholds` - Configurable alert threshold management
+  - **Frontend Dashboard**: React component with Material-UI and Recharts integration
+    - Real-time monitoring with 30-second auto-refresh
+    - Interactive time range selection (1h, 6h, 24h, 7d)
+    - Performance summary cards with health scores and status indicators
+    - Multi-axis charts combining response time, CPU, memory, and request metrics
+    - Active alerts display with severity levels and threshold information
+    - System resource visualization with progress bars and trend indicators
+  - **Service Layer**: PerformanceMetricsService and PerformanceAlertService
+    - Windows performance counter integration with cross-platform fallbacks
+    - Memory caching with variable TTL (5-30 seconds) for performance optimization
+    - Comprehensive data models (30+ classes) for all performance aspects
+
+- **✅ Threat Intelligence Health Monitoring Dashboard**: Service status monitoring system
+  - **Backend API**: ThreatIntelligenceHealthController for comprehensive service health
+    - `/api/threat-intelligence-health` - Complete health status of all TI services
+    - Service monitoring for VirusTotal, MalwareBazaar, and AlienVault OTX
+    - API rate limit tracking with remaining quotas and utilization
+    - Cache efficiency metrics and error rate monitoring per service
+    - Automated alerting for service degradation and failures
+  - **Frontend Dashboard**: React component with service status visualization
+    - Service grid view with individual health cards for each TI service
+    - Rate limit visualization with progress bars and quota tracking
+    - Performance comparison charts (response times, requests per service)
+    - Usage distribution pie charts showing query patterns
+    - Service-specific alerts with automatic generation and display
+    - Uptime tracking with formatted duration display
+  - **Health Monitoring**: Real-time service health assessment
+    - 60-second auto-refresh for current service status
+    - Service availability simulation with 90% success rates
+    - Comprehensive service metrics including API key status validation
+
+- **🔄 Dashboard Integration**: Seamless integration with main dashboard
+  - Updated main Dashboard.tsx to include both new dashboard components
+  - Proper service registration in Program.cs dependency injection container
+  - Material-UI design system consistency across all dashboard components
+  - Responsive grid layouts that work on all screen sizes
+  - Error handling with retry mechanisms and graceful degradation
+
 ### Fixed
+- **📋 Dashboard Security Events Count**: Fixed incorrect total events display in dashboard KPI cards
+  - Root cause: Dashboard used paginated data array length (`data.length` = 10) instead of API total field (`total` = 2168+)
+  - Impact: Dashboard now shows accurate total security events count matching Security Events page
+  - Files: `castellan-admin/src/components/Dashboard.tsx` (Lines 242-244, 313)
+  - Technical fix: Modified API response parsing to extract both `events` array and `total` count
+  - Result: Consistent event counts across dashboard and detail pages
+
 - **🔧 React Admin Interface**: Fixed missing RealtimeSystemMetrics component compilation failure
   - Root cause: Missing `RealtimeSystemMetrics.tsx` component referenced in Dashboard
   - Impact: React Admin now compiles successfully and displays real-time system metrics

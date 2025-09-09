@@ -2,6 +2,8 @@ import React from 'react';
 import { Layout as RaLayout, AppBar } from 'react-admin';
 import { Typography, Box, Chip } from '@mui/material';
 import { Security } from '@mui/icons-material';
+import { CachePerformanceIndicator } from './CachePerformanceIndicator';
+import { NavigationCacheIndicator } from './NavigationCacheIndicator';
 
 const CustomAppBar = () => (
   <AppBar
@@ -32,13 +34,18 @@ const CustomAppBar = () => (
           backgroundColor: 'rgba(255, 255, 255, 0.9)',
           color: '#1976d2',
           fontSize: '0.75rem',
-          fontWeight: 'bold'
+          fontWeight: 'bold',
+          mr: 2
         }}
       />
+      <CachePerformanceIndicator />
     </Box>
   </AppBar>
 );
 
 export const Layout = (props: any) => (
-  <RaLayout {...props} appBar={CustomAppBar} />
+  <>
+    <RaLayout {...props} appBar={CustomAppBar} />
+    <NavigationCacheIndicator />
+  </>
 );
