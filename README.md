@@ -36,6 +36,7 @@
 - **🔔 Smart Notifications** - Rich Teams/Slack alerts with adaptive rate limiting
 - **🎯 MITRE Integration** - Auto-updated 800+ ATT&CK techniques with threat mapping
 - **🔍 Threat Intelligence** - VirusTotal, MalwareBazaar, AlienVault OTX integration
+- **🆕 YARA Detection** - Signature-based malware detection with rule management
 - **📱 Real-time Dashboard** - React admin interface with SignalR live updates
 - **🔒 Enterprise Security** - BCrypt passwords, JWT tokens, audit trails
 
@@ -116,7 +117,8 @@
 | **[🏢 Architecture](docs/ARCHITECTURE.md)** | System architecture, security, and observability |
 | **[📈 Performance](docs/PERFORMANCE.md)** | Performance metrics, benchmarks, and optimization |
 | **[🔔 Notifications](docs/NOTIFICATIONS.md)** | Teams/Slack integration and alert configuration |
-| **[🛡️ Threat Intelligence](docs/THREAT_INTELLIGENCE.md)** | VirusTotal, MalwareBazaar, AlienVault OTX setup |
+|| **[🛡️ Threat Intelligence](docs/THREAT_INTELLIGENCE.md)** | VirusTotal, MalwareBazaar, AlienVault OTX setup |
+|| **[🆕 YARA Detection](docs/YARA_DETECTION.md)** | Signature-based malware detection and rule management |
 | **[⚖️ Comparison](docs/COMPARISON.md)** | Castellan vs traditional SIEM solutions |
 | **[🔐 Security](docs/AUTHENTICATION_SETUP.md)** | BCrypt, JWT, and enterprise security features |
 | **[🚑 Troubleshooting](docs/TROUBLESHOOTING.md)** | Common issues and solutions |

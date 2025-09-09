@@ -30,6 +30,34 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added Cache Inspector usage instructions
 ## [Unreleased]
 
+### Added
+- **🆕 YARA Malware Detection System**: Complete signature-based malware detection platform
+  - **Rule Management API**: Full REST API for YARA rule CRUD operations
+    - `GET/POST/PUT/DELETE /api/yara-rules` - Complete rule management
+    - Rule filtering by category, tag, MITRE technique, and enabled status
+    - Pagination support for large rule sets
+    - Rule testing and validation endpoints
+  - **Storage System**: File-based JSON storage with advanced features
+    - Thread-safe rule storage with versioning and rollback support
+    - Performance metrics tracking (execution time, hit count, false positives)
+    - MITRE ATT&CK technique mapping and categorization
+    - Rule metadata management (author, description, threat level, priority)
+  - **Security Integration**: JWT-authenticated API with comprehensive validation
+    - Basic YARA syntax validation
+    - Rule category management (Malware, Ransomware, Trojan, Backdoor, etc.)
+    - False positive reporting and tracking system
+  - **Dependencies**: Added dnYara and dnYara.NativePack for .NET YARA integration
+
+- **🆕 Performance Monitoring Enhancement**: Extended system monitoring capabilities
+  - Performance alert service with configurable thresholds
+  - Enhanced metrics collection for YARA rule execution
+  - Additional performance indicators for malware detection workflows
+
+- **🆕 Advanced Caching Improvements**: Frontend optimization enhancements
+  - Cache debugging tools and inspection utilities
+  - Performance indicators for cache effectiveness
+  - Navigation-aware caching for better user experience
+
 ## [0.4.0] - 2025-09-XX *(In Progress - Phase 3 UI/UX Completion)*
 
 ### Added

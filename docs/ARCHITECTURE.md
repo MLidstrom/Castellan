@@ -14,6 +14,7 @@ Castellan processes Windows security events through **enterprise-grade AI/ML ana
 - **Configuration Management**: Complete threat intelligence provider settings with persistent storage and real-time validation 🆕 **LIVE**
 - **Background Service Management**: Reliable PowerShell job-based startup with comprehensive monitoring
 - **🆕 Real-time Monitoring**: SignalR-powered live system health, scan progress, and threat intelligence status
+- **🆕 YARA Malware Detection**: Signature-based malware detection with comprehensive rule management and API
 
 ## System Architecture Diagram
 
@@ -24,9 +25,11 @@ flowchart LR
     C --> D[Qdrant Vector Database]
     B --> K[SQLite Database]
     B --> N[Threat Intelligence Services]
+    B --> R[YARA Detection Engine]
     N --> O[VirusTotal API]
     N --> P[MalwareBazaar API]
     N --> Q[AlienVault OTX API]
+    R --> S[YARA Rule Store]
     B --> E[Notification Services]
     E --> F[Desktop Notifications]
     E --> G[Web Admin Interface]
@@ -34,6 +37,7 @@ flowchart LR
     D --> H[Vector Search & Correlation]
     K --> L[Application & MITRE Data]
     N --> I[Threat Detection Engine]
+    R --> I
     H --> I
     I --> J[Security Alerts]
     J --> E
@@ -58,6 +62,11 @@ flowchart LR
         O
         P
         Q
+    end
+    
+    subgraph "Malware Detection"
+        R
+        S
     end
     
     subgraph "Intelligence & Analysis"
@@ -91,6 +100,8 @@ flowchart LR
     style O fill:#f3e5f5,color:#000
     style P fill:#f3e5f5,color:#000
     style Q fill:#f3e5f5,color:#000
+    style R fill:#ffe0b2,color:#000
+    style S fill:#ffe0b2,color:#000
 ```
 
 ## Security Architecture

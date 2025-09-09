@@ -8,6 +8,12 @@
 - **🆕 File Threat Scanning** - Real-time malware detection with VirusTotal integration and local heuristics
 
 ## 🛡️ **Security Detection**
+- **🆕 YARA Malware Detection** - Signature-based malware detection with comprehensive rule management
+  - Complete YARA rule management system with REST API
+  - File-based rule storage with versioning and rollback support
+  - Performance metrics and false positive tracking
+  - MITRE ATT&CK technique mapping for threat intelligence
+  - Category-based organization (Malware, Ransomware, Trojan, etc.)
 - **✅ Tier 1 Threat Intelligence** - Fully operational VirusTotal, MalwareBazaar, and AlienVault OTX integration for enhanced malware detection
 - **IP Reputation & Geolocation** - MaxMind GeoLite2 databases for IP enrichment and threat correlation
 - **MITRE ATT&CK Mapping** - Automatic threat technique classification with 800+ techniques

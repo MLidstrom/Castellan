@@ -1,7 +1,7 @@
 # Castellan API Documentation
 
 **Status**: ✅ **Production Ready**  
-**Last Updated**: September 6, 2025  
+**Last Updated**: September 9, 2025
 **API Version**: v1
 
 ## 🎯 Overview
@@ -397,6 +397,160 @@ Content-Type: application/json
 }
 ```
 
+## 🆕 YARA Malware Detection API
+
+### List YARA Rules
+```http
+GET /api/yara-rules?page=1&limit=10&category=Malware&enabled=true
+```
+
+**Query Parameters:**
+- `page` - Page number (default: 1)
+- `limit` - Items per page (default: 10, max: 100) 
+- `category` - Filter by category: `Malware`, `Ransomware`, `Trojan`, etc.
+- `tag` - Filter by tag
+- `mitreTechnique` - Filter by MITRE ATT&CK technique (e.g., `T1059.001`)
+- `enabled` - Filter by enabled status: `true`, `false`
+
+**Response:**
+```json
+{
+  "data": [
+    {
+      "id": "22d42700-9ca9-4ed9-9b84-869568d43024",
+      "name": "Suspicious_PowerShell_Commands",
+      "description": "Detects suspicious PowerShell command patterns",
+      "category": "Malware",
+      "author": "Security Team",
+      "createdAt": "2025-09-09T14:00:00Z",
+      "updatedAt": "2025-09-09T14:00:00Z",
+      "isEnabled": true,
+      "priority": 75,
+      "threatLevel": "High",
+      "hitCount": 0,
+      "falsePositiveCount": 0,
+      "averageExecutionTimeMs": 0.0,
+      "mitreTechniques": ["T1059.001"],
+      "tags": ["powershell", "suspicious"],
+      "isValid": true,
+      "source": "Custom"
+    }
+  ],
+  "total": 1,
+  "page": 1,
+  "perPage": 10
+}
+```
+
+### Create YARA Rule
+```http
+POST /api/yara-rules
+Content-Type: application/json
+
+{
+  "name": "Ransomware_File_Extensions",
+  "description": "Detects common ransomware file extensions",
+  "ruleContent": "rule Ransomware_Extensions {\n  strings:\n    $ext1 = \".encrypted\"\n    $ext2 = \".locked\"\n  condition:\n    any of them\n}",
+  "category": "Ransomware",
+  "author": "Threat Intel Team",
+  "isEnabled": true,
+  "priority": 90,
+  "threatLevel": "Critical",
+  "mitreTechniques": ["T1486"],
+  "tags": ["ransomware", "file-encryption"]
+}
+```
+
+### Get YARA Rule Details
+```http
+GET /api/yara-rules/{ruleId}
+```
+
+### Update YARA Rule
+```http
+PUT /api/yara-rules/{ruleId}
+Content-Type: application/json
+
+{
+  "description": "Updated description",
+  "isEnabled": false,
+  "threatLevel": "Medium"
+}
+```
+
+### Delete YARA Rule
+```http
+DELETE /api/yara-rules/{ruleId}
+```
+
+### Test YARA Rule
+```http
+POST /api/yara-rules/test
+Content-Type: application/json
+
+{
+  "ruleContent": "rule Test { strings: $a = \"malware\" condition: $a }",
+  "testContent": "This content contains malware signatures"
+}
+```
+
+**Response:**
+```json
+{
+  "isValid": true,
+  "matched": true,
+  "matchedStrings": [
+    {
+      "identifier": "$a",
+      "offset": 21,
+      "value": "malware",
+      "isHex": false
+    }
+  ],
+  "executionTimeMs": 2.5
+}
+```
+
+### Get Available Categories
+```http
+GET /api/yara-rules/categories
+```
+
+**Response:**
+```json
+{
+  "data": [
+    "Malware",
+    "Ransomware", 
+    "Trojan",
+    "Backdoor",
+    "Webshell",
+    "Cryptominer",
+    "Exploit",
+    "Suspicious",
+    "PUA",
+    "Custom"
+  ]
+}
+```
+
+### Report False Positive
+```http
+POST /api/yara-rules/{ruleId}/false-positive
+Content-Type: application/json
+
+{
+  "reporter": "analyst@company.com",
+  "comment": "This rule triggered on legitimate software",
+  "context": "Windows System File"
+}
+```
+
+### Get Rule Match History
+```http
+GET /api/yara-rules/{ruleId}/matches?page=1&limit=50
+```
+
 ## 📊 Reporting API
 
 ### Generate Security Report
@@ -593,11 +747,13 @@ X-RateLimit-Reset: 1693958400
 ```
 
 ### Rate Limits by Endpoint
-| Endpoint Category | Requests per Minute |
-|------------------|-------------------|
-| Authentication | 60 |
-| Security Events | 1000 |
-| AI Analysis | 100 |
+|| Endpoint Category | Requests per Minute |
+||------------------|-------------------|
+|| Authentication | 60 |
+|| Security Events | 1000 |
+|| AI Analysis | 100 |
+|| YARA Rules | 200 |
+|| YARA Testing | 50 |
 | Vector Search | 500 |
 | System Status | 200 |
 | Configuration | 30 |
