@@ -1,0 +1,114 @@
+using System.ComponentModel.DataAnnotations;
+
+namespace Castellan.Worker.Configuration;
+
+/// <summary>
+/// Configuration options for YARA scanning
+/// </summary>
+public class YaraScanningOptions
+{
+    /// <summary>
+    /// Configuration section name
+    /// </summary>
+    public const string SectionName = "YaraScanning";
+    
+    /// <summary>
+    /// Whether YARA scanning is enabled
+    /// </summary>
+    public bool Enabled { get; set; } = true;
+    
+    /// <summary>
+    /// Maximum file size to scan in MB
+    /// </summary>
+    [Range(1, 1000)]
+    public int MaxFileSizeMB { get; set; } = 100;
+    
+    /// <summary>
+    /// Timeout for scanning operations in seconds
+    /// </summary>
+    [Range(1, 300)]
+    public int ScanTimeoutSeconds { get; set; } = 30;
+    
+    /// <summary>
+    /// Maximum concurrent scans
+    /// </summary>
+    [Range(1, 20)]
+    public int MaxConcurrentScans { get; set; } = 4;
+    
+    /// <summary>
+    /// Whether to scan files automatically in security events
+    /// </summary>
+    public bool AutoScanSecurityEvents { get; set; } = true;
+    
+    /// <summary>
+    /// Minimum threat level to trigger auto-scanning
+    /// </summary>
+    public string MinThreatLevel { get; set; } = "Medium";
+    
+    /// <summary>
+    /// Rule compilation settings
+    /// </summary>
+    public YaraCompilationOptions Compilation { get; set; } = new();
+    
+    /// <summary>
+    /// Performance settings
+    /// </summary>
+    public YaraPerformanceOptions Performance { get; set; } = new();
+}
+
+/// <summary>
+/// YARA rule compilation options
+/// </summary>
+public class YaraCompilationOptions
+{
+    /// <summary>
+    /// Whether to enable fast pattern matching
+    /// </summary>
+    public bool EnableFastMatching { get; set; } = true;
+    
+    /// <summary>
+    /// Maximum memory usage for compiled rules in MB
+    /// </summary>
+    [Range(10, 1000)]
+    public int MaxMemoryMB { get; set; } = 256;
+    
+    /// <summary>
+    /// Whether to precompile rules on startup
+    /// </summary>
+    public bool PrecompileOnStartup { get; set; } = true;
+    
+    /// <summary>
+    /// Rule refresh interval in minutes
+    /// </summary>
+    [Range(1, 1440)]
+    public int RefreshIntervalMinutes { get; set; } = 60;
+}
+
+/// <summary>
+/// YARA performance options
+/// </summary>
+public class YaraPerformanceOptions
+{
+    /// <summary>
+    /// Enable performance metrics collection
+    /// </summary>
+    public bool EnableMetrics { get; set; } = true;
+    
+    /// <summary>
+    /// Warning threshold for scan time in seconds
+    /// </summary>
+    [Range(1, 300)]
+    public int SlowScanThresholdSeconds { get; set; } = 10;
+    
+    /// <summary>
+    /// Maximum scanning threads per core
+    /// </summary>
+    [Range(1, 4)]
+    public int ThreadsPerCore { get; set; } = 1;
+    
+    /// <summary>
+    /// Buffer size for stream scanning in KB
+    /// </summary>
+    [Range(1, 1024)]
+    public int StreamBufferSizeKB { get; set; } = 64;
+}

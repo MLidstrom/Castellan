@@ -205,7 +205,7 @@ public class PerformanceApiResponse<T>
 public class TimeSeriesData<T>
 {
     public DateTime Timestamp { get; set; }
-    public T Value { get; set; }
+    public T Value { get; set; } = default!;
     public Dictionary<string, object>? Metadata { get; set; }
 }
 

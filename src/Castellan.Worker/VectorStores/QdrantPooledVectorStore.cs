@@ -44,7 +44,8 @@ public sealed class QdrantPooledVectorStore : IVectorStore
 
     public async Task BatchUpsertAsync(List<(LogEvent logEvent, float[] embedding)> items, CancellationToken ct)
     {
-        _logger.LogDebug("Batch upserting {Count} items using connection-pooled vector store", items?.Count ?? 0);
+        ArgumentNullException.ThrowIfNull(items);
+        _logger.LogDebug("Batch upserting {Count} items using connection-pooled vector store", items.Count);
         await _vectorStore.BatchUpsertAsync(items, ct);
     }
 

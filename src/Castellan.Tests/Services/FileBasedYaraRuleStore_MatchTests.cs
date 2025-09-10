@@ -1,0 +1,334 @@
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using System.Threading.Tasks;
+using Microsoft.Extensions.Logging;
+using Xunit;
+using Moq;
+using Castellan.Worker.Services;
+using Castellan.Worker.Models;
+using FluentAssertions;
+using Castellan.Tests.TestUtilities;
+
+namespace Castellan.Tests.Services;
+
+/// <summary>
+/// Tests for match-related functionality in FileBasedYaraRuleStore
+/// </summary>
+[Collection("TestEnvironment")]
+public class FileBasedYaraRuleStore_MatchTests : IDisposable
+{
+    private readonly Mock<ILogger<FileBasedYaraRuleStore>> _mockLogger;
+    private readonly string _testDirectory;
+    private readonly FileBasedYaraRuleStore _store;
+
+    public FileBasedYaraRuleStore_MatchTests()
+    {
+        _mockLogger = new Mock<ILogger<FileBasedYaraRuleStore>>();
+        _testDirectory = Path.Combine(Path.GetTempPath(), "castellan-yara-match-tests", Guid.NewGuid().ToString());
+        Directory.CreateDirectory(_testDirectory);
+        
+        _store = new FileBasedYaraRuleStore(_mockLogger.Object);
+        SetTestDirectory();
+    }
+
+    public void Dispose()
+    {
+        if (Directory.Exists(_testDirectory))
+        {
+            Directory.Delete(_testDirectory, true);
+        }
+    }
+
+    [Fact]
+    public async Task SaveMatchAsync_ValidMatch_SavesAndReturnsMatch()
+    {
+        // Arrange
+        var match = TestDataFactory.CreateTestYaraMatch("rule-123", "TestRule");
+        match.Id = string.Empty; // Test auto-ID generation
+
+        // Act
+        var savedMatch = await _store.SaveMatchAsync(match);
+
+        // Assert
+        savedMatch.Should().NotBeNull();
+        savedMatch.Id.Should().NotBeNullOrEmpty();
+        savedMatch.RuleId.Should().Be("rule-123");
+        savedMatch.RuleName.Should().Be("TestRule");
+        savedMatch.MatchTime.Should().BeCloseTo(DateTime.UtcNow, TimeSpan.FromSeconds(5));
+    }
+
+    [Fact]
+    public async Task SaveMatchAsync_ExistingId_PreservesId()
+    {
+        // Arrange
+        var existingId = "existing-match-id";
+        var match = TestDataFactory.CreateTestYaraMatch("rule-123", "TestRule");
+        match.Id = existingId;
+
+        // Act
+        var savedMatch = await _store.SaveMatchAsync(match);
+
+        // Assert
+        savedMatch.Id.Should().Be(existingId);
+    }
+
+    [Fact]
+    public async Task SaveMatchAsync_MultipleMatches_SavesAll()
+    {
+        // Arrange
+        var matches = new[]
+        {
+            TestDataFactory.CreateTestYaraMatch("rule-1", "Rule1"),
+            TestDataFactory.CreateTestYaraMatch("rule-2", "Rule2"),
+            TestDataFactory.CreateTestYaraMatch("rule-3", "Rule3")
+        };
+
+        // Act
+        var savedMatches = new List<YaraMatch>();
+        foreach (var match in matches)
+        {
+            savedMatches.Add(await _store.SaveMatchAsync(match));
+        }
+
+        // Assert
+        savedMatches.Should().HaveCount(3);
+        savedMatches.Select(m => m.RuleName).Should().Contain("Rule1", "Rule2", "Rule3");
+    }
+
+    [Fact]
+    public async Task SaveMatchAsync_Over1000Matches_KeepsOnlyRecent1000()
+    {
+        // Arrange - Create 1050 matches
+        var matches = new List<YaraMatch>();
+        for (int i = 0; i < 1050; i++)
+        {
+            var match = TestDataFactory.CreateTestYaraMatch($"rule-{i}", $"Rule{i}");
+            match.MatchTime = DateTime.UtcNow.AddMinutes(-i); // Older matches have earlier times
+            matches.Add(match);
+        }
+
+        // Act - Save all matches
+        foreach (var match in matches)
+        {
+            await _store.SaveMatchAsync(match);
+        }
+
+        // Assert - Should only have 1000 matches, and they should be the most recent ones
+        var recentMatches = await _store.GetRecentMatchesAsync(2000); // Request more than stored
+        recentMatches.Should().HaveCount(1000);
+        
+        // The most recent match (index 0, oldest time offset) should be included
+        recentMatches.Should().Contain(m => m.RuleName == "Rule0");
+        // Very old matches should be pruned
+        recentMatches.Should().NotContain(m => m.RuleName == "Rule1049");
+    }
+
+    [Fact]
+    public async Task GetRecentMatchesAsync_NoMatches_ReturnsEmpty()
+    {
+        // Act
+        var matches = await _store.GetRecentMatchesAsync();
+
+        // Assert
+        matches.Should().NotBeNull().And.BeEmpty();
+    }
+
+    [Fact]
+    public async Task GetRecentMatchesAsync_WithMatches_ReturnsOrderedByTime()
+    {
+        // Arrange - Create matches with different timestamps
+        var oldMatch = TestDataFactory.CreateTestYaraMatch("rule-old", "OldRule");
+        oldMatch.MatchTime = DateTime.UtcNow.AddHours(-2);
+        
+        var newMatch = TestDataFactory.CreateTestYaraMatch("rule-new", "NewRule");
+        newMatch.MatchTime = DateTime.UtcNow.AddMinutes(-10);
+        
+        var newestMatch = TestDataFactory.CreateTestYaraMatch("rule-newest", "NewestRule");
+        newestMatch.MatchTime = DateTime.UtcNow.AddMinutes(-1);
+
+        await _store.SaveMatchAsync(oldMatch);
+        await _store.SaveMatchAsync(newMatch);
+        await _store.SaveMatchAsync(newestMatch);
+
+        // Act
+        var matches = await _store.GetRecentMatchesAsync();
+
+        // Assert
+        matches.Should().HaveCount(3);
+        var orderedMatches = matches.ToList();
+        orderedMatches[0].RuleName.Should().Be("NewestRule"); // Most recent first
+        orderedMatches[1].RuleName.Should().Be("NewRule");
+        orderedMatches[2].RuleName.Should().Be("OldRule"); // Oldest last
+    }
+
+    [Fact]
+    public async Task GetRecentMatchesAsync_WithCountLimit_ReturnsLimitedResults()
+    {
+        // Arrange
+        for (int i = 0; i < 10; i++)
+        {
+            var match = TestDataFactory.CreateTestYaraMatch($"rule-{i}", $"Rule{i}");
+            await _store.SaveMatchAsync(match);
+        }
+
+        // Act
+        var matches = await _store.GetRecentMatchesAsync(5);
+
+        // Assert
+        matches.Should().HaveCount(5);
+    }
+
+    [Fact]
+    public async Task GetMatchesBySecurityEventAsync_ExistingEventId_ReturnsMatches()
+    {
+        // Arrange
+        var securityEventId = "security-event-123";
+        var matchingMatch1 = TestDataFactory.CreateTestYaraMatch("rule-1", "Rule1");
+        matchingMatch1.SecurityEventId = securityEventId;
+        
+        var matchingMatch2 = TestDataFactory.CreateTestYaraMatch("rule-2", "Rule2");
+        matchingMatch2.SecurityEventId = securityEventId;
+        
+        var nonMatchingMatch = TestDataFactory.CreateTestYaraMatch("rule-3", "Rule3");
+        nonMatchingMatch.SecurityEventId = "different-event-456";
+
+        await _store.SaveMatchAsync(matchingMatch1);
+        await _store.SaveMatchAsync(matchingMatch2);
+        await _store.SaveMatchAsync(nonMatchingMatch);
+
+        // Act
+        var matches = await _store.GetMatchesBySecurityEventAsync(securityEventId);
+
+        // Assert
+        matches.Should().HaveCount(2);
+        matches.All(m => m.SecurityEventId == securityEventId).Should().BeTrue();
+        matches.Select(m => m.RuleName).Should().Contain("Rule1", "Rule2");
+    }
+
+    [Fact]
+    public async Task GetMatchesBySecurityEventAsync_NonExistentEventId_ReturnsEmpty()
+    {
+        // Arrange
+        var match = TestDataFactory.CreateTestYaraMatch("rule-1", "Rule1");
+        match.SecurityEventId = "existing-event";
+        await _store.SaveMatchAsync(match);
+
+        // Act
+        var matches = await _store.GetMatchesBySecurityEventAsync("non-existent-event");
+
+        // Assert
+        matches.Should().NotBeNull().And.BeEmpty();
+    }
+
+    [Fact]
+    public async Task SaveMatchAsync_LogsMatchInformation()
+    {
+        // Arrange
+        var match = TestDataFactory.CreateTestYaraMatch("rule-123", "TestRule");
+        match.TargetFile = "suspicious.exe";
+
+        // Act
+        await _store.SaveMatchAsync(match);
+
+        // Assert
+        _mockLogger.Verify(
+            x => x.Log(
+                LogLevel.Information,
+                It.IsAny<EventId>(),
+                It.Is<It.IsAnyType>((v, t) => v.ToString()!.Contains("YARA rule matched: TestRule on suspicious.exe")),
+                It.IsAny<Exception>(),
+                It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
+            Times.Once);
+    }
+
+    [Fact]
+    public async Task MatchPersistence_AcrossStoreInstances_MaintainsData()
+    {
+        // Arrange - Save match with first store instance
+        var match = TestDataFactory.CreateTestYaraMatch("rule-persistence", "PersistenceRule");
+        await _store.SaveMatchAsync(match);
+
+        // Act - Create new store instance (simulating app restart)
+        var newStore = new FileBasedYaraRuleStore(_mockLogger.Object);
+        SetTestDirectoryForStore(newStore);
+
+        var retrievedMatches = await newStore.GetRecentMatchesAsync();
+
+        // Assert
+        retrievedMatches.Should().HaveCount(1);
+        retrievedMatches.First().RuleName.Should().Be("PersistenceRule");
+    }
+
+    [Fact]
+    public async Task SaveMatchAsync_ComplexMatchData_PreservesAllFields()
+    {
+        // Arrange
+        var match = new YaraMatch
+        {
+            RuleId = "complex-rule-id",
+            RuleName = "ComplexRule",
+            TargetFile = "C:\\test\\complex.exe",
+            TargetHash = "abc123def456789",
+            MatchedStrings = new List<YaraMatchString>
+            {
+                new YaraMatchString
+                {
+                    Identifier = "$string1",
+                    Offset = 100,
+                    Value = "malicious_pattern_1",
+                    IsHex = false
+                },
+                new YaraMatchString
+                {
+                    Identifier = "$hex_string",
+                    Offset = 500,
+                    Value = "41 42 43 44",
+                    IsHex = true
+                }
+            },
+            Metadata = new Dictionary<string, string>
+            {
+                { "severity", "critical" },
+                { "confidence", "95" },
+                { "family", "trojan.generic" }
+            },
+            ExecutionTimeMs = 25.7,
+            SecurityEventId = "event-complex-123"
+        };
+
+        // Act
+        var savedMatch = await _store.SaveMatchAsync(match);
+
+        // Assert
+        savedMatch.RuleId.Should().Be("complex-rule-id");
+        savedMatch.RuleName.Should().Be("ComplexRule");
+        savedMatch.TargetFile.Should().Be("C:\\test\\complex.exe");
+        savedMatch.TargetHash.Should().Be("abc123def456789");
+        savedMatch.MatchedStrings.Should().HaveCount(2);
+        savedMatch.MatchedStrings[0].Identifier.Should().Be("$string1");
+        savedMatch.MatchedStrings[1].IsHex.Should().BeTrue();
+        savedMatch.Metadata.Should().HaveCount(3);
+        savedMatch.Metadata["severity"].Should().Be("critical");
+        savedMatch.ExecutionTimeMs.Should().Be(25.7);
+        savedMatch.SecurityEventId.Should().Be("event-complex-123");
+    }
+
+    private void SetTestDirectory()
+    {
+        SetTestDirectoryForStore(_store);
+    }
+
+    private void SetTestDirectoryForStore(FileBasedYaraRuleStore store)
+    {
+        var type = store.GetType();
+        var rulesDirectoryField = type.GetField("_rulesDirectory", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+        var rulesFilePathField = type.GetField("_rulesFilePath", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+        var matchesFilePathField = type.GetField("_matchesFilePath", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+        
+        rulesDirectoryField?.SetValue(store, _testDirectory);
+        rulesFilePathField?.SetValue(store, Path.Combine(_testDirectory, "rules.json"));
+        matchesFilePathField?.SetValue(store, Path.Combine(_testDirectory, "matches.json"));
+    }
+}

@@ -94,5 +94,70 @@ public static class TestDataFactory
             ""recommended_actions"": [""Monitor user activity"", ""Enable MFA""]
         }";
     }
+
+    public static YaraRule CreateTestYaraRule(string name, string description, string category = "Malware")
+    {
+        return new YaraRule
+        {
+            Name = name,
+            Description = description,
+            RuleContent = $"rule {name} {{ condition: true }}",
+            Category = category,
+            Author = "Test Author",
+            IsEnabled = true,
+            Priority = 50,
+            ThreatLevel = "Medium",
+            MitreTechniques = new List<string> { "T1059.001" },
+            Tags = new List<string> { "test" },
+            IsValid = true,
+            Source = "Test"
+        };
+    }
+
+    public static YaraMatch CreateTestYaraMatch(string ruleId, string ruleName)
+    {
+        return new YaraMatch
+        {
+            RuleId = ruleId,
+            RuleName = ruleName,
+            MatchTime = DateTimeOffset.UtcNow.DateTime,
+            TargetFile = "C:\\test\\sample.exe",
+            TargetHash = "abc123def456",
+            MatchedStrings = new List<YaraMatchString>
+            {
+                new YaraMatchString
+                {
+                    Identifier = "$test_string",
+                    Offset = 100,
+                    Value = "suspicious_pattern",
+                    IsHex = false
+                }
+            },
+            Metadata = new Dictionary<string, string>
+            {
+                { "severity", "high" },
+                { "confidence", "85" }
+            },
+            ExecutionTimeMs = 12.5,
+            SecurityEventId = "event-123"
+        };
+    }
+
+    public static YaraRuleRequest CreateTestYaraRuleRequest(string name, string description)
+    {
+        return new YaraRuleRequest
+        {
+            Name = name,
+            Description = description,
+            RuleContent = $"rule {name} {{ condition: true }}",
+            Category = "Malware",
+            Author = "Test Author",
+            IsEnabled = true,
+            Priority = 75,
+            ThreatLevel = "High",
+            MitreTechniques = new List<string> { "T1059.001" },
+            Tags = new List<string> { "test" }
+        };
+    }
 }
 

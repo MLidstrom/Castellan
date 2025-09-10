@@ -241,7 +241,7 @@ public sealed class QdrantConnectionPool : IQdrantConnectionPool
         return _loadBalancer.SelectInstance(healthyInstances);
     }
 
-    private async Task RefreshHealthStatusIfNeeded()
+    private Task RefreshHealthStatusIfNeeded()
     {
         var now = DateTimeOffset.UtcNow;
         var staleThreshold = _options.HealthMonitoring.CheckInterval.Add(_options.HealthMonitoring.CheckInterval);
@@ -253,6 +253,8 @@ public sealed class QdrantConnectionPool : IQdrantConnectionPool
         {
             PerformHealthChecks();
         }
+        
+        return Task.CompletedTask;
     }
 
     private async void PerformHealthChecks(object? state = null)

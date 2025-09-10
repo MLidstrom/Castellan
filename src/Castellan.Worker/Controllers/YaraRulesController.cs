@@ -17,13 +17,16 @@ public class YaraRulesController : ControllerBase
 {
     private readonly ILogger<YaraRulesController> _logger;
     private readonly IYaraRuleStore _ruleStore;
+    private readonly IYaraScanService? _yaraScanService;
     
     public YaraRulesController(
         ILogger<YaraRulesController> logger,
-        IYaraRuleStore ruleStore)
+        IYaraRuleStore ruleStore,
+        IYaraScanService? yaraScanService = null)
     {
         _logger = logger;
         _ruleStore = ruleStore;
+        _yaraScanService = yaraScanService;
     }
     
     /// <summary>
@@ -309,7 +312,7 @@ public class YaraRulesController : ControllerBase
         {
             IEnumerable<YaraMatch> matches;
             
-            if (!string.IsNullOrEmpty(securityEventId))
+            if (!string.IsNullOrWhiteSpace(securityEventId))
             {
                 matches = await _ruleStore.GetMatchesBySecurityEventAsync(securityEventId);
             }
@@ -382,7 +385,7 @@ public class YaraRulesController : ControllerBase
         return Ok(new { data = categories });
     }
     
-    private YaraRuleDto ConvertToDto(YaraRule rule)
+    internal YaraRuleDto ConvertToDto(YaraRule rule)
     {
         return new YaraRuleDto
         {
@@ -400,15 +403,15 @@ public class YaraRulesController : ControllerBase
             HitCount = rule.HitCount,
             FalsePositiveCount = rule.FalsePositiveCount,
             AverageExecutionTimeMs = rule.AverageExecutionTimeMs,
-            MitreTechniques = rule.MitreTechniques,
-            Tags = rule.Tags,
+            MitreTechniques = rule.MitreTechniques ?? new List<string>(),
+            Tags = rule.Tags ?? new List<string>(),
             IsValid = rule.IsValid,
             ValidationError = rule.ValidationError,
             Source = rule.Source
         };
     }
     
-    private (bool IsValid, string? Error) ValidateYaraRule(string ruleContent)
+    internal (bool IsValid, string? Error) ValidateYaraRule(string ruleContent)
     {
         // Basic YARA syntax validation
         // TODO: Use actual YARA compiler for validation once YaraScannerService is implemented
@@ -418,8 +421,11 @@ public class YaraRulesController : ControllerBase
             return (false, "Rule content cannot be empty");
         }
         
+        // Convert to lowercase for case-insensitive matching
+        var lowerContent = ruleContent.ToLowerInvariant();
+        
         // Check for basic YARA rule structure
-        if (!ruleContent.Contains("rule "))
+        if (!lowerContent.Contains("rule "))
         {
             return (false, "Invalid YARA rule: missing 'rule' keyword");
         }
@@ -429,11 +435,119 @@ public class YaraRulesController : ControllerBase
             return (false, "Invalid YARA rule: missing braces");
         }
         
-        if (!ruleContent.Contains("condition:"))
+        if (!lowerContent.Contains("condition:"))
         {
             return (false, "Invalid YARA rule: missing 'condition' section");
         }
         
         return (true, null);
+    }
+    
+    /// <summary>
+    /// Scan uploaded content using YARA rules
+    /// </summary>
+    [HttpPost("scan")]
+    public async Task<IActionResult> ScanContent([FromBody] YaraScanRequest request)
+    {
+        try
+        {
+            if (_yaraScanService == null)
+            {
+                return BadRequest(new { message = "YARA scanning service is not available" });
+            }
+            
+            if (!_yaraScanService.IsHealthy)
+            {
+                return BadRequest(new { message = $"YARA scanning service is not healthy: {_yaraScanService.LastError}" });
+            }
+            
+            if (!ModelState.IsValid)
+            {
+                return BadRequest(ModelState);
+            }
+            
+            IEnumerable<YaraMatch> matches;
+            
+            if (!string.IsNullOrEmpty(request.Content))
+            {
+                // Scan Base64 encoded content
+                try
+                {
+                    var bytes = Convert.FromBase64String(request.Content);
+                    matches = await _yaraScanService.ScanBytesAsync(bytes, request.FileName);
+                }
+                catch (FormatException)
+                {
+                    return BadRequest(new { message = "Invalid Base64 content" });
+                }
+            }
+            else if (!string.IsNullOrEmpty(request.FilePath) && System.IO.File.Exists(request.FilePath))
+            {
+                // Scan file from path
+                matches = await _yaraScanService.ScanFileAsync(request.FilePath);
+            }
+            else
+            {
+                return BadRequest(new { message = "Either Content or FilePath must be provided" });
+            }
+            
+            var result = new YaraScanResult
+            {
+                FileName = request.FileName ?? request.FilePath ?? "unknown",
+                ScanTime = DateTime.UtcNow,
+                MatchCount = matches.Count(),
+                Matches = matches.Select(m => new YaraScanMatch
+                {
+                    RuleId = m.RuleId,
+                    RuleName = m.RuleName,
+                    MatchedStrings = m.MatchedStrings,
+                    ExecutionTimeMs = m.ExecutionTimeMs
+                }).ToList()
+            };
+            
+            _logger.LogInformation("YARA scan completed: {FileName} - {MatchCount} matches", 
+                result.FileName, result.MatchCount);
+            
+            return Ok(new { data = result });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error during YARA scan");
+            return StatusCode(500, new { message = "Internal server error during scan" });
+        }
+    }
+    
+    /// <summary>
+    /// Get YARA scanning service status
+    /// </summary>
+    [HttpGet("status")]
+    public IActionResult GetStatus()
+    {
+        try
+        {
+            if (_yaraScanService == null)
+            {
+                return Ok(new
+                {
+                    isAvailable = false,
+                    isHealthy = false,
+                    error = "YARA scanning service is not registered",
+                    compiledRules = 0
+                });
+            }
+            
+            return Ok(new
+            {
+                isAvailable = true,
+                isHealthy = _yaraScanService.IsHealthy,
+                error = _yaraScanService.LastError,
+                compiledRules = _yaraScanService.GetCompiledRuleCount()
+            });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error getting YARA service status");
+            return StatusCode(500, new { message = "Internal server error" });
+        }
     }
 }

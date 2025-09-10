@@ -40,7 +40,7 @@ public class PerformanceAlertService
         _logger.LogInformation("Getting performance alerts");
 
         var cacheKey = "performance_alerts";
-        if (_cache.TryGetValue(cacheKey, out AlertResponse cachedAlerts))
+        if (_cache.TryGetValue(cacheKey, out AlertResponse? cachedAlerts) && cachedAlerts != null)
         {
             return cachedAlerts;
         }
@@ -85,7 +85,7 @@ public class PerformanceAlertService
     public async Task<PerformanceThresholds> GetThresholdsAsync()
     {
         var cacheKey = "performance_thresholds";
-        if (_cache.TryGetValue(cacheKey, out PerformanceThresholds thresholds))
+        if (_cache.TryGetValue(cacheKey, out PerformanceThresholds? thresholds) && thresholds != null)
         {
             return thresholds;
         }

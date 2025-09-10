@@ -44,6 +44,7 @@ public class ThreatIntelligenceHealthController : ControllerBase
             // Get service health status
             var services = new List<object>();
             var alerts = new List<object>();
+            // Aggregate metrics (computed from service details)
             var totalQueries = 0L;
             var totalResponseTime = 0.0;
             var totalErrors = 0L;
@@ -52,18 +53,27 @@ public class ThreatIntelligenceHealthController : ControllerBase
             // VirusTotal Service Health
             var vtHealth = await GetVirusTotalHealthAsync();
             services.Add(vtHealth);
+            totalQueries += (long)(vtHealth.GetType().GetProperty("requestsToday")?.GetValue(vtHealth) ?? 0L);
+            totalResponseTime += Convert.ToDouble(vtHealth.GetType().GetProperty("responseTime")?.GetValue(vtHealth) ?? 0.0);
+            totalErrors += (long)((double)(vtHealth.GetType().GetProperty("errorRate")?.GetValue(vtHealth) ?? 0.0) * 100);
             if (vtHealth.GetType().GetProperty("status")?.GetValue(vtHealth)?.ToString() == "healthy")
                 servicesOnline++;
 
             // MalwareBazaar Service Health  
             var mbHealth = await GetMalwareBazaarHealthAsync();
             services.Add(mbHealth);
+            totalQueries += (long)(mbHealth.GetType().GetProperty("requestsToday")?.GetValue(mbHealth) ?? 0L);
+            totalResponseTime += Convert.ToDouble(mbHealth.GetType().GetProperty("responseTime")?.GetValue(mbHealth) ?? 0.0);
+            totalErrors += (long)((double)(mbHealth.GetType().GetProperty("errorRate")?.GetValue(mbHealth) ?? 0.0) * 100);
             if (mbHealth.GetType().GetProperty("status")?.GetValue(mbHealth)?.ToString() == "healthy")
                 servicesOnline++;
 
             // AlienVault OTX Service Health
             var otxHealth = await GetOtxHealthAsync();
             services.Add(otxHealth);
+            totalQueries += (long)(otxHealth.GetType().GetProperty("requestsToday")?.GetValue(otxHealth) ?? 0L);
+            totalResponseTime += Convert.ToDouble(otxHealth.GetType().GetProperty("responseTime")?.GetValue(otxHealth) ?? 0.0);
+            totalErrors += (long)((double)(otxHealth.GetType().GetProperty("errorRate")?.GetValue(otxHealth) ?? 0.0) * 100);
             if (otxHealth.GetType().GetProperty("status")?.GetValue(otxHealth)?.ToString() == "healthy")
                 servicesOnline++;
 
@@ -79,10 +89,10 @@ public class ThreatIntelligenceHealthController : ControllerBase
             // Generate sample performance data
             var performanceMetrics = new
             {
-                totalQueries24h = Random.Shared.Next(500, 2000),
-                averageResponseTime = Random.Shared.Next(200, 800),
+                totalQueries24h = (int)totalQueries,
+                averageResponseTime = services.Count > 0 ? (int)(totalResponseTime / services.Count) : 0,
                 cacheEfficiency = (double)cacheEfficiency,
-                errorRate = Random.Shared.NextDouble() * 0.1
+                errorRate = services.Count > 0 ? totalErrors / (services.Count * 100.0) : 0.0
             };
 
             var usageMetrics = new

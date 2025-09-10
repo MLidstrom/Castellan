@@ -10,9 +10,13 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <InternalsVisibleTo Include="Castellan.Tests" />
+  </ItemGroup>
+  
+  <ItemGroup>
     <PackageReference Include="BCrypt.Net-Next" Version="4.0.3" />
     <PackageReference Include="dnYara" Version="2.1.0" />
-    <PackageReference Include="dnYara.NativePack" Version="2.1.0.3" />
+    <PackageReference Include="dnYara.NativePack" Version="2.1.0.3" ExcludeAssets="compile" />
     <PackageReference Include="MaxMind.GeoIP2" Version="5.3.0" />
     <PackageReference Include="Microsoft.Extensions.Caching.Memory" Version="9.0.8" />
     <PackageReference Include="Microsoft.Extensions.Hosting" Version="8.0.0" />

@@ -33,14 +33,14 @@ public class PerformanceMetricsService
         }
     }
 
-    public async Task<HistoricalMetrics> GetHistoricalMetricsAsync(string timeRange)
+    public Task<HistoricalMetrics> GetHistoricalMetricsAsync(string timeRange)
     {
         _logger.LogInformation("Getting historical metrics for time range: {TimeRange}", timeRange);
 
         var cacheKey = $"historical_metrics_{timeRange}";
-        if (_cache.TryGetValue(cacheKey, out HistoricalMetrics cachedMetrics))
+        if (_cache.TryGetValue(cacheKey, out HistoricalMetrics? cachedMetrics) && cachedMetrics != null)
         {
-            return cachedMetrics;
+            return Task.FromResult(cachedMetrics);
         }
 
         var timeSpan = ParseTimeRange(timeRange);
@@ -67,17 +67,17 @@ public class PerformanceMetricsService
         // Cache for 30 seconds to reduce computation overhead
         _cache.Set(cacheKey, metrics, TimeSpan.FromSeconds(30));
 
-        return metrics;
+        return Task.FromResult(metrics);
     }
 
-    public async Task<PerformanceCacheStatistics> GetCacheStatisticsAsync()
+    public Task<PerformanceCacheStatistics> GetCacheStatisticsAsync()
     {
         _logger.LogInformation("Getting cache statistics");
 
         var cacheKey = "cache_statistics";
-        if (_cache.TryGetValue(cacheKey, out PerformanceCacheStatistics cachedStats))
+        if (_cache.TryGetValue(cacheKey, out PerformanceCacheStatistics? cachedStats) && cachedStats != null)
         {
-            return cachedStats;
+            return Task.FromResult(cachedStats);
         }
 
         // In a real implementation, you would gather actual cache metrics
@@ -93,7 +93,7 @@ public class PerformanceMetricsService
         };
 
         _cache.Set(cacheKey, stats, TimeSpan.FromSeconds(15));
-        return stats;
+        return Task.FromResult(stats);
     }
 
     public async Task<DatabasePerformanceMetrics> GetDatabasePerformanceAsync()
@@ -128,14 +128,14 @@ public class PerformanceMetricsService
         return metrics;
     }
 
-    public async Task<SystemResourceMetrics> GetSystemResourcesAsync()
+    public Task<SystemResourceMetrics> GetSystemResourcesAsync()
     {
         _logger.LogInformation("Getting system resource metrics");
 
         var cacheKey = "system_resources";
-        if (_cache.TryGetValue(cacheKey, out SystemResourceMetrics cachedResources))
+        if (_cache.TryGetValue(cacheKey, out SystemResourceMetrics? cachedResources) && cachedResources != null)
         {
-            return cachedResources;
+            return Task.FromResult(cachedResources);
         }
 
         var metrics = new SystemResourceMetrics
@@ -172,10 +172,10 @@ public class PerformanceMetricsService
         };
 
         _cache.Set(cacheKey, metrics, TimeSpan.FromSeconds(5));
-        return metrics;
+        return Task.FromResult(metrics);
     }
 
-    public async Task<DashboardSummary> GetDashboardSummaryAsync()
+    public Task<DashboardSummary> GetDashboardSummaryAsync()
     {
         _logger.LogInformation("Getting dashboard summary");
 
@@ -207,7 +207,7 @@ public class PerformanceMetricsService
             }
         };
 
-        return summary;
+        return Task.FromResult(summary);
     }
 
     private List<PerformanceDataPoint> GenerateHistoricalDataPoints(DateTime start, DateTime end, string timeRange)
@@ -383,14 +383,14 @@ public class PerformanceMetricsService
     private int GetTotalConnections() => 20;
     private double GetConnectionUtilization() => (double)GetActiveConnections() / GetTotalConnections();
     private int GetPeakConnections() => 18;
-    private async Task<double> GetAverageQueryResponseTimeAsync() => Random.Shared.NextDouble() * 50 + 10;
-    private async Task<int> GetSlowQueryCountAsync() => Random.Shared.Next(0, 5);
-    private async Task<long> GetTotalQueryCountAsync() => Random.Shared.NextInt64(1000, 10000);
-    private async Task<double> GetQueriesPerSecondAsync() => Random.Shared.NextDouble() * 100 + 50;
-    private async Task<double> GetQdrantAverageOperationTimeAsync() => Random.Shared.NextDouble() * 20 + 5;
-    private async Task<long> GetQdrantVectorCountAsync() => Random.Shared.NextInt64(10000, 100000);
-    private async Task<string> GetQdrantCollectionStatusAsync() => "healthy";
-    private async Task<double> GetQdrantBatchOperationTimeAsync() => Random.Shared.NextDouble() * 100 + 50;
+    private Task<double> GetAverageQueryResponseTimeAsync() => Task.FromResult(Random.Shared.NextDouble() * 50 + 10);
+    private Task<int> GetSlowQueryCountAsync() => Task.FromResult(Random.Shared.Next(0, 5));
+    private Task<long> GetTotalQueryCountAsync() => Task.FromResult(Random.Shared.NextInt64(1000, 10000));
+    private Task<double> GetQueriesPerSecondAsync() => Task.FromResult(Random.Shared.NextDouble() * 100 + 50);
+    private Task<double> GetQdrantAverageOperationTimeAsync() => Task.FromResult(Random.Shared.NextDouble() * 20 + 5);
+    private Task<long> GetQdrantVectorCountAsync() => Task.FromResult(Random.Shared.NextInt64(10000, 100000));
+    private Task<string> GetQdrantCollectionStatusAsync() => Task.FromResult("healthy");
+    private Task<double> GetQdrantBatchOperationTimeAsync() => Task.FromResult(Random.Shared.NextDouble() * 100 + 50);
 
     // Cache-related methods
     private double GetCacheMemoryUsage() => Random.Shared.NextDouble() * 512 + 128; // MB

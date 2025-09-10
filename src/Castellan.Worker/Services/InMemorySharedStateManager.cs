@@ -30,6 +30,7 @@ public class InMemorySharedStateManager : ISharedStateManager
 
     // Events
     public event EventHandler<StateSynchronizationEventArgs>? StateSynchronized;
+    // Raised when a conflict occurs and is resolved. Currently used to update metrics.
     public event EventHandler<StateConflictEventArgs>? ConflictResolved;
 
     private bool _disposed;
@@ -164,7 +165,7 @@ public class InMemorySharedStateManager : ISharedStateManager
         return true;
     }
 
-    public async Task<bool> CompareAndSwapAsync<T>(string key, long expectedVersion, T newValue, TimeSpan? timeToLive = null, CancellationToken cancellationToken = default)
+    public Task<bool> CompareAndSwapAsync<T>(string key, long expectedVersion, T newValue, TimeSpan? timeToLive = null, CancellationToken cancellationToken = default)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(key);
 
@@ -172,18 +173,20 @@ public class InMemorySharedStateManager : ISharedStateManager
         {
             if (!_stateStore.TryGetValue(key, out var currentEntry))
             {
-                return false;
+                return Task.FromResult(false);
             }
 
             if (currentEntry.Version != expectedVersion)
             {
-                return false;
+                // Track conflict occurrences
+                Interlocked.Increment(ref _conflictCount);
+                return Task.FromResult(false);
             }
 
             if (currentEntry.IsExpired)
             {
                 _stateStore.TryRemove(key, out _);
-                return false;
+                return Task.FromResult(false);
             }
 
             var now = DateTimeOffset.UtcNow;
@@ -208,9 +211,27 @@ public class InMemorySharedStateManager : ISharedStateManager
             {
                 var previousValue = JsonSerializer.Deserialize<T>(currentEntry.Value);
                 await NotifySubscribersAsync<T>(key, StateChangeType.Updated, newValue, previousValue, newEntry.Version);
+                
+                // Raise conflict resolved event if needed
+                if (currentEntry.Version + 1 == newEntry.Version)
+                {
+                    Interlocked.Increment(ref _conflictResolutionCount);
+                    ConflictResolved?.Invoke(this, new StateConflictEventArgs
+                    {
+                        Key = key,
+                        ConflictingEntries = new List<ConflictingEntry>
+                        {
+                            new() { InstanceId = currentEntry.LastModifiedBy ?? "unknown", Version = currentEntry.Version, Value = previousValue, Timestamp = currentEntry.LastModified },
+                            new() { InstanceId = _instanceId, Version = newEntry.Version, Value = newValue, Timestamp = newEntry.LastModified }
+                        },
+                        ResolutionStrategy = "Compare-And-Swap",
+                        ResolvedValue = newValue,
+                        Resolved = true
+                    });
+                }
             });
 
-            return true;
+            return Task.FromResult(true);
         }
     }
 
@@ -240,7 +261,7 @@ public class InMemorySharedStateManager : ISharedStateManager
         return Task.FromResult<IReadOnlyList<string>>(matchingKeys);
     }
 
-    public async Task<IReadOnlyDictionary<string, object?>> GetBatchAsync(IEnumerable<string> keys, CancellationToken cancellationToken = default)
+    public Task<IReadOnlyDictionary<string, object?>> GetBatchAsync(IEnumerable<string> keys, CancellationToken cancellationToken = default)
     {
         var result = new Dictionary<string, object?>();
         
@@ -265,10 +286,10 @@ public class InMemorySharedStateManager : ISharedStateManager
             }
         }
 
-        return result.AsReadOnly();
+        return Task.FromResult<IReadOnlyDictionary<string, object?>>(result.AsReadOnly());
     }
 
-    public async Task SetBatchAsync(IReadOnlyDictionary<string, object?> values, TimeSpan? timeToLive = null, CancellationToken cancellationToken = default)
+    public Task SetBatchAsync(IReadOnlyDictionary<string, object?> values, TimeSpan? timeToLive = null, CancellationToken cancellationToken = default)
     {
         var now = DateTimeOffset.UtcNow;
         var ttl = timeToLive ?? TimeSpan.FromMinutes(_options.StateTimeoutMinutes);
@@ -307,9 +328,10 @@ public class InMemorySharedStateManager : ISharedStateManager
         }
 
         _logger.LogDebug("Set batch of {Count} state entries", values.Count);
+        return Task.CompletedTask;
     }
 
-    public async Task<string> SubscribeToChangesAsync(string keyPattern, Func<SharedStateChangeNotification, Task> callback, CancellationToken cancellationToken = default)
+    public Task<string> SubscribeToChangesAsync(string keyPattern, Func<SharedStateChangeNotification, Task> callback, CancellationToken cancellationToken = default)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(keyPattern);
         ArgumentNullException.ThrowIfNull(callback);
@@ -326,10 +348,10 @@ public class InMemorySharedStateManager : ISharedStateManager
         _subscriptions[subscriptionId] = subscription;
         
         _logger.LogDebug("Created subscription {SubscriptionId} for pattern {Pattern}", subscriptionId, keyPattern);
-        return subscriptionId;
+        return Task.FromResult(subscriptionId);
     }
 
-    public async Task UnsubscribeAsync(string subscriptionId, CancellationToken cancellationToken = default)
+    public Task UnsubscribeAsync(string subscriptionId, CancellationToken cancellationToken = default)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(subscriptionId);
 
@@ -338,6 +360,7 @@ public class InMemorySharedStateManager : ISharedStateManager
             _logger.LogDebug("Removed subscription {SubscriptionId} for pattern {Pattern}", 
                 subscriptionId, subscription.KeyPattern);
         }
+        return Task.CompletedTask;
     }
 
     public SharedStateMetrics GetMetrics()
@@ -370,7 +393,7 @@ public class InMemorySharedStateManager : ISharedStateManager
         };
     }
 
-    public async Task SynchronizeAsync(CancellationToken cancellationToken = default)
+    public Task SynchronizeAsync(CancellationToken cancellationToken = default)
     {
         var stopwatch = System.Diagnostics.Stopwatch.StartNew();
         var success = true;
@@ -408,6 +431,8 @@ public class InMemorySharedStateManager : ISharedStateManager
             ErrorMessage = errorMessage,
             ParticipatingInstances = new[] { _instanceId }
         });
+        
+        return Task.CompletedTask;
     }
 
     private async Task NotifySubscribersAsync<T>(string key, StateChangeType changeType, T? newValue, T? oldValue, long version)

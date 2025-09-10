@@ -1,0 +1,300 @@
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using System.Threading.Tasks;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
+using Xunit;
+using Castellan.Worker.Abstractions;
+using Castellan.Worker.Models;
+using Castellan.Worker.Services;
+using FluentAssertions;
+
+namespace Castellan.Tests.Integration;
+
+/// <summary>
+/// Integration tests for YARA functionality that test the full pipeline
+/// </summary>
+[Collection("TestEnvironment")]
+public class YaraIntegrationTests : IDisposable
+{
+    private readonly ServiceProvider _serviceProvider;
+    private readonly IYaraRuleStore _ruleStore;
+    private readonly string _testDirectory;
+
+    public YaraIntegrationTests()
+    {
+        _testDirectory = Path.Combine(Path.GetTempPath(), "castellan-yara-integration-tests", Guid.NewGuid().ToString());
+        Directory.CreateDirectory(_testDirectory);
+
+        // Setup DI container
+        var services = new ServiceCollection();
+        services.AddLogging(builder => builder.AddConsole().SetMinimumLevel(LogLevel.Warning));
+        services.AddSingleton<IYaraRuleStore, FileBasedYaraRuleStore>();
+
+        _serviceProvider = services.BuildServiceProvider();
+        _ruleStore = _serviceProvider.GetRequiredService<IYaraRuleStore>();
+        
+        // Use reflection to set the test directory
+        SetTestDirectory();
+    }
+
+    public void Dispose()
+    {
+        _serviceProvider?.Dispose();
+        if (Directory.Exists(_testDirectory))
+        {
+            Directory.Delete(_testDirectory, true);
+        }
+    }
+
+    [Fact]
+    public async Task YaraRuleLifecycle_CreateUpdateDelete_WorksCorrectly()
+    {
+        // Arrange - Create a rule
+        var originalRule = new YaraRule
+        {
+            Name = "Integration_Test_Rule",
+            Description = "Integration test rule",
+            RuleContent = "rule Integration_Test_Rule { condition: true }",
+            Category = YaraRuleCategory.Malware,
+            Author = "Integration Test",
+            IsEnabled = true,
+            Priority = 80,
+            ThreatLevel = "High",
+            MitreTechniques = new List<string> { "T1059.001", "T1027" },
+            Tags = new List<string> { "integration", "test", "malware" }
+        };
+
+        // Act & Assert - Create
+        var createdRule = await _ruleStore.AddRuleAsync(originalRule);
+        createdRule.Should().NotBeNull();
+        createdRule.Id.Should().NotBeNullOrEmpty();
+        createdRule.Name.Should().Be("Integration_Test_Rule");
+        createdRule.CreatedAt.Should().BeCloseTo(DateTime.UtcNow, TimeSpan.FromSeconds(5));
+
+        // Act & Assert - Retrieve
+        var retrievedRule = await _ruleStore.GetRuleByIdAsync(createdRule.Id);
+        retrievedRule.Should().NotBeNull();
+        retrievedRule!.Name.Should().Be("Integration_Test_Rule");
+        retrievedRule.Priority.Should().Be(80);
+        retrievedRule.MitreTechniques.Should().Contain("T1059.001", "T1027");
+
+        // Act & Assert - Update
+        retrievedRule.Description = "Updated integration test rule";
+        retrievedRule.Priority = 90;
+        retrievedRule.ThreatLevel = "Critical";
+        
+        var updatedRule = await _ruleStore.UpdateRuleAsync(retrievedRule);
+        updatedRule.Should().NotBeNull();
+        updatedRule.Description.Should().Be("Updated integration test rule");
+        updatedRule.Priority.Should().Be(90);
+        updatedRule.ThreatLevel.Should().Be("Critical");
+        updatedRule.Version.Should().Be(2);
+        updatedRule.UpdatedAt.Should().BeAfter(updatedRule.CreatedAt);
+
+        // Act & Assert - Delete
+        var deleteResult = await _ruleStore.DeleteRuleAsync(createdRule.Id);
+        deleteResult.Should().BeTrue();
+        
+        var deletedRule = await _ruleStore.GetRuleByIdAsync(createdRule.Id);
+        deletedRule.Should().BeNull();
+    }
+
+    [Fact]
+    public async Task YaraRuleFiltering_MultipleCategories_ReturnsCorrectResults()
+    {
+        // Arrange
+        var malwareRule = CreateTestRule("Malware_Rule", YaraRuleCategory.Malware, new[] { "malware" });
+        var ransomwareRule = CreateTestRule("Ransomware_Rule", YaraRuleCategory.Ransomware, new[] { "ransomware" });
+        var trojanRule = CreateTestRule("Trojan_Rule", YaraRuleCategory.Trojan, new[] { "trojan" });
+        
+        await _ruleStore.AddRuleAsync(malwareRule);
+        await _ruleStore.AddRuleAsync(ransomwareRule);
+        await _ruleStore.AddRuleAsync(trojanRule);
+
+        // Act & Assert - Filter by category
+        var malwareRules = await _ruleStore.GetRulesByCategoryAsync(YaraRuleCategory.Malware);
+        malwareRules.Should().HaveCount(1);
+        malwareRules.First().Name.Should().Be("Malware_Rule");
+
+        var ransomwareRules = await _ruleStore.GetRulesByCategoryAsync(YaraRuleCategory.Ransomware);
+        ransomwareRules.Should().HaveCount(1);
+        ransomwareRules.First().Name.Should().Be("Ransomware_Rule");
+
+        // Act & Assert - Get all rules
+        var allRules = await _ruleStore.GetAllRulesAsync();
+        allRules.Should().HaveCount(3);
+        allRules.Select(r => r.Category).Should().Contain(YaraRuleCategory.Malware, YaraRuleCategory.Ransomware, YaraRuleCategory.Trojan);
+    }
+
+    [Fact]
+    public async Task YaraRuleMetrics_UpdateAndFalsePositive_UpdatesCorrectly()
+    {
+        // Arrange
+        var rule = CreateTestRule("Metrics_Test_Rule", YaraRuleCategory.Suspicious, new[] { "metrics" });
+        var createdRule = await _ruleStore.AddRuleAsync(rule);
+
+        // Act - Update metrics multiple times
+        await _ruleStore.UpdateRuleMetricsAsync(createdRule.Id, true, 10.5);
+        await _ruleStore.UpdateRuleMetricsAsync(createdRule.Id, true, 15.2);
+        await _ruleStore.UpdateRuleMetricsAsync(createdRule.Id, false, 8.1); // No match, but still updates timing
+
+        // Assert - Check metrics
+        var updatedRule = await _ruleStore.GetRuleByIdAsync(createdRule.Id);
+        updatedRule.Should().NotBeNull();
+        updatedRule!.HitCount.Should().Be(2);
+        updatedRule.AverageExecutionTimeMs.Should().BeApproximately(11.267, 0.01); // (10.5 + 15.2 + 8.1) / 3
+
+        // Act - Record false positive
+        await _ruleStore.RecordFalsePositiveAsync(createdRule.Id);
+        await _ruleStore.RecordFalsePositiveAsync(createdRule.Id);
+
+        // Assert - Check false positive count
+        var finalRule = await _ruleStore.GetRuleByIdAsync(createdRule.Id);
+        finalRule.Should().NotBeNull();
+        finalRule!.FalsePositiveCount.Should().Be(2);
+    }
+
+    [Fact]
+    public async Task YaraRuleFiltering_ByMitreTechniqueAndTag_ReturnsCorrectResults()
+    {
+        // Arrange
+        var powershellRule = CreateTestRule("PowerShell_Rule", YaraRuleCategory.Malware, new[] { "powershell", "script" });
+        powershellRule.MitreTechniques = new List<string> { "T1059.001", "T1027" };
+        
+        var wmiRule = CreateTestRule("WMI_Rule", YaraRuleCategory.Suspicious, new[] { "wmi", "persistence" });
+        wmiRule.MitreTechniques = new List<string> { "T1047", "T1027" };
+        
+        var genericRule = CreateTestRule("Generic_Rule", YaraRuleCategory.Custom, new[] { "generic" });
+        genericRule.MitreTechniques = new List<string> { "T1055" };
+
+        await _ruleStore.AddRuleAsync(powershellRule);
+        await _ruleStore.AddRuleAsync(wmiRule);
+        await _ruleStore.AddRuleAsync(genericRule);
+
+        // Act & Assert - Filter by MITRE technique
+        var t1027Rules = await _ruleStore.GetRulesByMitreTechniqueAsync("T1027");
+        t1027Rules.Should().HaveCount(2);
+        t1027Rules.Select(r => r.Name).Should().Contain("PowerShell_Rule", "WMI_Rule");
+
+        var t1059Rules = await _ruleStore.GetRulesByMitreTechniqueAsync("T1059.001");
+        t1059Rules.Should().HaveCount(1);
+        t1059Rules.First().Name.Should().Be("PowerShell_Rule");
+
+        // Act & Assert - Filter by tag
+        var scriptRules = await _ruleStore.GetRulesByTagAsync("script");
+        scriptRules.Should().HaveCount(1);
+        scriptRules.First().Name.Should().Be("PowerShell_Rule");
+
+        var persistenceRules = await _ruleStore.GetRulesByTagAsync("persistence");
+        persistenceRules.Should().HaveCount(1);
+        persistenceRules.First().Name.Should().Be("WMI_Rule");
+    }
+
+    [Fact]
+    public async Task YaraRuleStore_EnabledDisabled_FiltersCorrectly()
+    {
+        // Arrange
+        var enabledRule1 = CreateTestRule("Enabled_Rule_1", YaraRuleCategory.Malware, new[] { "enabled" });
+        enabledRule1.IsEnabled = true;
+        
+        var enabledRule2 = CreateTestRule("Enabled_Rule_2", YaraRuleCategory.Trojan, new[] { "enabled" });
+        enabledRule2.IsEnabled = true;
+        
+        var disabledRule = CreateTestRule("Disabled_Rule", YaraRuleCategory.Suspicious, new[] { "disabled" });
+        disabledRule.IsEnabled = false;
+
+        await _ruleStore.AddRuleAsync(enabledRule1);
+        await _ruleStore.AddRuleAsync(enabledRule2);
+        await _ruleStore.AddRuleAsync(disabledRule);
+
+        // Act
+        var enabledRules = await _ruleStore.GetEnabledRulesAsync();
+        var allRules = await _ruleStore.GetAllRulesAsync();
+
+        // Assert
+        enabledRules.Should().HaveCount(2);
+        enabledRules.All(r => r.IsEnabled).Should().BeTrue();
+        enabledRules.Select(r => r.Name).Should().Contain("Enabled_Rule_1", "Enabled_Rule_2");
+        
+        allRules.Should().HaveCount(3);
+    }
+
+    [Fact]
+    public async Task YaraRuleStore_RuleExistence_ChecksCorrectly()
+    {
+        // Arrange
+        var rule = CreateTestRule("Existence_Test_Rule", YaraRuleCategory.Custom, new[] { "existence" });
+        await _ruleStore.AddRuleAsync(rule);
+
+        // Act & Assert
+        var exists = await _ruleStore.RuleExistsAsync("Existence_Test_Rule");
+        exists.Should().BeTrue();
+
+        var doesntExist = await _ruleStore.RuleExistsAsync("Non_Existent_Rule");
+        doesntExist.Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task YaraRuleStore_PersistenceAcrossInstances_WorksCorrectly()
+    {
+        // Arrange - Create rule with first store instance
+        var rule = CreateTestRule("Persistence_Test_Rule", YaraRuleCategory.Exploit, new[] { "persistence" });
+        var createdRule = await _ruleStore.AddRuleAsync(rule);
+
+        // Act - Create new store instance (simulating application restart)
+        using var newServiceProvider = new ServiceCollection()
+            .AddLogging(builder => builder.AddConsole().SetMinimumLevel(LogLevel.Warning))
+            .AddSingleton<IYaraRuleStore, FileBasedYaraRuleStore>()
+            .BuildServiceProvider();
+            
+        var newRuleStore = newServiceProvider.GetRequiredService<IYaraRuleStore>();
+        SetTestDirectoryForStore(newRuleStore);
+
+        // Assert - Rule should still exist in new store instance
+        var persistedRule = await newRuleStore.GetRuleByIdAsync(createdRule.Id);
+        persistedRule.Should().NotBeNull();
+        persistedRule!.Name.Should().Be("Persistence_Test_Rule");
+        persistedRule.Category.Should().Be(YaraRuleCategory.Exploit);
+        persistedRule.Tags.Should().Contain("persistence");
+    }
+
+    private YaraRule CreateTestRule(string name, string category, string[] tags)
+    {
+        return new YaraRule
+        {
+            Name = name,
+            Description = $"Test rule: {name}",
+            RuleContent = $"rule {name} {{ condition: true }}",
+            Category = category,
+            Author = "Integration Test",
+            IsEnabled = true,
+            Priority = 50,
+            ThreatLevel = "Medium",
+            MitreTechniques = new List<string> { "T1059.001" },
+            Tags = tags.ToList(),
+            IsValid = true,
+            Source = "Test"
+        };
+    }
+
+    private void SetTestDirectory()
+    {
+        SetTestDirectoryForStore(_ruleStore);
+    }
+
+    private void SetTestDirectoryForStore(IYaraRuleStore store)
+    {
+        // Use reflection to set the private fields to our test directory
+        var type = store.GetType();
+        var rulesDirectoryField = type.GetField("_rulesDirectory", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+        var rulesFilePathField = type.GetField("_rulesFilePath", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+        var matchesFilePathField = type.GetField("_matchesFilePath", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+        
+        rulesDirectoryField?.SetValue(store, _testDirectory);
+        rulesFilePathField?.SetValue(store, Path.Combine(_testDirectory, "rules.json"));
+        matchesFilePathField?.SetValue(store, Path.Combine(_testDirectory, "matches.json"));
+    }
+}

@@ -203,7 +203,11 @@ builder.Services.AddSingleton<ISecurityEventStore, FileBasedSecurityEventStore>(
 builder.Services.AddSingleton<IAutomatedResponseService, AutomatedResponseService>(); // Automated threat response
 
 // Register YARA services
+builder.Services.Configure<YaraScanningOptions>(builder.Configuration.GetSection(YaraScanningOptions.SectionName));
 builder.Services.AddSingleton<IYaraRuleStore, FileBasedYaraRuleStore>();
+builder.Services.AddSingleton<IYaraScanService, YaraScanService>();
+builder.Services.AddHostedService<YaraScanService>(provider => 
+    (YaraScanService)provider.GetRequiredService<IYaraScanService>());
 builder.Services.AddHostedService<Pipeline>();
 builder.Services.AddHostedService<StartupOrchestratorService>(); // Automatically start all required services
 builder.Services.AddHostedService<MitreImportStartupService>(); // Auto-import MITRE data if needed

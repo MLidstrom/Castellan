@@ -211,3 +211,52 @@ public class YaraTestResponse
     
     public double ExecutionTimeMs { get; set; }
 }
+
+/// <summary>
+/// Request model for YARA scanning
+/// </summary>
+public class YaraScanRequest
+{
+    /// <summary>
+    /// Base64 encoded content to scan
+    /// </summary>
+    public string? Content { get; set; }
+    
+    /// <summary>
+    /// File path to scan (alternative to Content)
+    /// </summary>
+    public string? FilePath { get; set; }
+    
+    /// <summary>
+    /// Optional filename for context
+    /// </summary>
+    public string? FileName { get; set; }
+}
+
+/// <summary>
+/// Response model for YARA scanning
+/// </summary>
+public class YaraScanResult
+{
+    public string FileName { get; set; } = string.Empty;
+    
+    public DateTime ScanTime { get; set; }
+    
+    public int MatchCount { get; set; }
+    
+    public List<YaraScanMatch> Matches { get; set; } = new List<YaraScanMatch>();
+}
+
+/// <summary>
+/// YARA scan match result
+/// </summary>
+public class YaraScanMatch
+{
+    public string? RuleId { get; set; }
+    
+    public string RuleName { get; set; } = string.Empty;
+    
+    public List<YaraMatchString> MatchedStrings { get; set; } = new List<YaraMatchString>();
+    
+    public double ExecutionTimeMs { get; set; }
+}
