@@ -39,6 +39,24 @@ import {
   MitreTechniquesShow,
 } from './resources/MitreTechniques';
 
+// Import YARA resources
+import {
+  YaraRulesList,
+  YaraRulesShow,
+  YaraRulesCreate,
+  YaraRulesEdit,
+} from './resources/YaraRules';
+
+import {
+  YaraMatchesList,
+  YaraMatchesShow,
+} from './resources/YaraMatches';
+
+// Import timeline resource
+import {
+  TimelineList,
+} from './resources/Timeline';
+
 // Import notification settings resource
 import {
   NotificationSettingsList,
@@ -64,6 +82,9 @@ import {
   Notifications as NotificationsIcon,
   Gavel as MitreIcon,
   Settings as ConfigurationIcon,
+  Shield as YaraRulesIcon,
+  FindInPage as YaraMatchesIcon,
+  Timeline as TimelineIcon,
 } from '@mui/icons-material';
 
 const App = () => {
@@ -97,6 +118,34 @@ const App = () => {
       show={MitreTechniquesShow}
       icon={MitreIcon}
       recordRepresentation={(record) => `${record.techniqueId} - ${record.name}`}
+    />
+    
+    {/* YARA Rules Resource - Available in CastellanProFree */}
+    <Resource
+      name="yara-rules"
+      list={YaraRulesList}
+      show={YaraRulesShow}
+      create={YaraRulesCreate}
+      edit={YaraRulesEdit}
+      icon={YaraRulesIcon}
+      recordRepresentation={(record) => `${record.name} - ${record.category}`}
+    />
+    
+    {/* YARA Matches Resource - Available in CastellanProFree */}
+    <Resource
+      name="yara-matches"
+      list={YaraMatchesList}
+      show={YaraMatchesShow}
+      icon={YaraMatchesIcon}
+      recordRepresentation={(record) => `${record.ruleName} - ${record.targetFile}`}
+    />
+    
+    {/* Timeline Resource - Available in CastellanProFree */}
+    <Resource
+      name="timeline"
+      list={TimelineList}
+      icon={TimelineIcon}
+      recordRepresentation={() => 'Security Event Timeline'}
     />
     
     {/* Compliance Reports Resource - Now Available */}

@@ -58,6 +58,7 @@ import {
   Download as DownloadIcon,
   ViewColumn as ViewColumnIcon,
 } from '@mui/icons-material';
+import CustomExportButton from '../components/CustomExportButton';
 
 // Hook to fetch MITRE technique data (reusing from original)
 const useMitreTechniques = () => {
@@ -319,7 +320,7 @@ const ListActions = () => (
   <TopToolbar>
     <FilterButton />
     <CreateButton />
-    <ExportButton />
+    <CustomExportButton />
     <SelectColumnsButton />
   </TopToolbar>
 );

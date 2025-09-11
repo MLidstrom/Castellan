@@ -1,10 +1,18 @@
-# Stop Castellan Components
+# Stop Castellan Applications Only
+# Stops all Castellan processes but leaves Qdrant and Ollama running by default
 # Compatible with Windows PowerShell 5.1 and PowerShell 7+
+#
+# Usage:
+#   .\scripts\stop.ps1                    # Stop only Castellan apps (default)
+#   .\scripts\stop.ps1 -Force             # Force kill if graceful shutdown fails
+#   .\scripts\stop.ps1 -StopQdrant        # Also stop Qdrant container
+#   .\scripts\stop.ps1 -StopOllama        # Also stop Ollama service
+#   .\scripts\stop.ps1 -StopQdrant -StopOllama -Force  # Stop everything
 param(
-    [switch]$Force = $false,
-    [switch]$KeepQdrant = $true,  # Changed default to true - Qdrant stays running by default
-    [switch]$StopQdrant = $false, # New flag to explicitly stop Qdrant
-    [switch]$StopOllama = $false  # New flag to explicitly stop Ollama
+    [switch]$Force = $false,      # Force kill processes if graceful shutdown fails
+    [switch]$KeepQdrant = $true,  # Default: Keep Qdrant running
+    [switch]$StopQdrant = $false, # Explicit flag to stop Qdrant container
+    [switch]$StopOllama = $false  # Explicit flag to stop Ollama service
 )
 
 # Ensure we're using TLS 1.2 for web requests on older PowerShell versions
@@ -12,8 +20,9 @@ if ($PSVersionTable.PSVersion.Major -lt 6) {
     [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
 }
 
-Write-Host "Stopping Castellan Components" -ForegroundColor Cyan
+Write-Host "Stopping Castellan Applications" -ForegroundColor Cyan
 Write-Host "==============================" -ForegroundColor Cyan
+Write-Host "Qdrant and Ollama will remain running" -ForegroundColor Gray
 Write-Host ""
 
 $stoppedComponents = @()

@@ -1,7 +1,7 @@
 # Castellan API Documentation
 
 **Status**: ✅ **Production Ready**  
-**Last Updated**: September 9, 2025
+**Last Updated**: September 11, 2025
 **API Version**: v1
 
 ## 🎯 Overview
@@ -546,9 +546,497 @@ Content-Type: application/json
 }
 ```
 
-### Get Rule Match History
+## 🔍 YARA Matches API
+
+### Get YARA Matches
 ```http
-GET /api/yara-rules/{ruleId}/matches?page=1&limit=50
+GET /api/yara-rules/matches?securityEventId={eventId}&count=100
+```
+
+**Query Parameters:**
+- `securityEventId` - Filter matches by security event ID (optional)
+- `count` - Maximum number of matches to return (default: 100)
+
+**Response:**
+```json
+{
+  "data": [
+    {
+      "id": "match-uuid-123",
+      "ruleId": "22d42700-9ca9-4ed9-9b84-869568d43024",
+      "ruleName": "Suspicious_PowerShell_Commands",
+      "matchTime": "2025-09-11T07:30:00Z",
+      "targetFile": "C:\\temp\\suspicious.ps1",
+      "targetHash": "a1b2c3d4e5f6...",
+      "matchedStrings": [
+        {
+          "identifier": "$a",
+          "offset": 42,
+          "value": "Invoke-Expression",
+          "isHex": false
+        }
+      ],
+      "metadata": {
+        "threat_level": "High",
+        "category": "Malware"
+      },
+      "executionTimeMs": 15.2,
+      "securityEventId": "evt-456"
+    }
+  ],
+  "total": 1
+}
+```
+
+## 📈 Timeline Visualization API
+
+### Get Timeline Data
+```http
+GET /api/timeline?granularity=day&from=2025-09-04T00:00:00Z&to=2025-09-11T23:59:59Z
+```
+
+**Query Parameters:**
+- `granularity` - Time aggregation granularity: `minute`, `hour`, `day`, `week`, `month` (default: `day`)
+- `from` - Start time for timeline (ISO 8601 format)
+- `to` - End time for timeline (ISO 8601 format)
+- `eventTypes` - Filter by event types (comma-separated)
+- `riskLevels` - Filter by risk levels (comma-separated)
+
+**Response:**
+```json
+{
+  "data": [
+    {
+      "timestamp": "2025-09-04T00:00:00.0000000",
+      "count": 12
+    },
+    {
+      "timestamp": "2025-09-05T00:00:00.0000000",
+      "count": 28
+    },
+    {
+      "timestamp": "2025-09-06T00:00:00.0000000",
+      "count": 45
+    }
+  ],
+  "total": 8
+}
+```
+
+### Get Timeline Statistics
+```http
+GET /api/timeline/stats?startTime=2025-09-04T00:00:00Z&endTime=2025-09-11T23:59:59Z
+```
+
+**Query Parameters:**
+- `startTime` - Start time for statistics (ISO 8601 format)
+- `endTime` - End time for statistics (ISO 8601 format)
+
+**Response:**
+```json
+{
+  "totalEvents": 156,
+  "eventsByRiskLevel": {
+    "low": 89,
+    "medium": 45,
+    "high": 22
+  },
+  "eventsByType": {
+    "ProcessCreation": 67,
+    "Authentication": 34,
+    "NetworkConnection": 28,
+    "FileSystem": 27
+  },
+  "eventsByHour": {
+    "08": 12,
+    "09": 23,
+    "10": 45,
+    "11": 38
+  },
+  "eventsByDayOfWeek": {
+    "Monday": 22,
+    "Tuesday": 34,
+    "Wednesday": 45,
+    "Thursday": 33,
+    "Friday": 22
+  },
+  "topMitreTechniques": ["T1059.001", "T1055", "T1087"],
+  "topMachines": ["WORKSTATION-01", "SERVER-02"],
+  "topUsers": ["admin", "service-account"],
+  "averageRiskScore": 42.5,
+  "highRiskEvents": 22,
+  "criticalRiskEvents": 3
+}
+```
+
+### Get Detailed Timeline Events
+```http
+GET /api/timeline/events/detailed?startTime=2025-09-11T00:00:00Z&endTime=2025-09-11T23:59:59Z&limit=50
+```
+
+**Query Parameters:**
+- `startTime` - Start time for events (ISO 8601 format, required)
+- `endTime` - End time for events (ISO 8601 format, required)
+- `riskLevels` - Filter by risk levels (optional)
+- `eventTypes` - Filter by event types (optional)
+- `limit` - Maximum number of events to return (default: 50)
+
+**Response:**
+```json
+{
+  "events": [
+    {
+      "id": "evt-123",
+      "eventType": "ProcessCreation",
+      "timestamp": "2025-09-11T14:30:00Z",
+      "riskLevel": "high",
+      "summary": "Suspicious process execution detected",
+      "mitreTechniques": ["T1059.001"],
+      "confidence": 87,
+      "machine": "WORKSTATION-01",
+      "user": "admin"
+    }
+  ],
+  "totalCount": 156,
+  "startTime": "2025-09-11T00:00:00Z",
+  "endTime": "2025-09-11T23:59:59Z"
+}
+```
+
+### Get Timeline Heatmap
+```http
+GET /api/timeline/heatmap?granularity=hour&startTime=2025-09-04T00:00:00Z&endTime=2025-09-11T23:59:59Z
+```
+
+**Query Parameters:**
+- `granularity` - Time granularity: `hour`, `day`, `week` (default: `hour`)
+- `startTime` - Start time (ISO 8601 format)
+- `endTime` - End time (ISO 8601 format)
+- `riskLevels` - Filter by risk levels (optional)
+
+**Response:**
+```json
+{
+  "data": [
+    {
+      "timeBucket": "2025-09-04T08:00:00Z",
+      "intensity": 0.75,
+      "eventCount": 23
+    },
+    {
+      "timeBucket": "2025-09-04T09:00:00Z", 
+      "intensity": 1.0,
+      "eventCount": 31
+    }
+  ]
+}
+```
+
+### Get Timeline Metrics
+```http
+GET /api/timeline/metrics?startTime=2025-09-01T00:00:00Z&endTime=2025-09-30T23:59:59Z
+```
+
+**Query Parameters:**
+- `startTime` - Start time for metrics analysis (ISO 8601 format)
+- `endTime` - End time for metrics analysis (ISO 8601 format)
+
+**Response:**
+```json
+{
+  "trends": {
+    "eventVelocity": {
+      "current": 156,
+      "previous": 134,
+      "percentageChange": 16.4
+    },
+    "riskTrend": "increasing",
+    "topGrowingThreats": ["T1059.001", "T1055"]
+  },
+  "anomalies": [
+    {
+      "timestamp": "2025-09-11T14:00:00Z",
+      "score": 2.8,
+      "eventCount": 89,
+      "expectedCount": 23.5,
+      "description": "Unusually high activity detected"
+    }
+  ],
+  "patterns": {
+    "peakHours": ["09:00-11:00", "14:00-16:00"],
+    "quietDays": ["Sunday"],
+    "seasonalTrends": "stable"
+  }
+}
+```
+
+## 💾 Export API
+
+### Get Available Export Formats
+```http
+GET /api/export/formats
+```
+
+**Response:**
+```json
+{
+  "data": [
+    {
+      "format": "csv",
+      "name": "Comma-Separated Values",
+      "description": "Standard CSV format for spreadsheet applications",
+      "mimeType": "text/csv",
+      "fileExtension": ".csv"
+    },
+    {
+      "format": "json",
+      "name": "JSON",
+      "description": "Structured JSON format for programmatic access",
+      "mimeType": "application/json",
+      "fileExtension": ".json"
+    },
+    {
+      "format": "pdf",
+      "name": "Portable Document Format",
+      "description": "Formatted PDF report for documentation",
+      "mimeType": "application/pdf",
+      "fileExtension": ".pdf"
+    }
+  ]
+}
+```
+
+### Export Security Events
+```http
+POST /api/export/security-events
+Content-Type: application/json
+
+{
+  "format": "csv",
+  "filters": {
+    "dateFrom": "2025-09-01T00:00:00Z",
+    "dateTo": "2025-09-11T23:59:59Z",
+    "riskLevel": ["high", "critical"],
+    "eventTypes": ["ProcessCreation", "Authentication"]
+  },
+  "options": {
+    "includeHeaders": true,
+    "maxRecords": 10000,
+    "fields": ["timestamp", "eventType", "riskLevel", "summary", "mitreTechniques"]
+  }
+}
+```
+
+**Query Parameters (Alternative GET request):**
+```http
+GET /api/export/security-events?format=csv&dateFrom=2025-09-01T00:00:00Z&dateTo=2025-09-11T23:59:59Z&riskLevel=high,critical
+```
+
+**Response (JSON format):**
+```json
+{
+  "data": [
+    {
+      "id": "evt-123",
+      "timestamp": "2025-09-11T14:30:00Z",
+      "eventType": "ProcessCreation",
+      "riskLevel": "high",
+      "summary": "Suspicious process execution detected",
+      "mitreTechniques": ["T1059.001"],
+      "confidence": 87,
+      "machine": "WORKSTATION-01",
+      "user": "admin"
+    }
+  ],
+  "exportInfo": {
+    "format": "json",
+    "totalRecords": 156,
+    "exportedRecords": 156,
+    "generatedAt": "2025-09-11T14:30:00Z",
+    "filters": {
+      "dateFrom": "2025-09-01T00:00:00Z",
+      "dateTo": "2025-09-11T23:59:59Z"
+    }
+  }
+}
+```
+
+**Response (CSV format):**
+```csv
+Id,Timestamp,EventType,RiskLevel,Summary,MitreTechniques,Confidence,Machine,User
+evt-123,2025-09-11T14:30:00Z,ProcessCreation,high,"Suspicious process execution detected","T1059.001",87,WORKSTATION-01,admin
+evt-124,2025-09-11T14:31:00Z,Authentication,critical,"Failed logon attempts detected","T1110.001",92,SERVER-01,service-account
+```
+
+**Response (PDF format):**
+Returns a binary PDF file with formatted security event report including:
+- Executive summary with key statistics
+- Event timeline visualization
+- Risk level distribution charts
+- Top MITRE techniques table
+- Detailed event listings with filtering applied
+
+### Get Export Statistics
+```http
+GET /api/export/stats
+```
+
+**Response:**
+```json
+{
+  "data": {
+    "totalExports": 1247,
+    "exportsByFormat": {
+      "csv": 543,
+      "json": 398,
+      "pdf": 306
+    },
+    "exportsByTimeRange": {
+      "last24Hours": 23,
+      "lastWeek": 156,
+      "lastMonth": 423
+    },
+    "averageExportSize": {
+      "csv": "2.4MB",
+      "json": "3.1MB",
+      "pdf": "1.8MB"
+    },
+    "mostExportedEventTypes": [
+      {
+        "eventType": "ProcessCreation",
+        "count": 1247
+      },
+      {
+        "eventType": "Authentication", 
+        "count": 892
+      }
+    ],
+    "popularFilters": {
+      "riskLevel": ["high", "critical"],
+      "timeRange": "last7days"
+    }
+  }
+}
+```
+
+### Background Export (Large Datasets)
+For large exports that may take time to process:
+
+```http
+POST /api/export/security-events/async
+Content-Type: application/json
+
+{
+  "format": "csv",
+  "filters": {
+    "dateFrom": "2025-01-01T00:00:00Z",
+    "dateTo": "2025-12-31T23:59:59Z"
+  },
+  "options": {
+    "maxRecords": 100000
+  },
+  "callbackUrl": "https://your-app.com/export-complete"
+}
+```
+
+**Response:**
+```json
+{
+  "exportId": "export-uuid-123",
+  "status": "processing",
+  "estimatedCompletion": "2025-09-11T14:45:00Z",
+  "progress": {
+    "recordsProcessed": 0,
+    "totalRecords": 45000,
+    "percentComplete": 0
+  }
+}
+```
+
+### Check Export Status
+```http
+GET /api/export/status/{exportId}
+```
+
+**Response:**
+```json
+{
+  "exportId": "export-uuid-123",
+  "status": "completed",
+  "downloadUrl": "/api/export/download/export-uuid-123",
+  "expiresAt": "2025-09-18T14:30:00Z",
+  "fileSize": "15.2MB",
+  "recordCount": 45000
+}
+```
+
+### Download Export File
+```http
+GET /api/export/download/{exportId}
+```
+
+Returns the exported file with appropriate Content-Type and Content-Disposition headers.
+
+## 🔍 YARA Scanning API
+
+### Scan Content with YARA Rules
+```http
+POST /api/yara-rules/scan
+Content-Type: application/json
+
+{
+  "content": "base64-encoded-file-content",
+  "fileName": "suspicious_file.exe"
+}
+```
+
+**Alternative - Scan by File Path:**
+```json
+{
+  "filePath": "C:\\temp\\suspicious_file.exe",
+  "fileName": "suspicious_file.exe"
+}
+```
+
+**Response:**
+```json
+{
+  "data": {
+    "fileName": "suspicious_file.exe",
+    "scanTime": "2025-09-11T07:30:00Z",
+    "matchCount": 2,
+    "matches": [
+      {
+        "ruleId": "rule-uuid-123",
+        "ruleName": "Malware_Detection_Rule",
+        "matchedStrings": [
+          {
+            "identifier": "$malware_sig",
+            "offset": 1024,
+            "value": "malicious_pattern",
+            "isHex": false
+          }
+        ],
+        "executionTimeMs": 8.5
+      }
+    ]
+  }
+}
+```
+
+### Get YARA Service Status
+```http
+GET /api/yara-rules/status
+```
+
+**Response:**
+```json
+{
+  "isAvailable": true,
+  "isHealthy": true,
+  "error": null,
+  "compiledRules": 45
+}
 ```
 
 ## 📊 Reporting API
@@ -753,10 +1241,16 @@ X-RateLimit-Reset: 1693958400
 || Security Events | 1000 |
 || AI Analysis | 100 |
 || YARA Rules | 200 |
+|| YARA Matches | 300 |
+|| YARA Scanning | 50 |
 || YARA Testing | 50 |
-| Vector Search | 500 |
-| System Status | 200 |
-| Configuration | 30 |
+|| Timeline Data | 500 |
+|| Timeline Stats | 200 |
+|| Export Operations | 100 |
+|| Export Downloads | 50 |
+|| Vector Search | 500 |
+|| System Status | 200 |
+|| Configuration | 30 |
 
 ## 📞 Support and Integration
 

@@ -1,0 +1,1132 @@
+import React from 'react';
+import {
+  List,
+  Datagrid,
+  TextField,
+  DateField,
+  BooleanField,
+  Show,
+  SimpleShowLayout,
+  Edit,
+  SimpleForm,
+  Create,
+  TextInput,
+  BooleanInput,
+  SelectInput,
+  required,
+  useRecordContext,
+  FunctionField,
+  ChipField,
+  ArrayField,
+  SingleFieldList,
+  NumberField,
+  Button,
+  useRefresh,
+  useNotify,
+  useDataProvider,
+  TopToolbar,
+  EditButton,
+  ShowButton,
+  BulkDeleteButton,
+  BulkExportButton,
+  useListContext,
+  Confirm,
+} from 'react-admin';
+import {
+  Card,
+  CardContent,
+  Typography,
+  Chip,
+  Box,
+  Grid,
+  Alert,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  MenuItem,
+  Menu,
+  IconButton,
+  Tooltip,
+  CircularProgress,
+  LinearProgress,
+  Divider,
+  List as MuiList,
+  ListItem,
+  ListItemText,
+  ListItemIcon,
+  Paper,
+  Tabs,
+  Tab,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+} from '@mui/material';
+import {
+  PlayArrow as ScanIcon,
+  CheckCircle as ValidIcon,
+  Error as InvalidIcon,
+  GetApp as ImportIcon,
+  Publish as ExportIcon,
+  MoreVert as MoreIcon,
+  CheckBox as EnableIcon,
+  CheckBoxOutlineBlank as DisableIcon,
+  Delete as DeleteIcon,
+  Refresh as RefreshIcon,
+  Analytics as AnalyticsIcon,
+  Assessment as StatsIcon,
+  Timeline as TrendIcon,
+  Monitor as HealthIcon,
+  Warning as WarningIcon,
+  BugReport as FalsePositiveIcon,
+  Upload as UploadIcon,
+  Download as DownloadIcon,
+} from '@mui/icons-material';
+
+// Import YARA Dashboard Components
+import { YaraAnalyticsDashboard } from '../components/YaraAnalyticsDashboard';
+import { YaraHealthMonitor } from '../components/YaraHealthMonitor';
+
+// YARA rule categories for SelectInput
+const YARA_CATEGORIES = [
+  { id: 'Malware', name: 'Malware' },
+  { id: 'Ransomware', name: 'Ransomware' },
+  { id: 'Trojan', name: 'Trojan' },
+  { id: 'Backdoor', name: 'Backdoor' },
+  { id: 'Suspicious', name: 'Suspicious' },
+  { id: 'PUA', name: 'Potentially Unwanted Application' },
+  { id: 'Exploit', name: 'Exploit' },
+  { id: 'Custom', name: 'Custom' },
+];
+
+// Threat levels for SelectInput
+const THREAT_LEVELS = [
+  { id: 'Low', name: 'Low' },
+  { id: 'Medium', name: 'Medium' },
+  { id: 'High', name: 'High' },
+  { id: 'Critical', name: 'Critical' },
+];
+
+// Custom field to display rule validation status
+const ValidationStatusField = () => {
+  const record = useRecordContext();
+  if (!record) return null;
+
+  return (
+    <Box display="flex" alignItems="center" gap={1}>
+      {record.isValid ? (
+        <>
+          <ValidIcon color="success" fontSize="small" />
+          <Chip label="Valid" color="success" size="small" />
+        </>
+      ) : (
+        <>
+          <InvalidIcon color="error" fontSize="small" />
+          <Chip label="Invalid" color="error" size="small" />
+          {record.validationError && (
+            <Typography variant="caption" color="error">
+              {record.validationError}
+            </Typography>
+          )}
+        </>
+      )}
+    </Box>
+  );
+};
+
+// Custom field to display threat level with color coding
+const ThreatLevelField = () => {
+  const record = useRecordContext();
+  if (!record) return null;
+
+  const getColor = (level: string) => {
+    switch (level?.toLowerCase()) {
+      case 'critical': return 'error';
+      case 'high': return 'warning';
+      case 'medium': return 'info';
+      case 'low': return 'success';
+      default: return 'default';
+    }
+  };
+
+  return (
+    <Chip
+      label={record.threatLevel}
+      color={getColor(record.threatLevel) as any}
+      size="small"
+    />
+  );
+};
+
+// Bulk Enable Button
+const BulkEnableButton = () => {
+  const { selectedIds, onUnselectItems } = useListContext();
+  const dataProvider = useDataProvider();
+  const notify = useNotify();
+  const refresh = useRefresh();
+  const [loading, setLoading] = React.useState(false);
+
+  const handleBulkEnable = async () => {
+    setLoading(true);
+    try {
+      await dataProvider.create('yara-rules/bulk', {
+        data: {
+          ruleIds: selectedIds,
+          operation: 'enable'
+        }
+      });
+      notify('Rules enabled successfully', { type: 'success' });
+      onUnselectItems();
+      refresh();
+    } catch (error: any) {
+      notify(`Failed to enable rules: ${error.message}`, { type: 'error' });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (!selectedIds || selectedIds.length === 0) return null;
+
+  return (
+    <Button
+      onClick={handleBulkEnable}
+      disabled={loading}
+      startIcon={loading ? <CircularProgress size={16} /> : <EnableIcon />}
+      color="primary"
+    >
+      Enable ({selectedIds.length})
+    </Button>
+  );
+};
+
+// Bulk Disable Button
+const BulkDisableButton = () => {
+  const { selectedIds, onUnselectItems } = useListContext();
+  const dataProvider = useDataProvider();
+  const notify = useNotify();
+  const refresh = useRefresh();
+  const [loading, setLoading] = React.useState(false);
+
+  const handleBulkDisable = async () => {
+    setLoading(true);
+    try {
+      await dataProvider.create('yara-rules/bulk', {
+        data: {
+          ruleIds: selectedIds,
+          operation: 'disable'
+        }
+      });
+      notify('Rules disabled successfully', { type: 'success' });
+      onUnselectItems();
+      refresh();
+    } catch (error: any) {
+      notify(`Failed to disable rules: ${error.message}`, { type: 'error' });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (!selectedIds || selectedIds.length === 0) return null;
+
+  return (
+    <Button
+      onClick={handleBulkDisable}
+      disabled={loading}
+      startIcon={loading ? <CircularProgress size={16} /> : <DisableIcon />}
+      color="warning"
+    >
+      Disable ({selectedIds.length})
+    </Button>
+  );
+};
+
+// Bulk Validate Button
+const BulkValidateButton = () => {
+  const { selectedIds, onUnselectItems } = useListContext();
+  const dataProvider = useDataProvider();
+  const notify = useNotify();
+  const refresh = useRefresh();
+  const [loading, setLoading] = React.useState(false);
+
+  const handleBulkValidate = async () => {
+    setLoading(true);
+    try {
+      await dataProvider.create('yara-rules/bulk', {
+        data: {
+          ruleIds: selectedIds,
+          operation: 'validate'
+        }
+      });
+      notify('Rules validated successfully', { type: 'success' });
+      onUnselectItems();
+      refresh();
+    } catch (error: any) {
+      notify(`Failed to validate rules: ${error.message}`, { type: 'error' });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (!selectedIds || selectedIds.length === 0) return null;
+
+  return (
+    <Button
+      onClick={handleBulkValidate}
+      disabled={loading}
+      startIcon={loading ? <CircularProgress size={16} /> : <RefreshIcon />}
+      color="info"
+    >
+      Validate ({selectedIds.length})
+    </Button>
+  );
+};
+
+// Custom Bulk Actions
+const YaraBulkActions = () => (
+  <>
+    <BulkEnableButton />
+    <BulkDisableButton />
+    <BulkValidateButton />
+    <BulkDeleteButton />
+    <BulkExportButton />
+  </>
+);
+
+// Import Dialog Component
+const ImportDialog = ({ open, onClose }: { open: boolean; onClose: () => void }) => {
+  const [ruleContent, setRuleContent] = React.useState('');
+  const [category, setCategory] = React.useState('Custom');
+  const [author, setAuthor] = React.useState('Imported');
+  const [skipDuplicates, setSkipDuplicates] = React.useState(true);
+  const [enableByDefault, setEnableByDefault] = React.useState(false);
+  const [loading, setLoading] = React.useState(false);
+  
+  const dataProvider = useDataProvider();
+  const notify = useNotify();
+  const refresh = useRefresh();
+
+  const handleImport = async () => {
+    if (!ruleContent.trim()) {
+      notify('Please enter rule content', { type: 'error' });
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const result = await dataProvider.create('yara-rules/import', {
+        data: {
+          ruleContent,
+          category,
+          author,
+          skipDuplicates,
+          enableByDefault
+        }
+      });
+      
+      const { importedCount, skippedCount, failedCount } = result.data.data;
+      notify(
+        `Import completed: ${importedCount} imported, ${skippedCount} skipped, ${failedCount} failed`,
+        { type: 'success' }
+      );
+      
+      refresh();
+      onClose();
+      setRuleContent('');
+    } catch (error: any) {
+      notify(`Import failed: ${error.message}`, { type: 'error' });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        setRuleContent(e.target?.result as string);
+      };
+      reader.readAsText(file);
+    }
+  };
+
+  return (
+    <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth>
+      <DialogTitle>Import YARA Rules</DialogTitle>
+      <DialogContent>
+        <Grid container spacing={2}>
+          <Grid item xs={12} md={6}>
+            <SelectInput
+              source="category"
+              label="Default Category"
+              choices={YARA_CATEGORIES}
+              defaultValue="Custom"
+              onChange={(e: any) => setCategory(e.target.value)}
+            />
+          </Grid>
+          <Grid item xs={12} md={6}>
+            <TextInput
+              source="author"
+              label="Default Author"
+              defaultValue="Imported"
+              onChange={(e: any) => setAuthor(e.target.value)}
+            />
+          </Grid>
+          <Grid item xs={12} md={6}>
+            <BooleanInput
+              source="skipDuplicates"
+              label="Skip Duplicates"
+              defaultValue={true}
+              onChange={(e: any) => setSkipDuplicates(e.target.checked)}
+            />
+          </Grid>
+          <Grid item xs={12} md={6}>
+            <BooleanInput
+              source="enableByDefault"
+              label="Enable Rules by Default"
+              defaultValue={false}
+              onChange={(e: any) => setEnableByDefault(e.target.checked)}
+            />
+          </Grid>
+          <Grid item xs={12}>
+            <input
+              accept=".yar,.yara,.txt"
+              type="file"
+              onChange={handleFileUpload}
+              style={{ marginBottom: 16 }}
+            />
+            <TextInput
+              source="ruleContent"
+              label="YARA Rules Content"
+              multiline
+              rows={15}
+              fullWidth
+              value={ruleContent}
+              onChange={(e: any) => setRuleContent(e.target.value)}
+              helperText="Paste YARA rules content or upload a file"
+              sx={{
+                '& textarea': {
+                  fontFamily: 'monospace',
+                  fontSize: '0.875rem',
+                },
+              }}
+            />
+          </Grid>
+        </Grid>
+      </DialogContent>
+      <DialogActions>
+        <Button onClick={onClose}>Cancel</Button>
+        <Button
+          onClick={handleImport}
+          disabled={loading}
+          startIcon={loading ? <CircularProgress size={16} /> : <ImportIcon />}
+          variant="contained"
+        >
+          Import Rules
+        </Button>
+      </DialogActions>
+    </Dialog>
+  );
+};
+
+// Export functionality
+const useExportRules = () => {
+  const dataProvider = useDataProvider();
+  const notify = useNotify();
+
+  const exportRules = async (selectedIds?: string[], format = 'raw') => {
+    try {
+      const response = await dataProvider.create('yara-rules/export', {
+        data: {
+          ruleIds: selectedIds || [],
+          format,
+          includeDisabled: false,
+          includeMetadata: true
+        }
+      });
+      
+      // Create download link
+      const blob = new Blob([response.data], { type: 'text/plain' });
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `yara_rules_${new Date().toISOString().split('T')[0]}.${format === 'json' ? 'json' : 'yar'}`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      window.URL.revokeObjectURL(url);
+      
+      notify('Rules exported successfully', { type: 'success' });
+    } catch (error: any) {
+      notify(`Export failed: ${error.message}`, { type: 'error' });
+    }
+  };
+
+  return exportRules;
+};
+
+// List Actions Toolbar
+const YaraListActions = () => {
+  const [importOpen, setImportOpen] = React.useState(false);
+  const [statsOpen, setStatsOpen] = React.useState(false);
+  const [healthOpen, setHealthOpen] = React.useState(false);
+  const [scanOpen, setScanOpen] = React.useState(false);
+  const exportRules = useExportRules();
+  const refresh = useRefresh();
+  const dataProvider = useDataProvider();
+  const notify = useNotify();
+  const [refreshing, setRefreshing] = React.useState(false);
+
+  const handleRefreshRules = async () => {
+    setRefreshing(true);
+    try {
+      await dataProvider.create('yara-rules/refresh', { data: {} });
+      notify('YARA rules refreshed successfully', { type: 'success' });
+      refresh();
+    } catch (error: any) {
+      notify(`Failed to refresh rules: ${error.message}`, { type: 'error' });
+    } finally {
+      setRefreshing(false);
+    }
+  };
+
+  return (
+    <TopToolbar>
+      <Button
+        onClick={() => setImportOpen(true)}
+        startIcon={<ImportIcon />}
+        color="primary"
+      >
+        Import
+      </Button>
+      <Button
+        onClick={() => exportRules()}
+        startIcon={<ExportIcon />}
+        color="secondary"
+      >
+        Export All
+      </Button>
+      <Button
+        onClick={() => setScanOpen(true)}
+        startIcon={<ScanIcon />}
+        color="info"
+      >
+        Scan
+      </Button>
+      <Button
+        onClick={() => setStatsOpen(true)}
+        startIcon={<StatsIcon />}
+        color="info"
+      >
+        Analytics
+      </Button>
+      <Button
+        onClick={() => setHealthOpen(true)}
+        startIcon={<HealthIcon />}
+        color="success"
+      >
+        Health
+      </Button>
+      <Button
+        onClick={handleRefreshRules}
+        disabled={refreshing}
+        startIcon={refreshing ? <CircularProgress size={16} /> : <RefreshIcon />}
+        color="warning"
+      >
+        Refresh
+      </Button>
+      
+      <ImportDialog open={importOpen} onClose={() => setImportOpen(false)} />
+      <ManualScanDialog open={scanOpen} onClose={() => setScanOpen(false)} />
+      
+      {/* Analytics Dialogs */}
+      <Dialog open={statsOpen} onClose={() => setStatsOpen(false)} maxWidth="xl" fullWidth>
+        <DialogTitle>YARA Analytics Dashboard</DialogTitle>
+        <DialogContent>
+          <YaraAnalyticsDashboard />
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setStatsOpen(false)}>Close</Button>
+        </DialogActions>
+      </Dialog>
+      
+      <Dialog open={healthOpen} onClose={() => setHealthOpen(false)} maxWidth="xl" fullWidth>
+        <DialogTitle>YARA System Health</DialogTitle>
+        <DialogContent>
+          <YaraHealthMonitor />
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setHealthOpen(false)}>Close</Button>
+        </DialogActions>
+      </Dialog>
+    </TopToolbar>
+  );
+};
+
+// Manual Scan Dialog Component
+const ManualScanDialog = ({ open, onClose }: { open: boolean; onClose: () => void }) => {
+  const [content, setContent] = React.useState('');
+  const [fileName, setFileName] = React.useState('');
+  const [loading, setLoading] = React.useState(false);
+  const [results, setResults] = React.useState<any>(null);
+  
+  const dataProvider = useDataProvider();
+  const notify = useNotify();
+
+  const handleScan = async () => {
+    if (!content.trim()) {
+      notify('Please enter content to scan', { type: 'error' });
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const result = await dataProvider.create('yara-rules/scan', {
+        data: {
+          content: btoa(content), // Base64 encode
+          fileName: fileName || 'manual_scan.txt'
+        }
+      });
+      
+      setResults(result.data.data);
+      notify(`Scan completed: ${result.data.data.matchCount} matches found`, { type: 'success' });
+    } catch (error: any) {
+      notify(`Scan failed: ${error.message}`, { type: 'error' });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        setContent(e.target?.result as string);
+        setFileName(file.name);
+      };
+      reader.readAsText(file);
+    }
+  };
+
+  const clearResults = () => {
+    setResults(null);
+    setContent('');
+    setFileName('');
+  };
+
+  return (
+    <Dialog open={open} onClose={onClose} maxWidth="lg" fullWidth>
+      <DialogTitle>Manual YARA Scan</DialogTitle>
+      <DialogContent>
+        <Grid container spacing={2}>
+          <Grid item xs={12}>
+            <input
+              accept="*/*"
+              type="file"
+              onChange={handleFileUpload}
+              style={{ marginBottom: 16 }}
+            />
+            <TextInput
+              source="fileName"
+              label="File Name"
+              value={fileName}
+              onChange={(e: any) => setFileName(e.target.value)}
+              fullWidth
+              sx={{ mb: 2 }}
+            />
+            <TextInput
+              source="content"
+              label="Content to Scan"
+              multiline
+              rows={10}
+              fullWidth
+              value={content}
+              onChange={(e: any) => setContent(e.target.value)}
+              helperText="Paste content or upload a file to scan with YARA rules"
+              sx={{
+                '& textarea': {
+                  fontFamily: 'monospace',
+                  fontSize: '0.875rem',
+                },
+              }}
+            />
+          </Grid>
+          
+          {results && (
+            <Grid item xs={12}>
+              <Divider sx={{ my: 2 }} />
+              <Typography variant="h6" gutterBottom>
+                Scan Results
+              </Typography>
+              <Alert 
+                severity={results.matchCount > 0 ? 'warning' : 'success'}
+                sx={{ mb: 2 }}
+              >
+                <strong>{results.matchCount} matches found</strong> in {results.fileName}
+                <br />
+                Scanned at: {new Date(results.scanTime).toLocaleString()}
+              </Alert>
+              
+              {results.matches?.length > 0 && (
+                <TableContainer component={Paper}>
+                  <Table size="small">
+                    <TableHead>
+                      <TableRow>
+                        <TableCell>Rule Name</TableCell>
+                        <TableCell>Rule ID</TableCell>
+                        <TableCell>Execution Time</TableCell>
+                        <TableCell>Matched Strings</TableCell>
+                      </TableRow>
+                    </TableHead>
+                    <TableBody>
+                      {results.matches.map((match: any, index: number) => (
+                        <TableRow key={index}>
+                          <TableCell>{match.ruleName}</TableCell>
+                          <TableCell>
+                            <Typography variant="caption" fontFamily="monospace">
+                              {match.ruleId}
+                            </Typography>
+                          </TableCell>
+                          <TableCell>
+                            <Chip
+                              label={`${match.executionTimeMs}ms`}
+                              size="small"
+                              color={match.executionTimeMs > 100 ? 'error' : 
+                                     match.executionTimeMs > 50 ? 'warning' : 'success'}
+                            />
+                          </TableCell>
+                          <TableCell>
+                            {match.matchedStrings?.length || 0} strings
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </TableContainer>
+              )}
+            </Grid>
+          )}
+        </Grid>
+      </DialogContent>
+      <DialogActions>
+        {results && (
+          <Button onClick={clearResults} color="secondary">
+            Clear Results
+          </Button>
+        )}
+        <Button onClick={onClose}>Close</Button>
+        <Button
+          onClick={handleScan}
+          disabled={loading}
+          startIcon={loading ? <CircularProgress size={16} /> : <ScanIcon />}
+          variant="contained"
+        >
+          {loading ? 'Scanning...' : 'Scan Content'}
+        </Button>
+      </DialogActions>
+    </Dialog>
+  );
+};
+
+// Custom field to display MITRE techniques
+const MitreTechniquesField = () => {
+  const record = useRecordContext();
+  if (!record || !record.mitreTechniques) return null;
+
+  return (
+    <Box display="flex" gap={0.5} flexWrap="wrap">
+      {record.mitreTechniques.map((technique: string, index: number) => (
+        <Chip
+          key={index}
+          label={technique}
+          variant="outlined"
+          size="small"
+          color="primary"
+        />
+      ))}
+    </Box>
+  );
+};
+
+// List view for YARA rules
+export const YaraRulesList = () => (
+  <List
+    filters={[
+      <TextInput source="q" label="Search" alwaysOn />,
+      <SelectInput
+        source="category"
+        label="Category"
+        choices={YARA_CATEGORIES}
+        alwaysOn
+      />,
+      <SelectInput
+        source="threatLevel"
+        label="Threat Level"
+        choices={THREAT_LEVELS}
+        alwaysOn
+      />,
+      <BooleanInput source="isValid" label="Valid Rules Only" />,
+      <BooleanInput source="isEnabled" label="Enabled Only" />,
+    ]}
+    sort={{ field: 'updatedAt', order: 'DESC' }}
+    perPage={25}
+    actions={<YaraListActions />}
+  >
+    <Datagrid rowClick="show" bulkActionButtons={<YaraBulkActions />}>
+      <TextField source="name" label="Rule Name" />
+      <TextField source="category" label="Category" />
+      <FunctionField
+        label="Threat Level"
+        render={(record: any) => <ThreatLevelField />}
+      />
+      <FunctionField
+        label="Status"
+        render={(record: any) => <ValidationStatusField />}
+      />
+      <BooleanField source="isEnabled" label="Enabled" />
+      <FunctionField
+        label="Matches"
+        render={(record: any) => record.hitCount || 0}
+      />
+      <DateField source="updatedAt" label="Modified" />
+      <TextField source="author" label="Author" />
+      <ShowButton />
+      <EditButton />
+    </Datagrid>
+  </List>
+);
+
+// False Positive Button for Show View
+const FalsePositiveButton = () => {
+  const record = useRecordContext();
+  const dataProvider = useDataProvider();
+  const notify = useNotify();
+  const refresh = useRefresh();
+  const [loading, setLoading] = React.useState(false);
+  const [open, setOpen] = React.useState(false);
+
+  const handleFalsePositive = async () => {
+    if (!record?.id) return;
+    setLoading(true);
+    try {
+      await dataProvider.create(`yara-rules/${record.id}/false-positive`, { data: {} });
+      notify('False positive recorded', { type: 'success' });
+      refresh();
+      setOpen(false);
+    } catch (error: any) {
+      notify(`Failed to record false positive: ${error.message}`, { type: 'error' });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <>
+      <Button
+        onClick={() => setOpen(true)}
+        startIcon={<FalsePositiveIcon />}
+        color="warning"
+      >
+        Report False Positive
+      </Button>
+      <Confirm
+        isOpen={open}
+        loading={loading}
+        title="Report False Positive"
+        content={`Are you sure you want to report rule "${record?.name}" as a false positive?`}
+        onConfirm={handleFalsePositive}
+        onClose={() => setOpen(false)}
+      />
+    </>
+  );
+};
+
+// Enhanced Show Actions
+const YaraShowActions = () => {
+  const record = useRecordContext();
+  const exportRules = useExportRules();
+
+  return (
+    <TopToolbar>
+      <EditButton />
+      <Button
+        onClick={() => record?.id && exportRules([String(record.id)])}
+        startIcon={<ExportIcon />}
+        color="secondary"
+        disabled={!record?.id}
+      >
+        Export Rule
+      </Button>
+      <FalsePositiveButton />
+    </TopToolbar>
+  );
+};
+
+// Show view for individual YARA rule
+export const YaraRulesShow = () => (
+  <Show actions={<YaraShowActions />}>
+    <SimpleShowLayout>
+      <Grid container spacing={2}>
+        <Grid item xs={12} md={6}>
+          <Card>
+            <CardContent>
+              <Typography variant="h6" gutterBottom>
+                Rule Information
+              </Typography>
+              <TextField source="name" label="Name" />
+              <TextField source="author" label="Author" />
+              <TextField source="category" label="Category" />
+              <FunctionField
+                label="Threat Level"
+                render={(record: any) => <ThreatLevelField />}
+              />
+              <BooleanField source="isEnabled" label="Enabled" />
+              <DateField source="createdAt" label="Created" />
+              <DateField source="updatedAt" label="Last Modified" />
+            </CardContent>
+          </Card>
+        </Grid>
+        <Grid item xs={12} md={6}>
+          <Card>
+            <CardContent>
+              <Typography variant="h6" gutterBottom>
+                Validation & Performance
+              </Typography>
+              <FunctionField
+                label="Validation Status"
+                render={(record: any) => <ValidationStatusField />}
+              />
+              <NumberField source="hitCount" label="Total Matches" />
+              <NumberField source="averageExecutionTimeMs" label="Avg Exec Time (ms)" />
+              <NumberField source="falsePositiveCount" label="False Positives" />
+            </CardContent>
+          </Card>
+        </Grid>
+        <Grid item xs={12}>
+          <Card>
+            <CardContent>
+              <Typography variant="h6" gutterBottom>
+                Rule Content
+              </Typography>
+              <FunctionField
+                label="YARA Rule"
+                render={(record: any) => (
+                  <pre
+                    style={{
+                      fontFamily: 'monospace',
+                      fontSize: '0.875rem',
+                      backgroundColor: '#f5f5f5',
+                      padding: '8px',
+                      borderRadius: '4px',
+                      whiteSpace: 'pre-wrap',
+                      maxWidth: '100%',
+                      overflow: 'auto'
+                    }}
+                  >
+                    {record.ruleContent}
+                  </pre>
+                )}
+              />
+            </CardContent>
+          </Card>
+        </Grid>
+        <Grid item xs={12} md={6}>
+          <Card>
+            <CardContent>
+              <Typography variant="h6" gutterBottom>
+                MITRE ATT&CK Techniques
+              </Typography>
+              <FunctionField
+                render={(record: any) => <MitreTechniquesField />}
+              />
+            </CardContent>
+          </Card>
+        </Grid>
+        <Grid item xs={12} md={6}>
+          <Card>
+            <CardContent>
+              <Typography variant="h6" gutterBottom>
+                Tags
+              </Typography>
+              <FunctionField
+                render={(record: any) => (
+                  <Box display="flex" gap={0.5} flexWrap="wrap">
+                    {record.tags?.map((tag: string, index: number) => (
+                      <Chip key={index} label={tag} size="small" />
+                    ))}
+                  </Box>
+                )}
+              />
+            </CardContent>
+          </Card>
+        </Grid>
+        <Grid item xs={12}>
+          <Card>
+            <CardContent>
+              <Typography variant="h6" gutterBottom>
+                Description
+              </Typography>
+              <FunctionField
+                render={(record: any) => (
+                  <Typography variant="body2">
+                    {record.description || 'No description provided'}
+                  </Typography>
+                )}
+              />
+            </CardContent>
+          </Card>
+        </Grid>
+      </Grid>
+    </SimpleShowLayout>
+  </Show>
+);
+
+// Create view for new YARA rule
+export const YaraRulesCreate = () => (
+  <Create>
+    <SimpleForm>
+      <Grid container spacing={2}>
+        <Grid item xs={12} md={6}>
+          <TextInput source="name" label="Rule Name" validate={required()} fullWidth />
+          <TextInput source="author" label="Author" fullWidth />
+          <SelectInput
+            source="category"
+            label="Category"
+            choices={YARA_CATEGORIES}
+            validate={required()}
+            fullWidth
+          />
+          <SelectInput
+            source="threatLevel"
+            label="Threat Level"
+            choices={THREAT_LEVELS}
+            validate={required()}
+            fullWidth
+          />
+        </Grid>
+        <Grid item xs={12} md={6}>
+          <BooleanInput source="isEnabled" label="Enable Rule" defaultValue={true} />
+          <TextInput source="priority" label="Priority (0-100)" type="number" fullWidth />
+          <TextInput
+            source="tags"
+            label="Tags (comma-separated)"
+            fullWidth
+            helperText="Enter tags separated by commas"
+          />
+          <TextInput
+            source="mitreTechniques"
+            label="MITRE Techniques (comma-separated)"
+            fullWidth
+            helperText="Enter technique IDs like T1055, T1071"
+          />
+        </Grid>
+        <Grid item xs={12}>
+          <TextInput
+            source="description"
+            label="Description"
+            multiline
+            rows={3}
+            fullWidth
+          />
+        </Grid>
+        <Grid item xs={12}>
+          <TextInput
+            source="ruleContent"
+            label="YARA Rule Content"
+            multiline
+            rows={15}
+            fullWidth
+            validate={required()}
+            helperText="Enter the complete YARA rule syntax"
+            sx={{
+              '& textarea': {
+                fontFamily: 'monospace',
+                fontSize: '0.875rem',
+              },
+            }}
+          />
+        </Grid>
+      </Grid>
+    </SimpleForm>
+  </Create>
+);
+
+// Edit view for existing YARA rule
+export const YaraRulesEdit = () => (
+  <Edit>
+    <SimpleForm>
+      <Grid container spacing={2}>
+        <Grid item xs={12} md={6}>
+          <TextInput source="name" label="Rule Name" validate={required()} fullWidth />
+          <TextInput source="author" label="Author" fullWidth />
+          <SelectInput
+            source="category"
+            label="Category"
+            choices={YARA_CATEGORIES}
+            validate={required()}
+            fullWidth
+          />
+          <SelectInput
+            source="threatLevel"
+            label="Threat Level"
+            choices={THREAT_LEVELS}
+            validate={required()}
+            fullWidth
+          />
+        </Grid>
+        <Grid item xs={12} md={6}>
+          <BooleanInput source="isEnabled" label="Enable Rule" />
+          <TextInput source="priority" label="Priority (0-100)" type="number" fullWidth />
+          <TextInput
+            source="tags"
+            label="Tags (comma-separated)"
+            fullWidth
+            helperText="Enter tags separated by commas"
+          />
+          <TextInput
+            source="mitreTechniques"
+            label="MITRE Techniques (comma-separated)"
+            fullWidth
+            helperText="Enter technique IDs like T1055, T1071"
+          />
+        </Grid>
+        <Grid item xs={12}>
+          <Alert severity="info" sx={{ mb: 2 }}>
+            <strong>Validation Status:</strong>
+            <FunctionField render={(record: any) => <ValidationStatusField />} />
+          </Alert>
+        </Grid>
+        <Grid item xs={12}>
+          <TextInput
+            source="description"
+            label="Description"
+            multiline
+            rows={3}
+            fullWidth
+          />
+        </Grid>
+        <Grid item xs={12}>
+          <TextInput
+            source="ruleContent"
+            label="YARA Rule Content"
+            multiline
+            rows={15}
+            fullWidth
+            validate={required()}
+            helperText="Enter the complete YARA rule syntax"
+            sx={{
+              '& textarea': {
+                fontFamily: 'monospace',
+                fontSize: '0.875rem',
+              },
+            }}
+          />
+        </Grid>
+      </Grid>
+    </SimpleForm>
+  </Edit>
+);

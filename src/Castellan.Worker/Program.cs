@@ -202,6 +202,12 @@ builder.Services.AddSingleton<RulesEngine>(); // M4: Add RulesEngine for correla
 builder.Services.AddSingleton<ISecurityEventStore, FileBasedSecurityEventStore>(); // Persistent store for API access
 builder.Services.AddSingleton<IAutomatedResponseService, AutomatedResponseService>(); // Automated threat response
 
+// Register Export Service
+builder.Services.AddSingleton<IExportService, ExportService>();
+
+// Register Timeline Service
+builder.Services.AddScoped<ITimelineService, TimelineService>();
+
 // Register YARA services
 builder.Services.Configure<YaraScanningOptions>(builder.Configuration.GetSection(YaraScanningOptions.SectionName));
 builder.Services.AddSingleton<IYaraRuleStore, FileBasedYaraRuleStore>();
@@ -281,7 +287,9 @@ try
         // Phase 2B Caching Services
         typeof(ICacheService),
         typeof(TextHashingService),
-        typeof(EmbeddingCacheService)
+        typeof(EmbeddingCacheService),
+        // v0.4.0 Export Service
+        typeof(IExportService)
     };
     
     foreach (var serviceType in criticalServices)

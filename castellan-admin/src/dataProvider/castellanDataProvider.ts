@@ -59,7 +59,21 @@ const RESOURCE_MAP: Record<string, string> = {
     'mitre/techniques': 'mitre/techniques',
     'mitre/tactics': 'mitre/tactics',
     'mitre/groups': 'mitre/groups',
-    'mitre/software': 'mitre/software'
+    'mitre/software': 'mitre/software',
+    // YARA Rule Engine resource mappings
+    'yara-rules': 'yara-rules',
+    'yara-matches': 'yara-rules/matches',
+    'yara-categories': 'yara-rules/categories',
+    // Export resource mappings
+    'export/formats': 'export/formats',
+    'export/security-events': 'export/security-events',
+    'export/stats': 'export/stats',
+    // Timeline resource mappings
+    'timeline': 'timeline',
+    'timeline/events': 'timeline/events',
+    'timeline/heatmap': 'timeline/heatmap',
+    'timeline/stats': 'timeline/stats',
+    'timeline/anomalies': 'timeline/anomalies'
 };
 
 // Transform react-admin filter format to backend API format
@@ -623,6 +637,139 @@ const baseEnhancedCastellanDataProvider = {
             console.error(`Error making custom API call to ${fullUrl}:`, error);
             throw error;
         }
+    },
+
+    // Timeline-specific API methods
+    getTimelineData: async (params: {
+        granularity?: 'minute' | 'hour' | 'day' | 'week' | 'month';
+        from?: string;
+        to?: string;
+        eventTypes?: string[];
+        riskLevels?: string[];
+    }) => {
+        const query = new URLSearchParams();
+        if (params.granularity) query.set('granularity', params.granularity);
+        if (params.from) query.set('from', params.from);
+        if (params.to) query.set('to', params.to);
+        if (params.eventTypes?.length) query.set('eventTypes', params.eventTypes.join(','));
+        if (params.riskLevels?.length) query.set('riskLevels', params.riskLevels.join(','));
+        
+        const url = `${API_URL}/timeline?${query.toString()}`;
+        
+        try {
+            console.log(`[TimelineDataProvider] Getting timeline data: ${url}`);
+            const { json } = await httpClient(url);
+            return {
+                data: json.data || json,
+                total: json.total || (json.data ? json.data.length : 0)
+            };
+        } catch (error) {
+            console.error('Error fetching timeline data:', error);
+            throw error;
+        }
+    },
+
+    getTimelineEvents: async (params: {
+        timeStart?: string;
+        timeEnd?: string;
+        eventTypes?: string[];
+        riskLevels?: string[];
+        page?: number;
+        limit?: number;
+    }) => {
+        const query = new URLSearchParams();
+        if (params.timeStart) query.set('timeStart', params.timeStart);
+        if (params.timeEnd) query.set('timeEnd', params.timeEnd);
+        if (params.eventTypes?.length) query.set('eventTypes', params.eventTypes.join(','));
+        if (params.riskLevels?.length) query.set('riskLevels', params.riskLevels.join(','));
+        if (params.page) query.set('page', params.page.toString());
+        if (params.limit) query.set('limit', params.limit.toString());
+        
+        const url = `${API_URL}/timeline/events?${query.toString()}`;
+        
+        try {
+            console.log(`[TimelineDataProvider] Getting timeline events: ${url}`);
+            const { json } = await httpClient(url);
+            return {
+                data: json.data || json,
+                total: json.total || (json.data ? json.data.length : 0)
+            };
+        } catch (error) {
+            console.error('Error fetching timeline events:', error);
+            throw error;
+        }
+    },
+
+    getTimelineHeatmap: async (params: {
+        granularity?: 'hour' | 'day' | 'week';
+        from?: string;
+        to?: string;
+    }) => {
+        const query = new URLSearchParams();
+        if (params.granularity) query.set('granularity', params.granularity);
+        if (params.from) query.set('from', params.from);
+        if (params.to) query.set('to', params.to);
+        
+        const url = `${API_URL}/timeline/heatmap?${query.toString()}`;
+        
+        try {
+            console.log(`[TimelineDataProvider] Getting timeline heatmap: ${url}`);
+            const { json } = await httpClient(url);
+            return {
+                data: json.data || json,
+                total: json.total || (json.data ? json.data.length : 0)
+            };
+        } catch (error) {
+            console.error('Error fetching timeline heatmap:', error);
+            throw error;
+        }
+    },
+
+    getTimelineStats: async (params?: {
+        from?: string;
+        to?: string;
+    }) => {
+        const query = new URLSearchParams();
+        if (params?.from) query.set('from', params.from);
+        if (params?.to) query.set('to', params.to);
+        
+        const url = `${API_URL}/timeline/stats?${query.toString()}`;
+        
+        try {
+            console.log(`[TimelineDataProvider] Getting timeline stats: ${url}`);
+            const { json } = await httpClient(url);
+            return {
+                data: json.data || json
+            };
+        } catch (error) {
+            console.error('Error fetching timeline stats:', error);
+            throw error;
+        }
+    },
+
+    getTimelineAnomalies: async (params?: {
+        from?: string;
+        to?: string;
+        threshold?: number;
+    }) => {
+        const query = new URLSearchParams();
+        if (params?.from) query.set('from', params.from);
+        if (params?.to) query.set('to', params.to);
+        if (params?.threshold) query.set('threshold', params.threshold.toString());
+        
+        const url = `${API_URL}/timeline/anomalies?${query.toString()}`;
+        
+        try {
+            console.log(`[TimelineDataProvider] Getting timeline anomalies: ${url}`);
+            const { json } = await httpClient(url);
+            return {
+                data: json.data || json,
+                total: json.total || (json.data ? json.data.length : 0)
+            };
+        } catch (error) {
+            console.error('Error fetching timeline anomalies:', error);
+            throw error;
+        }
     }
 };
 
@@ -638,7 +785,13 @@ export const enhancedCastellanDataProvider = {
     healthCheck: baseEnhancedCastellanDataProvider.healthCheck,
     testNotificationConnection: baseEnhancedCastellanDataProvider.testNotificationConnection,
     getNotificationHealth: baseEnhancedCastellanDataProvider.getNotificationHealth,
-    custom: baseEnhancedCastellanDataProvider.custom
+    custom: baseEnhancedCastellanDataProvider.custom,
+    // Timeline-specific methods
+    getTimelineData: baseEnhancedCastellanDataProvider.getTimelineData,
+    getTimelineEvents: baseEnhancedCastellanDataProvider.getTimelineEvents,
+    getTimelineHeatmap: baseEnhancedCastellanDataProvider.getTimelineHeatmap,
+    getTimelineStats: baseEnhancedCastellanDataProvider.getTimelineStats,
+    getTimelineAnomalies: baseEnhancedCastellanDataProvider.getTimelineAnomalies
 };
 
 export default enhancedCastellanDataProvider;

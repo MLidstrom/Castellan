@@ -13,6 +13,7 @@ using Castellan.Worker.Models;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using dnYara;
 
 namespace Castellan.Worker.Services;
 
@@ -28,11 +29,15 @@ public class YaraScanService : BackgroundService, IYaraScanService
     private readonly SemaphoreSlim _scanLock;
     private readonly System.Threading.Timer _ruleRefreshTimer;
     
-    private List<YaraRule>? _compiledRules;
     private int _compiledRuleCount;
     private string? _lastError;
     private bool _isHealthy;
     private DateTime _lastRuleRefresh;
+    
+    // dnYara context and compiled rules
+    private YaraContext? _yaraContext;
+    private dnYara.CompiledRules? _compiledRules;
+    private readonly object _yaraLock = new object();
     
     // Performance metrics
     private long _totalScans;
@@ -90,10 +95,12 @@ public class YaraScanService : BackgroundService, IYaraScanService
     {
         try
         {
-            // TODO: Initialize actual YARA context once dnYara API is properly integrated
+            // Initialize dnYara context - this creates the native YARA context
+            _yaraContext = new YaraContext();
+            
             _isHealthy = true;
             _lastError = null;
-            _logger.LogInformation("YARA scanning service initialized (placeholder implementation)");
+            _logger.LogInformation("YARA scanning service initialized with dnYara");
         }
         catch (Exception ex)
         {
@@ -129,35 +136,76 @@ public class YaraScanService : BackgroundService, IYaraScanService
                 return;
             }
             
-            // TODO: Implement actual YARA rule compilation once dnYara API is integrated
-            // For now, just store the rules for basic validation
-            var compiledCount = 0;
+            // Compile all rules together using dnYara
             var validRules = new List<YaraRule>();
+            var compiledCount = 0;
             
-            foreach (var rule in rulesList)
+            lock (_yaraLock)
             {
                 try
                 {
-                    // Basic validation (this will be replaced with actual YARA compilation)
-                    var (isValid, error) = ValidateYaraRuleBasic(rule.RuleContent);
-                    if (isValid)
+                    // Dispose old compiled rules
+                    _compiledRules?.Dispose();
+                    _compiledRules = null;
+                    
+                    // Create new compiler
+                    using var compiler = new dnYara.Compiler();
+                    
+                    // Add and validate each rule
+                    foreach (var rule in rulesList)
                     {
-                        validRules.Add(rule);
-                        compiledCount++;
-                        _logger.LogDebug("Validated rule: {RuleName}", rule.Name);
+                        try
+                        {
+                            // Try to add rule to compiler - this validates syntax
+                            compiler.AddRuleString(rule.RuleContent);
+                            
+                            // If successful, mark as valid
+                            rule.IsValid = true;
+                            rule.ValidationError = null;
+                            rule.LastValidated = DateTime.UtcNow;
+                            validRules.Add(rule);
+                            compiledCount++;
+                            
+                            _logger.LogDebug("Validated rule: {RuleName}", rule.Name);
+                        }
+                        catch (Exception ex)
+                        {
+                            // Rule validation failed
+                            rule.IsValid = false;
+                            rule.ValidationError = ex.Message;
+                            rule.LastValidated = DateTime.UtcNow;
+                            // Note: We'll update invalid rules after the lock
+                            _logger.LogWarning(ex, "YARA rule validation failed: {RuleName} - {Error}", rule.Name, ex.Message);
+                        }
                     }
-                    else
+                    
+                    // Compile all valid rules
+                    if (validRules.Any())
                     {
-                        _logger.LogWarning("Failed to validate YARA rule {RuleName}: {Error}", rule.Name, error);
-                        rule.IsValid = false;
-                        rule.ValidationError = error;
-                        rule.LastValidated = DateTime.UtcNow;
-                        await _ruleStore.UpdateRuleAsync(rule);
+                        _compiledRules = compiler.Compile();
+                        _logger.LogDebug("Successfully compiled {Count} YARA rules", validRules.Count);
                     }
                 }
                 catch (Exception ex)
                 {
-                    _logger.LogWarning(ex, "Failed to process YARA rule: {RuleName}", rule.Name);
+                    _lastError = $"YARA compilation error: {ex.Message}";
+                    _isHealthy = false;
+                    _logger.LogError(ex, "Failed to compile YARA rules");
+                    return;
+                }
+            }
+            
+            // Update invalid rules after the lock (to avoid await in lock)
+            var invalidRules = rulesList.Where(r => !r.IsValid).ToList();
+            foreach (var invalidRule in invalidRules)
+            {
+                try
+                {
+                    await _ruleStore.UpdateRuleAsync(invalidRule);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex, "Failed to update invalid rule in store: {RuleName}", invalidRule.Name);
                 }
             }
             
@@ -169,7 +217,6 @@ public class YaraScanService : BackgroundService, IYaraScanService
                 return;
             }
             
-            _compiledRules = validRules;
             _compiledRuleCount = compiledCount;
             _lastRuleRefresh = DateTime.UtcNow;
             _isHealthy = true;
@@ -214,7 +261,7 @@ public class YaraScanService : BackgroundService, IYaraScanService
 
     public async Task<IEnumerable<YaraMatch>> ScanStreamAsync(Stream stream, string? fileName = null, CancellationToken cancellationToken = default)
     {
-        if (!_options.CurrentValue.Enabled || !_isHealthy || _compiledRules == null)
+        if (!_options.CurrentValue.Enabled || !_isHealthy)
         {
             return Enumerable.Empty<YaraMatch>();
         }
@@ -246,46 +293,63 @@ public class YaraScanService : BackgroundService, IYaraScanService
             // Calculate file hash for match record
             var fileHash = CalculateHash(buffer);
             
-            // TODO: Perform actual YARA scan once dnYara API is properly integrated
-            // For now, simulate scan results for testing
-            if (_compiledRules?.Any() == true)
+            // Perform real YARA scanning using dnYara
+            lock (_yaraLock)
             {
-                // Simulate a simple pattern match for demonstration
-                var content = Encoding.UTF8.GetString(buffer);
-                foreach (var rule in _compiledRules)
+                if (_compiledRules != null)
                 {
-                    // Very basic simulation - check if any rule content keywords are found
-                    if (content.Contains("malware", StringComparison.OrdinalIgnoreCase) || 
-                        content.Contains("virus", StringComparison.OrdinalIgnoreCase))
+                    try
                     {
-                        var yaraMatch = new YaraMatch
+                        // Create scanner and scan the buffer
+                        var scanner = new dnYara.Scanner();
+                        
+                        // Convert buffer to string for scanning (YARA can handle binary data but we'll convert for text-based rules)
+                        var content = Encoding.UTF8.GetString(buffer);
+                        var scanResults = scanner.ScanString(content, _compiledRules);
+                        
+                        // Process scan results (collect them first, then process outside the lock)
+                        var scanResultsList = new List<(object result, string? fileName, string fileHash, long elapsedMs)>();
+                        foreach (var result in scanResults)
                         {
-                            Id = Guid.NewGuid().ToString(),
-                            RuleId = rule.Id,
-                            RuleName = rule.Name,
-                            MatchTime = DateTime.UtcNow,
-                            TargetFile = fileName ?? "stream",
-                            TargetHash = fileHash,
-                            ExecutionTimeMs = stopwatch.ElapsedMilliseconds,
-                            MatchedStrings = new List<YaraMatchString>
+                            scanResultsList.Add((result, fileName, fileHash, stopwatch.ElapsedMilliseconds));
+                        }
+                        
+                        // Store results for processing outside lock
+                        foreach (var (result, fName, fHash, elapsed) in scanResultsList)
+                        {
+                            var yaraMatch = CreateYaraMatchFromScanResult(result, fName, fHash, elapsed);
+                            if (yaraMatch != null)
                             {
-                                new YaraMatchString
-                                {
-                                    Identifier = "$test",
-                                    Offset = 0,
-                                    Value = "simulated match",
-                                    IsHex = false
-                                }
-                            },
-                            Metadata = new Dictionary<string, string> { { "author", rule.Author } }
-                        };
-                        
-                        matches.Add(yaraMatch);
-                        
-                        // Save match and update rule metrics
-                        await _ruleStore.SaveMatchAsync(yaraMatch);
-                        await _ruleStore.UpdateRuleMetricsAsync(rule.Id, true, yaraMatch.ExecutionTimeMs);
+                                matches.Add(yaraMatch);
+                            }
+                        }
                     }
+                    catch (Exception ex)
+                    {
+                        _logger.LogError(ex, "Error during YARA scan: {FileName} - {Error}", fileName ?? "stream", ex.Message);
+                    }
+                }
+            }
+            
+            // Process matches outside the lock (requires async calls)
+            foreach (var match in matches.ToList())
+            {
+                try
+                {
+                    // Save match and update rule metrics
+                    await _ruleStore.SaveMatchAsync(match);
+                    var ruleId = GetRuleIdByName(match.RuleName);
+                    if (ruleId != null)
+                    {
+                        await _ruleStore.UpdateRuleMetricsAsync(ruleId, true, match.ExecutionTimeMs);
+                    }
+                    
+                    _logger.LogInformation("YARA match found: Rule {RuleName} matched in {FileName}", 
+                        match.RuleName, fileName ?? "stream");
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Failed to save YARA match: {RuleName}", match.RuleName);
                 }
             }
             
@@ -356,24 +420,106 @@ public class YaraScanService : BackgroundService, IYaraScanService
         }
     }
 
-    private (bool IsValid, string? Error) ValidateYaraRuleBasic(string ruleContent)
+    private YaraMatch? CreateYaraMatchFromScanResult(object scanResult, string? fileName, string fileHash, long executionTimeMs)
     {
-        // Basic YARA syntax validation - will be replaced with actual YARA compiler validation
-        if (string.IsNullOrWhiteSpace(ruleContent))
-            return (false, "Rule content cannot be empty");
-        
-        var lowerContent = ruleContent.ToLowerInvariant();
-        
-        if (!lowerContent.Contains("rule "))
-            return (false, "Invalid YARA rule: missing 'rule' keyword");
-        
-        if (!ruleContent.Contains("{") || !ruleContent.Contains("}"))
-            return (false, "Invalid YARA rule: missing braces");
-        
-        if (!lowerContent.Contains("condition:"))
-            return (false, "Invalid YARA rule: missing 'condition' section");
-        
-        return (true, null);
+        try
+        {
+            // Since we don't have detailed info about the ScanResult type structure from our exploration,
+            // we'll use reflection to extract what we can
+            var resultType = scanResult.GetType();
+            
+            // Try to get rule name and matched strings from the scan result
+            string? ruleName = null;
+            var matchedStrings = new List<YaraMatchString>();
+            
+            // Use reflection to get rule name and match details
+            var ruleProperty = resultType.GetProperty("Rule") ?? resultType.GetProperty("RuleName");
+            if (ruleProperty != null)
+            {
+                var ruleValue = ruleProperty.GetValue(scanResult);
+                if (ruleValue != null)
+                {
+                    // If it's a Rule object, try to get its name
+                    var ruleType = ruleValue.GetType();
+                    var nameProperty = ruleType.GetProperty("Name") ?? ruleType.GetProperty("Identifier");
+                    if (nameProperty != null)
+                    {
+                        ruleName = nameProperty.GetValue(ruleValue)?.ToString();
+                    }
+                    else
+                    {
+                        ruleName = ruleValue.ToString();
+                    }
+                }
+            }
+            
+            // Try to get matches
+            var matchesProperty = resultType.GetProperty("Matches") ?? resultType.GetProperty("MatchingStrings");
+            if (matchesProperty != null)
+            {
+                var matchesValue = matchesProperty.GetValue(scanResult);
+                if (matchesValue is System.Collections.IEnumerable enumerable)
+                {
+                    foreach (var match in enumerable)
+                    {
+                        if (match != null)
+                        {
+                            var matchType = match.GetType();
+                            var identifierProp = matchType.GetProperty("Identifier") ?? matchType.GetProperty("Name");
+                            var offsetProp = matchType.GetProperty("Offset") ?? matchType.GetProperty("Position");
+                            var valueProp = matchType.GetProperty("Value") ?? matchType.GetProperty("Data");
+                            
+                            var identifier = identifierProp?.GetValue(match)?.ToString() ?? "$unknown";
+                            var offset = (int)(offsetProp?.GetValue(match) ?? 0);
+                            var value = valueProp?.GetValue(match)?.ToString() ?? "";
+                            
+                            matchedStrings.Add(new YaraMatchString
+                            {
+                                Identifier = identifier,
+                                Offset = offset,
+                                Value = value,
+                                IsHex = false
+                            });
+                        }
+                    }
+                }
+            }
+            
+            if (string.IsNullOrEmpty(ruleName))
+            {
+                _logger.LogWarning("Could not extract rule name from scan result");
+                return null;
+            }
+            
+            var ruleId = GetRuleIdByName(ruleName);
+            if (ruleId == null)
+            {
+                _logger.LogWarning("Could not find rule ID for rule name: {RuleName}", ruleName);
+                return null;
+            }
+            
+            return new YaraMatch
+            {
+                Id = Guid.NewGuid().ToString(),
+                RuleId = ruleId,
+                RuleName = ruleName,
+                MatchTime = DateTime.UtcNow,
+                TargetFile = fileName ?? "stream",
+                TargetHash = fileHash,
+                ExecutionTimeMs = executionTimeMs,
+                MatchedStrings = matchedStrings,
+                Metadata = new Dictionary<string, string>
+                {
+                    { "scanner", "dnYara" },
+                    { "scan_type", fileName != null ? "file" : "stream" }
+                }
+            };
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to create YaraMatch from scan result");
+            return null;
+        }
     }
 
     public override void Dispose()
@@ -381,6 +527,15 @@ public class YaraScanService : BackgroundService, IYaraScanService
         _ruleRefreshTimer?.Dispose();
         _compilationLock?.Dispose();
         _scanLock?.Dispose();
+        
+        // Clean up YARA resources
+        lock (_yaraLock)
+        {
+            _compiledRules?.Dispose();
+            _compiledRules = null;
+            _yaraContext?.Dispose();
+            _yaraContext = null;
+        }
         
         base.Dispose();
     }

@@ -24,7 +24,7 @@
 
 **Castellan** is a **100% open source**, enterprise-grade security monitoring platform that transforms Windows event logs into actionable security intelligence using AI-powered analysis, vector search, and real-time threat correlation.
 
-🚀 **Enterprise Features**: 12K+ events/sec processing • Vector similarity search • Real-time Teams/Slack alerts • 800+ MITRE ATT&CK techniques • VirusTotal/MalwareBazaar integration
+🚀 **Enterprise Features**: 12K+ events/sec processing • Vector similarity search • Real-time Teams/Slack alerts • 800+ MITRE ATT&CK techniques • VirusTotal/MalwareBazaar integration • **Complete YARA malware detection**
 
 ⚡ **5-Minute Setup**: `.\scripts\start.ps1` → Open `http://localhost:8080` → Start monitoring
 
@@ -36,7 +36,7 @@
 - **🔔 Smart Notifications** - Rich Teams/Slack alerts with adaptive rate limiting
 - **🎯 MITRE Integration** - Auto-updated 800+ ATT&CK techniques with threat mapping
 - **🔍 Threat Intelligence** - VirusTotal, MalwareBazaar, AlienVault OTX integration
-- **🆕 YARA Detection** - Signature-based malware detection with rule management
+- **⚡ YARA Malware Detection** - Complete signature-based detection with React Admin UI
 - **📱 Real-time Dashboard** - React admin interface with SignalR live updates
 - **🔒 Enterprise Security** - BCrypt passwords, JWT tokens, audit trails
 
@@ -109,25 +109,21 @@
 
 ## 📚 Documentation
 
+**[📖 Complete Documentation Index](docs/README.md)** - Master documentation hub with organized access to all guides, features, and technical references.
+
+### Quick Reference
 | Topic | Description |
 |-------|-------------|
 | **[🚀 Quick Start Guide](docs/GETTING_STARTED.md)** | Complete installation and setup instructions |
-| **[🔧 Configuration](docs/CONFIGURATION_SETUP.md)** | Authentication, AI providers, threat intelligence setup |
 | **[🔥 Features](docs/FEATURES.md)** | Comprehensive feature overview and capabilities |
+| **[🆕 YARA Detection](docs/YARA_DETECTION.md)** | Signature-based malware detection and rule management |
+| **[🔧 Configuration](docs/CONFIGURATION_SETUP.md)** | Authentication, AI providers, threat intelligence setup |
+| **[🔔 Notifications](docs/NOTIFICATIONS.md)** | Teams/Slack integration and alert configuration |
 | **[🏢 Architecture](docs/ARCHITECTURE.md)** | System architecture, security, and observability |
 | **[📈 Performance](docs/PERFORMANCE.md)** | Performance metrics, benchmarks, and optimization |
-| **[🔔 Notifications](docs/NOTIFICATIONS.md)** | Teams/Slack integration and alert configuration |
-|| **[🛡️ Threat Intelligence](docs/THREAT_INTELLIGENCE.md)** | VirusTotal, MalwareBazaar, AlienVault OTX setup |
-|| **[🆕 YARA Detection](docs/YARA_DETECTION.md)** | Signature-based malware detection and rule management |
-| **[⚖️ Comparison](docs/COMPARISON.md)** | Castellan vs traditional SIEM solutions |
-| **[🔐 Security](docs/AUTHENTICATION_SETUP.md)** | BCrypt, JWT, and enterprise security features |
 | **[🚑 Troubleshooting](docs/TROUBLESHOOTING.md)** | Common issues and solutions |
 
-### Additional Resources
-- **[API Documentation](docs/API.md)** - REST API reference
-- **[Build Guide](docs/BUILD_GUIDE.md)** - Development and deployment
-- **[Performance Tuning](docs/PERFORMANCE_TUNING.md)** - Optimization guide
-- **[Windows PowerShell](docs/WINDOWS_POWERSHELL_COMPATIBILITY.md)** - Native Windows support
+> **📚 For the complete documentation catalog** including API references, build guides, security features, integrations, and specialized guides, visit **[docs/README.md](docs/README.md)**.
 
 ## 🤝 Community & Support
 

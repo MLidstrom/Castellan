@@ -26,6 +26,9 @@ public sealed class Pipeline(
     IPerformanceMonitor performanceMonitor,
     ISecurityEventStore securityEventStore,
     IAutomatedResponseService automatedResponseService,
+    IYaraScanService yaraScanService,
+    IYaraRuleStore yaraRuleStore,
+    IOptionsMonitor<YaraScanningOptions> yaraScanningOptions,
     IServiceProvider serviceProvider,
     ILogger<Pipeline> log
 ) : BackgroundService
@@ -34,6 +37,9 @@ public sealed class Pipeline(
     private readonly IOptionsMonitor<PipelineOptions> _pipelineOptions = pipelineOptions;
     private readonly IIPEnrichmentService _ipEnrichmentService = ipEnrichmentService;
     private readonly IAutomatedResponseService _automatedResponseService = automatedResponseService;
+    private readonly IYaraScanService _yaraScanService = yaraScanService;
+    private readonly IYaraRuleStore _yaraRuleStore = yaraRuleStore;
+    private readonly IOptionsMonitor<YaraScanningOptions> _yaraScanningOptions = yaraScanningOptions;
     
     // Semaphore-based throttling for pipeline processing
     private SemaphoreSlim? _processingSemaphore;
@@ -750,6 +756,9 @@ public sealed class Pipeline(
         // Store the security event for API access
         securityEventStore.AddSecurityEvent(securityEvent);
         
+        // YARA Integration: Scan files if auto-scanning is enabled
+        await PerformYaraScanIfEnabled(securityEvent, ct);
+        
                     log.LogInformation("Processing security event: Risk={RiskLevel}, EventId={EventId}, Channel={Channel}", 
             securityEvent.RiskLevel, e.EventId, e.Channel);
         
@@ -1145,6 +1154,304 @@ public sealed class Pipeline(
             var searchTime = (DateTimeOffset.UtcNow - searchStartTime).TotalMilliseconds;
 
             return (upsertTime, searchTime, neighbors);
+        }
+    }
+    
+    /// <summary>
+    /// Performs YARA scanning on files associated with a security event if auto-scanning is enabled
+    /// </summary>
+    private async Task PerformYaraScanIfEnabled(SecurityEvent securityEvent, CancellationToken ct)
+    {
+        try
+        {
+            var yaraOptions = _yaraScanningOptions.CurrentValue;
+            
+            // Check if YARA scanning is enabled and meets threshold
+            if (!yaraOptions.Enabled || !yaraOptions.AutoScanSecurityEvents)
+            {
+                return;
+            }
+            
+            // Check if security event meets minimum threat level for scanning
+            if (!ShouldScanBasedOnThreatLevel(securityEvent.RiskLevel, yaraOptions.MinThreatLevel))
+            {
+                log.LogDebug("🔍 Skipping YARA scan for event {EventId}: threat level {RiskLevel} below minimum {MinThreatLevel}", 
+                    securityEvent.OriginalEvent.EventId, securityEvent.RiskLevel, yaraOptions.MinThreatLevel);
+                return;
+            }
+            
+            // Extract file paths from the security event
+            var filePaths = ExtractFilePathsFromSecurityEvent(securityEvent);
+            if (!filePaths.Any())
+            {
+                log.LogDebug("🔍 No file paths found in security event {EventId} for YARA scanning", 
+                    securityEvent.OriginalEvent.EventId);
+                return;
+            }
+            
+            log.LogInformation("🔍 YARA scanning triggered for security event {EventId} with {FileCount} files", 
+                securityEvent.OriginalEvent.EventId, filePaths.Count);
+            
+            // Perform YARA scanning on each file
+            foreach (var filePath in filePaths)
+            {
+                try
+                {
+                    if (!File.Exists(filePath))
+                    {
+                        log.LogDebug("🔍 Skipping YARA scan: file not found {FilePath}", filePath);
+                        continue;
+                    }
+                    
+                    log.LogDebug("🔍 YARA scanning file: {FilePath}", filePath);
+                    var matches = await _yaraScanService.ScanFileAsync(filePath, ct);
+                    
+                    if (matches.Any())
+                    {
+                        log.LogWarning("🔍 YARA matches found in {FilePath}: {MatchCount} rules matched", 
+                            filePath, matches.Count());
+                            
+                        // Link YARA matches to the security event
+                        await LinkYaraMatchesToSecurityEvent(matches, securityEvent, ct);
+                    }
+                    else
+                    {
+                        log.LogDebug("🔍 YARA scan completed for {FilePath}: no matches", filePath);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    log.LogWarning(ex, "🔍 YARA scan failed for file {FilePath}", filePath);
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            log.LogError(ex, "🔍 Error during YARA scanning integration for event {EventId}", 
+                securityEvent.OriginalEvent.EventId);
+        }
+    }
+    
+    /// <summary>
+    /// Determines if YARA scanning should be performed based on threat level
+    /// </summary>
+    private static bool ShouldScanBasedOnThreatLevel(string eventRiskLevel, string minThreatLevel)
+    {
+        var riskLevels = new Dictionary<string, int>
+        {
+            { "low", 1 },
+            { "medium", 2 },
+            { "high", 3 },
+            { "critical", 4 }
+        };
+        
+        if (!riskLevels.TryGetValue(eventRiskLevel.ToLowerInvariant(), out var eventLevel))
+        {
+            return false; // Unknown risk level
+        }
+        
+        if (!riskLevels.TryGetValue(minThreatLevel.ToLowerInvariant(), out var minLevel))
+        {
+            return false; // Unknown minimum threat level
+        }
+        
+        return eventLevel >= minLevel;
+    }
+    
+    /// <summary>
+    /// Extracts file paths from a security event for YARA scanning
+    /// </summary>
+    private List<string> ExtractFilePathsFromSecurityEvent(SecurityEvent securityEvent)
+    {
+        var filePaths = new List<string>();
+        var logEvent = securityEvent.OriginalEvent;
+        
+        try
+        {
+            // Process Creation events (EventId 4688) often contain file paths
+            if (logEvent.Channel.Equals("Security", StringComparison.OrdinalIgnoreCase) && 
+                logEvent.EventId == 4688 && 
+                securityEvent.EventType == SecurityEventType.ProcessCreation)
+            {
+                // Extract process path from the message
+                var processPath = ExtractProcessPathFromMessage(logEvent.Message);
+                if (!string.IsNullOrEmpty(processPath))
+                {
+                    filePaths.Add(processPath);
+                }
+            }
+            
+            // PowerShell script block events might contain file references
+            else if (logEvent.Channel.Contains("PowerShell", StringComparison.OrdinalIgnoreCase) && 
+                     logEvent.EventId == 4104)
+            {
+                var scriptPaths = ExtractScriptPathsFromPowerShellEvent(logEvent.Message);
+                filePaths.AddRange(scriptPaths);
+            }
+            
+            // Service installation events might contain executable paths
+            else if (logEvent.EventId == 7045 || logEvent.EventId == 4697)
+            {
+                var servicePath = ExtractServicePathFromMessage(logEvent.Message);
+                if (!string.IsNullOrEmpty(servicePath))
+                {
+                    filePaths.Add(servicePath);
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            log.LogDebug(ex, "Error extracting file paths from security event {EventId}", logEvent.EventId);
+        }
+        
+        return filePaths.Distinct().Where(p => !string.IsNullOrWhiteSpace(p)).ToList();
+    }
+    
+    /// <summary>
+    /// Extracts process path from Windows Security event message
+    /// </summary>
+    private string? ExtractProcessPathFromMessage(string message)
+    {
+        try
+        {
+            // Look for common patterns in process creation events
+            var patterns = new[]
+            {
+                @"New Process Name:\s*([C-Z]:\\[^\r\n]+)",
+                @"Process Name:\s*([C-Z]:\\[^\r\n]+)",
+                @"Application\s*([C-Z]:\\[^\r\n]+)",
+                @"\""([C-Z]:\\[^\""]+)\.exe\"""
+            };
+            
+            foreach (var pattern in patterns)
+            {
+                var match = System.Text.RegularExpressions.Regex.Match(message, pattern, 
+                    System.Text.RegularExpressions.RegexOptions.IgnoreCase | 
+                    System.Text.RegularExpressions.RegexOptions.Multiline);
+                if (match.Success && match.Groups.Count > 1)
+                {
+                    var path = match.Groups[1].Value.Trim();
+                    if (Path.IsPathRooted(path) && path.Length > 3)
+                    {
+                        return path;
+                    }
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            log.LogDebug(ex, "Error extracting process path from message");
+        }
+        
+        return null;
+    }
+    
+    /// <summary>
+    /// Extracts script file paths from PowerShell events
+    /// </summary>
+    private List<string> ExtractScriptPathsFromPowerShellEvent(string message)
+    {
+        var paths = new List<string>();
+        
+        try
+        {
+            // Look for file paths in PowerShell script blocks
+            var patterns = new[]
+            {
+                @"\. ([C-Z]:\\[^\s\r\n]+\.ps1)",
+                @"& \""([C-Z]:\\[^\""]+\.ps1)\""",
+                @"Invoke-Expression.*([C-Z]:\\[^\s\r\n]+\.ps1)",
+                @"Import-Module ([C-Z]:\\[^\s\r\n]+\.(ps1|psm1))"
+            };
+            
+            foreach (var pattern in patterns)
+            {
+                var matches = System.Text.RegularExpressions.Regex.Matches(message, pattern, 
+                    System.Text.RegularExpressions.RegexOptions.IgnoreCase | 
+                    System.Text.RegularExpressions.RegexOptions.Multiline);
+                    
+                foreach (System.Text.RegularExpressions.Match match in matches)
+                {
+                    if (match.Groups.Count > 1)
+                    {
+                        var path = match.Groups[1].Value.Trim();
+                        if (Path.IsPathRooted(path))
+                        {
+                            paths.Add(path);
+                        }
+                    }
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            log.LogDebug(ex, "Error extracting script paths from PowerShell event");
+        }
+        
+        return paths;
+    }
+    
+    /// <summary>
+    /// Extracts service executable path from service installation events
+    /// </summary>
+    private string? ExtractServicePathFromMessage(string message)
+    {
+        try
+        {
+            // Look for service executable paths
+            var patterns = new[]
+            {
+                @"Service File Name:\s*([C-Z]:\\[^\r\n]+)",
+                @"Binary Path Name:\s*([C-Z]:\\[^\r\n]+)",
+                @"ImagePath:\s*([C-Z]:\\[^\r\n]+)"
+            };
+            
+            foreach (var pattern in patterns)
+            {
+                var match = System.Text.RegularExpressions.Regex.Match(message, pattern, 
+                    System.Text.RegularExpressions.RegexOptions.IgnoreCase | 
+                    System.Text.RegularExpressions.RegexOptions.Multiline);
+                if (match.Success && match.Groups.Count > 1)
+                {
+                    var path = match.Groups[1].Value.Trim();
+                    if (Path.IsPathRooted(path) && path.Length > 3)
+                    {
+                        return path;
+                    }
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            log.LogDebug(ex, "Error extracting service path from message");
+        }
+        
+        return null;
+    }
+    
+    /// <summary>
+    /// Links YARA matches to a security event by setting the SecurityEventId
+    /// </summary>
+    private async Task LinkYaraMatchesToSecurityEvent(IEnumerable<YaraMatch> matches, SecurityEvent securityEvent, CancellationToken ct)
+    {
+        try
+        {
+            foreach (var match in matches)
+            {
+                // Set the security event ID to link the match to this event
+                match.SecurityEventId = securityEvent.Id;
+                
+                // Save the updated match
+                await _yaraRuleStore.SaveMatchAsync(match);
+                
+                log.LogInformation("🔍 YARA match linked to security event: Rule {RuleName} → Event {EventId}", 
+                    match.RuleName, securityEvent.OriginalEvent.EventId);
+            }
+        }
+        catch (Exception ex)
+        {
+            log.LogError(ex, "Error linking YARA matches to security event {EventId}", 
+                securityEvent.OriginalEvent.EventId);
         }
     }
 }

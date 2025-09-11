@@ -54,6 +54,9 @@ import { PerformanceDashboard } from './PerformanceDashboard';
 import { ThreatIntelligenceHealthDashboard } from './ThreatIntelligenceHealthDashboard';
 import { CacheStatusIndicator } from './CacheStatusIndicator';
 import { ApiDiagnostic } from './ApiDiagnostic';
+import { YaraDashboardWidget } from './YaraDashboardWidget';
+import { YaraDashboardWidgetSimple } from './YaraDashboardWidgetSimple';
+import { YaraSummaryCard } from './YaraSummaryCard';
 import '../utils/debugCache'; // Import debug utilities
 import '../utils/cacheDebugger'; // Import cache performance monitor
 
@@ -682,6 +685,10 @@ export const Dashboard = () => {
             </CardContent>
           </Card>
         </Box>
+        
+        <Box sx={{ flex: '1 1 250px', minWidth: '250px' }}>
+          <YaraSummaryCard />
+        </Box>
       </Box>
 
       {/* Connection Pool Monitor - Phase 2A */}
@@ -860,7 +867,7 @@ export const Dashboard = () => {
         </Box>
       </Box>
 
-      {/* Bottom Row - System Performance, Compliance Status, and Threat Scanner */}
+      {/* Bottom Row - System Performance, Compliance Status, Threat Scanner, and YARA */}
       <Box sx={{ 
         display: 'flex', 
         gap: 3,
@@ -1113,6 +1120,18 @@ export const Dashboard = () => {
               )}
             </CardContent>
           </Card>
+        </Box>
+      </Box>
+
+      {/* YARA Rule Engine Dashboard Widget */}
+      <Box sx={{ 
+        display: 'flex', 
+        flexWrap: 'wrap', 
+        gap: 3,
+        marginBottom: '30px'
+      }}>
+        <Box sx={{ flex: '1 1 100%', minWidth: '100%' }}>
+          <YaraDashboardWidgetSimple />
         </Box>
       </Box>
 

@@ -1,9 +1,17 @@
-# Start Castellan - Enhanced wrapper with validation and error handling
+# Start All Castellan Services
+# Starts Castellan apps, Qdrant vector database, and Ollama AI service if not running
 # Compatible with Windows PowerShell 5.1 and PowerShell 7+
-# NOTE: Worker runs in background by default. Use -Foreground to run interactively.
+#
+# Usage:
+#   .\scripts\start.ps1                    # Start all services (default)
+#   .\scripts\start.ps1 -NoBuild           # Skip build step
+#   .\scripts\start.ps1 -Foreground        # Run Worker in foreground (for debugging)
+#   .\scripts\start.ps1 -NoReactAdmin      # Skip React Admin startup
+#
 param(
-    [switch]$NoBuild = $false,
-    [switch]$Foreground = $false  # Override default background behavior
+    [switch]$NoBuild = $false,        # Skip building the project
+    [switch]$Foreground = $false,      # Run Worker in foreground instead of background
+    [switch]$NoReactAdmin = $false     # Skip starting React Admin UI
 )
 
 # Ensure we're using TLS 1.2 for web requests on older PowerShell versions
@@ -11,8 +19,9 @@ if ($PSVersionTable.PSVersion.Major -lt 6) {
     [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
 }
 
-Write-Host "Starting Castellan Worker Service..." -ForegroundColor Cyan
-Write-Host "The Worker will automatically start all required services." -ForegroundColor Gray
+Write-Host "Starting All Castellan Services" -ForegroundColor Cyan
+Write-Host "=============================" -ForegroundColor Cyan
+Write-Host "Will start: Qdrant, Ollama, Worker API, and React Admin UI" -ForegroundColor Gray
 Write-Host ""
 
 # Function to check if .NET is installed
@@ -65,6 +74,81 @@ function Build-Project {
     catch {
         Write-Host "ERROR: Build error: $_" -ForegroundColor Red
         Pop-Location
+        return $false
+    }
+}
+
+# Function to start React Admin UI
+function Start-ReactAdmin {
+    Write-Host "Checking React Admin UI..." -ForegroundColor Yellow
+    
+    # Check if React Admin is already running
+    $nodeProcesses = Get-CimInstance Win32_Process -Filter "Name='node.exe'" -ErrorAction SilentlyContinue | Where-Object {
+        $_.CommandLine -like "*castellan-admin*" -or $_.CommandLine -like "*:8080*"
+    }
+    
+    if ($nodeProcesses) {
+        Write-Host "OK: React Admin is already running" -ForegroundColor Green
+        return $true
+    }
+    
+    # Check if castellan-admin directory exists
+    $reactAdminPath = Join-Path $PSScriptRoot "..\castellan-admin"
+    if (-not (Test-Path $reactAdminPath)) {
+        Write-Host "WARNING: React Admin directory not found - skipping UI startup" -ForegroundColor Yellow
+        return $false
+    }
+    
+    # Check if node_modules exists
+    $nodeModulesPath = Join-Path $reactAdminPath "node_modules"
+    if (-not (Test-Path $nodeModulesPath)) {
+        Write-Host "Installing React Admin dependencies..." -ForegroundColor Yellow
+        try {
+            Push-Location $reactAdminPath
+            & npm install --silent
+            $installSuccess = $LASTEXITCODE -eq 0
+            Pop-Location
+            
+            if (-not $installSuccess) {
+                Write-Host "WARNING: Failed to install dependencies - skipping UI startup" -ForegroundColor Yellow
+                return $false
+            }
+        }
+        catch {
+            Write-Host "WARNING: Failed to install dependencies: $_" -ForegroundColor Yellow
+            Pop-Location
+            return $false
+        }
+    }
+    
+    # Start React Admin in background
+    try {
+        Write-Host "Starting React Admin UI..." -ForegroundColor Yellow
+        
+        # Use cmd.exe to properly handle npm on Windows
+        $startInfo = New-Object System.Diagnostics.ProcessStartInfo
+        $startInfo.FileName = "cmd.exe"
+        $startInfo.Arguments = "/c npm start"
+        $startInfo.WorkingDirectory = $reactAdminPath
+        $startInfo.UseShellExecute = $false
+        $startInfo.CreateNoWindow = $true
+        $startInfo.RedirectStandardOutput = $false
+        $startInfo.RedirectStandardError = $false
+        
+        $process = [System.Diagnostics.Process]::Start($startInfo)
+        
+        if ($process) {
+            Write-Host "OK: React Admin starting in background (PID: $($process.Id))" -ForegroundColor Green
+            Write-Host "  UI will be available at: http://localhost:8080" -ForegroundColor Gray
+            return $true
+        }
+        else {
+            Write-Host "WARNING: Failed to start React Admin" -ForegroundColor Yellow
+            return $false
+        }
+    }
+    catch {
+        Write-Host "WARNING: Failed to start React Admin: $_" -ForegroundColor Yellow
         return $false
     }
 }
@@ -196,14 +280,35 @@ else {
     Write-Host "WARNING: Skipping build (--NoBuild specified)" -ForegroundColor Yellow
 }
 
-# Step 5: Start the Worker service
+# Step 5: Start the Worker service and React Admin UI
 # Background is now the default; -Foreground overrides this
 $runInBackground = -not $Foreground
 
-if (Start-Worker -RunInBackground:$runInBackground) {
-    if ($Foreground) {
-        Write-Host "`nWorker service stopped" -ForegroundColor Cyan
+Write-Host "`nStarting core services..." -ForegroundColor Cyan
+$workerStarted = Start-Worker -RunInBackground:$runInBackground
+
+if ($runInBackground -and $workerStarted) {
+    # Only start React Admin if Worker is running in background
+    Write-Host "`nStarting web interface..." -ForegroundColor Cyan
+    $uiStarted = Start-ReactAdmin
+    
+    if ($workerStarted -and $uiStarted) {
+        Write-Host "`n✅ Castellan successfully started!" -ForegroundColor Green
+        Write-Host "All services are running in the background." -ForegroundColor Gray
+        Write-Host "Web UI: http://localhost:8080" -ForegroundColor Gray
+    } elseif ($workerStarted) {
+        Write-Host "`n✅ Castellan core services started!" -ForegroundColor Green
+        Write-Host "Worker service is running. Web UI startup was skipped or failed." -ForegroundColor Yellow
+    } else {
+        Write-Host "`n⚠️  Castellan partially started" -ForegroundColor Yellow
+        Write-Host "Worker service failed to start. Some functionality may be limited." -ForegroundColor Yellow
+        exit 1
     }
+    exit 0
+}
+elseif ($workerStarted) {
+    # Worker started in foreground mode
+    Write-Host "`nWorker service stopped" -ForegroundColor Cyan
     exit 0
 }
 else {
