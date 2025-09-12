@@ -33,22 +33,98 @@
 - **Memory Management** - Improved caching strategies for large datasets
 - **Background Processing** - Asynchronous search for massive datasets
 
-## 🗄️ v0.9.0 - Database Architecture Consolidation (Planned Q2 2026)
+## ⚡ v0.6.0 - Performance & Caching Overhaul (Planned Q2 2026)
 
-### 🐘 PostgreSQL Migration
-- **Database Consolidation** - Migrate from SQLite to PostgreSQL for enhanced performance
-- **JSON Querying** - Advanced JSONB queries for dynamic fields
-- **Time-Series Partitioning** - Optimized storage for security events
-- **Unified Retention Policies** - Consistent data retention across PostgreSQL and Qdrant
-- **Performance Benchmarks** - Comprehensive performance testing and optimization
+### 🚀 React Admin Performance Acceleration
+- **Optimized Data Provider** - Enhanced caching integration with React Admin
+- **Component Memoization** - React.memo optimization for expensive components
+- **Virtual Scrolling** - Handle large datasets with minimal DOM elements
+- **Lazy Loading** - On-demand component and data loading
+- **Bundle Optimization** - Code splitting and tree shaking improvements
+- **Connection Pooling** - Enhanced database connection management
 
-### 🔄 Storage Architecture
-- **Eliminate JSON File Storage** - Remove FileBasedSecurityEventStore duplication
-- **Vector Reference System** - Qdrant vectors reference PostgreSQL primary keys
-- **Backup & Recovery** - Enterprise-grade backup and disaster recovery
-- **Data Migration Tools** - Seamless migration from v0.4.0 to v0.9.0
+### 🧠 Advanced Caching System
+- **Multi-Layer Cache** - Memory, localStorage, and service worker caching
+- **Smart Cache Invalidation** - Intelligent cache refresh based on data changes
+- **Cache Debugging Tools** - Enhanced debugging and performance monitoring
+- **Background Refresh** - Preemptive cache warming and updates
+- **Cache Compression** - Reduce memory footprint with data compression
+- **Cache Analytics** - Real-time cache hit/miss ratio monitoring
 
-## 🌟 v1.0.0 - Enterprise Feature Complete (Planned Q3 2026)
+### 🗃️ Database Performance Optimization
+- **Strategic Indexing** - Optimized indexes for complex queries
+- **Query Optimization** - Performance-tuned database queries
+- **Connection Optimization** - Improved connection pooling and timeout handling
+- **Background Processing** - Asynchronous data operations
+
+## 📡 v0.7.0 - External Data Collection (Planned Q3 2026)
+
+### 🔄 Automated Data Collection Framework
+- **Collection Scheduling Engine** - Flexible scheduling with timezone support
+- **Data Source Registry** - Centralized management of external sources
+- **Health Monitoring** - Real-time status of collection services
+- **Error Recovery System** - Automatic retry and fallback mechanisms
+- **Configuration Management** - Web UI for collection settings
+
+### 🛡️ MITRE ATT&CK Integration
+- **Daily MITRE Updates** - Automated collection of framework updates
+- **Technique Validation** - Automated validation of new techniques
+- **Version Management** - Track and manage MITRE framework versions
+- **Custom Technique Support** - Support for organization-specific techniques
+
+### 🦠 YARA Rule Management
+- **Multi-Source Collection** - Aggregate rules from multiple repositories
+- **Daily Rule Updates** - Automated YARA rule collection and validation
+- **Rule Conflict Resolution** - Intelligent handling of duplicate rules
+- **Custom Rule Integration** - Support for organization-specific rules
+- **Rule Performance Testing** - Automated testing of rule effectiveness
+
+## 🌐 v0.8.0 - Threat Intelligence & Enrichment (Planned Q4 2026)
+
+### 📍 IP Enrichment & Geolocation
+- **Hourly IP Intelligence** - Automated collection of threat IP data
+- **Geolocation Updates** - Weekly IP geolocation database updates
+- **ISP & Organization Data** - Enhanced IP attribution information
+- **Threat Classification** - Automated threat level assignment
+- **Historical Tracking** - Track IP reputation changes over time
+
+### 🔍 Enhanced Threat Intelligence
+- **Multi-Source Integration** - VirusTotal, MalwareBazaar, OTX, and more
+- **Intelligence Correlation** - Cross-reference data across sources
+- **Confidence Scoring** - Weighted scoring based on source reliability
+- **Custom Intelligence** - Integration of proprietary threat feeds
+- **Intelligence Aging** - Automatic expiration of stale intelligence
+
+### 📊 Data Quality & Analytics
+- **Collection Metrics Dashboard** - Success rates and performance statistics
+- **Data Freshness Indicators** - Visual indicators of data age and validity
+- **Source Reliability Tracking** - Monitor and score data source quality
+- **Coverage Analysis** - Identify gaps in threat intelligence coverage
+
+## 🎛️ v0.9.0 - Configuration & Monitoring Excellence (Planned Q1 2027)
+
+### ⚙️ Advanced Configuration Management
+- **Configuration Templates** - Pre-built templates for common scenarios
+- **Environment-Specific Configs** - Development, staging, production profiles
+- **Configuration Validation** - Advanced validation with dependency checking
+- **Configuration Backup & Restore** - Automated backup and recovery
+- **Configuration Audit Trail** - Track all configuration changes
+- **Hot Configuration Reload** - Apply changes without service restart
+
+### 📈 Comprehensive Monitoring & Alerting
+- **System Health Dashboard** - Real-time system status and performance
+- **Predictive Analytics** - Early warning system for potential issues
+- **Custom Alerting Rules** - Flexible alerting based on metrics
+- **Performance Baselines** - Establish and monitor performance benchmarks
+- **Capacity Planning** - Resource usage trends and capacity recommendations
+
+### 🔧 Operational Excellence
+- **Automated Diagnostics** - Self-healing capabilities for common issues
+- **Log Management** - Enhanced logging with structured data and search
+- **Maintenance Windows** - Scheduled maintenance with minimal downtime
+- **Disaster Recovery** - Complete backup and recovery procedures
+
+## 🌟 v1.0.0 - Enterprise Feature Complete (Planned Q2 2027)
 
 ### 🏢 Enterprise Features
 - **Multi-Tenancy** - Support for multiple organizations and teams
@@ -70,6 +146,12 @@
 
 ## 📋 Long-Term Vision (Beyond v1.0.0)
 
+### 🗄️ Optional Database Enhancement
+- **PostgreSQL Migration** - Optional upgrade from SQLite to PostgreSQL for enterprise-scale deployments
+- **JSON Querying** - Advanced JSONB queries for dynamic fields
+- **Time-Series Partitioning** - Optimized storage for massive security event datasets
+- **Advanced Backup & Recovery** - Enterprise-grade backup and disaster recovery
+
 ### 🌐 Platform Evolution
 - **Cloud-Native Architecture** - Microservices with container orchestration
 - **Real-Time Streaming** - Apache Kafka integration for high-volume event processing
@@ -90,8 +172,11 @@
 |---------|----------|-------------|---------|
 | v0.4.0 | Timeline, Export, Config UI, YARA | Sept 11, 2025 | ✅ **COMPLETE** |
 | v0.5.0 | Advanced Search & Analytics | Q1 2026 | 📋 **PLANNED** |
-| v0.9.0 | PostgreSQL Migration | Q2 2026 | 📋 **PLANNED** |
-| v1.0.0 | Enterprise Features | Q3 2026 | 📋 **PLANNED** |
+| v0.6.0 | Performance & Caching Overhaul | Q2 2026 | 📋 **PLANNED** |
+| v0.7.0 | External Data Collection | Q3 2026 | 📋 **PLANNED** |
+| v0.8.0 | Threat Intelligence & Enrichment | Q4 2026 | 📋 **PLANNED** |
+| v0.9.0 | Configuration & Monitoring Excellence | Q1 2027 | 📋 **PLANNED** |
+| v1.0.0 | Enterprise Features | Q2 2027 | 📋 **PLANNED** |
 
 ## 🤝 Contributing
 

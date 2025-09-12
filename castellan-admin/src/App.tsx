@@ -1,79 +1,6 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, Suspense } from 'react';
 import { Admin, Resource } from 'react-admin';
-// Using production providers with real backend API
-import { enhancedCastellanDataProvider } from './dataProvider/castellanDataProvider';
-import { enhancedAuthProvider } from './auth/authProvider';
-import { Layout } from './components/Layout';
-import { Dashboard } from './components/Dashboard';
-import { initializeCachePreloader } from './utils/cachePreloader';
-import './utils/cacheInspector'; // Load cache debugging tools
-
-// Import resources
-import {
-  SecurityEventList,
-  SecurityEventShow,
-  SecurityEventEdit,
-  SecurityEventCreate,
-} from './resources/SecurityEvents'; // Reverted to original for stability
-import {
-  SystemStatusList,
-  SystemStatusShow,
-} from './resources/SystemStatus';
-
-// Import functional compliance reports components
-import {
-  ComplianceReportList,
-  ComplianceReportShow,
-  ComplianceReportCreate,
-} from './resources/ComplianceReports';
-
-// Import threat scanner resource
-import {
-  ThreatScannerList,
-  ThreatScannerShow,
-} from './resources/ThreatScanner';
-
-// Import MITRE techniques resource
-import {
-  MitreTechniquesList,
-  MitreTechniquesShow,
-} from './resources/MitreTechniques';
-
-// Import YARA resources
-import {
-  YaraRulesList,
-  YaraRulesShow,
-  YaraRulesCreate,
-  YaraRulesEdit,
-} from './resources/YaraRules';
-
-import {
-  YaraMatchesList,
-  YaraMatchesShow,
-} from './resources/YaraMatches';
-
-// Import timeline resource
-import {
-  TimelineList,
-} from './resources/Timeline';
-
-// Import notification settings resource
-import {
-  NotificationSettingsList,
-  NotificationSettingsShow,
-  NotificationSettingsCreate,
-  NotificationSettingsEdit,
-} from './resources/NotificationSettings';
-
-// Import configuration resource
-import {
-  ConfigurationList,
-  ConfigurationShow,
-} from './resources/Configuration';
-
-// CastellanProFree - No edition detection needed
-
-// Import Material-UI icons for resources
+import { Box, CircularProgress, Typography } from '@mui/material';
 import {
   Security as SecurityIcon,
   Assessment as ComplianceIcon,
@@ -86,6 +13,74 @@ import {
   FindInPage as YaraMatchesIcon,
   Timeline as TimelineIcon,
 } from '@mui/icons-material';
+// Using production providers with real backend API
+import { enhancedCastellanDataProvider } from './dataProvider/castellanDataProvider';
+import { enhancedAuthProvider } from './auth/authProvider';
+import { Layout } from './components/Layout';
+import { initializeCachePreloader } from './utils/cachePreloader';
+import './utils/cacheInspector'; // Load cache debugging tools
+import './utils/performanceTesting'; // Load performance testing suite
+
+// Lazy load Dashboard for better performance
+const Dashboard = React.lazy(() => import('./components/Dashboard').then(module => ({ default: module.Dashboard })));
+
+// Lazy-loaded resource imports for better performance and code splitting
+const SecurityEventList = React.lazy(() => import('./resources/SecurityEvents').then(module => ({ default: module.SecurityEventList })));
+const SecurityEventShow = React.lazy(() => import('./resources/SecurityEvents').then(module => ({ default: module.SecurityEventShow })));
+const SecurityEventEdit = React.lazy(() => import('./resources/SecurityEvents').then(module => ({ default: module.SecurityEventEdit })));
+const SecurityEventCreate = React.lazy(() => import('./resources/SecurityEvents').then(module => ({ default: module.SecurityEventCreate })));
+
+const SystemStatusList = React.lazy(() => import('./resources/SystemStatus').then(module => ({ default: module.SystemStatusList })));
+const SystemStatusShow = React.lazy(() => import('./resources/SystemStatus').then(module => ({ default: module.SystemStatusShow })));
+
+const ComplianceReportList = React.lazy(() => import('./resources/ComplianceReports').then(module => ({ default: module.ComplianceReportList })));
+const ComplianceReportShow = React.lazy(() => import('./resources/ComplianceReports').then(module => ({ default: module.ComplianceReportShow })));
+const ComplianceReportCreate = React.lazy(() => import('./resources/ComplianceReports').then(module => ({ default: module.ComplianceReportCreate })));
+
+const ThreatScannerList = React.lazy(() => import('./resources/ThreatScanner').then(module => ({ default: module.ThreatScannerList })));
+const ThreatScannerShow = React.lazy(() => import('./resources/ThreatScanner').then(module => ({ default: module.ThreatScannerShow })));
+
+const MitreTechniquesList = React.lazy(() => import('./resources/MitreTechniques').then(module => ({ default: module.MitreTechniquesList })));
+const MitreTechniquesShow = React.lazy(() => import('./resources/MitreTechniques').then(module => ({ default: module.MitreTechniquesShow })));
+
+const YaraRulesList = React.lazy(() => import('./resources/YaraRules').then(module => ({ default: module.YaraRulesList })));
+const YaraRulesShow = React.lazy(() => import('./resources/YaraRules').then(module => ({ default: module.YaraRulesShow })));
+const YaraRulesCreate = React.lazy(() => import('./resources/YaraRules').then(module => ({ default: module.YaraRulesCreate })));
+const YaraRulesEdit = React.lazy(() => import('./resources/YaraRules').then(module => ({ default: module.YaraRulesEdit })));
+
+const YaraMatchesList = React.lazy(() => import('./resources/YaraMatches').then(module => ({ default: module.YaraMatchesList })));
+const YaraMatchesShow = React.lazy(() => import('./resources/YaraMatches').then(module => ({ default: module.YaraMatchesShow })));
+
+const TimelineList = React.lazy(() => import('./resources/Timeline').then(module => ({ default: module.TimelineList })));
+
+const NotificationSettingsList = React.lazy(() => import('./resources/NotificationSettings').then(module => ({ default: module.NotificationSettingsList })));
+const NotificationSettingsShow = React.lazy(() => import('./resources/NotificationSettings').then(module => ({ default: module.NotificationSettingsShow })));
+const NotificationSettingsCreate = React.lazy(() => import('./resources/NotificationSettings').then(module => ({ default: module.NotificationSettingsCreate })));
+const NotificationSettingsEdit = React.lazy(() => import('./resources/NotificationSettings').then(module => ({ default: module.NotificationSettingsEdit })));
+
+const ConfigurationList = React.lazy(() => import('./resources/Configuration').then(module => ({ default: module.ConfigurationList })));
+const ConfigurationShow = React.lazy(() => import('./resources/Configuration').then(module => ({ default: module.ConfigurationShow })));
+
+// CastellanProFree - No edition detection needed
+
+// Loading fallback component for lazy-loaded resources
+const LoadingFallback = () => (
+  <Box
+    sx={{
+      display: 'flex',
+      flexDirection: 'column',
+      alignItems: 'center',
+      justifyContent: 'center',
+      height: '200px',
+      gap: 2
+    }}
+  >
+    <CircularProgress size={40} />
+    <Typography variant="body2" color="textSecondary">
+      Loading component...
+    </Typography>
+  </Box>
+);
 
 const App = () => {
   // Initialize cache preloader for immediate data availability
@@ -94,12 +89,13 @@ const App = () => {
   }, []);
 
   return (
-    <Admin
-      dataProvider={enhancedCastellanDataProvider}
-      authProvider={enhancedAuthProvider}
-      layout={Layout}
-      dashboard={Dashboard}
-    >
+    <Suspense fallback={<LoadingFallback />}>
+      <Admin
+        dataProvider={enhancedCastellanDataProvider}
+        authProvider={enhancedAuthProvider}
+        layout={Layout}
+        dashboard={Dashboard}
+      >
     {/* Security Events Resource - Available in CastellanProFree */}
     <Resource
       name="security-events"
@@ -196,6 +192,7 @@ const App = () => {
       recordRepresentation={() => 'System Configuration'}
     />
   </Admin>
+    </Suspense>
   );
 };
 

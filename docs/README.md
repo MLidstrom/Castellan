@@ -63,6 +63,7 @@ Welcome to the complete documentation for **Castellan**, the AI-powered Windows 
 ### Production-Ready Components
 - ✅ **Native YARA Integration** - dnYara 2.1.0 with real malware scanning
 - ✅ **Timeline Visualization** - Interactive security event analysis with React Admin UI
+- ✅ **Advanced Search & Filtering** - Multi-criteria search with MITRE technique filtering
 - ✅ **Export Capabilities** - CSV/JSON/PDF export for security data and reports
 - ✅ **AI-Powered Analysis** - LLM threat classification with vector search
 - ✅ **Enterprise Scale** - 12K+ events/sec with intelligent caching

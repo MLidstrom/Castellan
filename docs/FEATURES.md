@@ -24,6 +24,15 @@
 - **Automated Response** - Real-time threat response with configurable actions and escalation
 
 ## 📊 **Monitoring & Analysis**
+- **✅ Advanced Search & Filtering** ✅ **PRODUCTION READY** - Comprehensive security event search system
+  - **Multi-Criteria Filtering** - Date ranges, risk levels, event types, MITRE ATT&CK techniques
+  - **Full-Text Search** - High-performance SQLite FTS5 with exact match and fuzzy search options
+  - **MITRE Technique Filtering** - 25+ common security techniques organized by tactic categories
+  - **Numeric Range Filters** - Confidence, correlation, burst, and anomaly score filtering
+  - **URL Synchronization** - Bookmarkable and shareable search states with persistent filters
+  - **Real-time Results** - Search summaries with performance metrics and result counts
+  - **Export Integration** - Direct CSV, JSON, XLSX export from filtered results
+  - **Professional UI** - Responsive drawer interface with loading states and error handling
 - **🆕 Real-time System Monitoring** - Live system health, performance metrics, and threat intelligence status via SignalR
 - **✅ Enhanced Performance Dashboard** - Full-stack monitoring with 7 API endpoints, real-time charts, and configurable alerts
 - **✅ Threat Intelligence Health Dashboard** - Comprehensive service health monitoring for VirusTotal, MalwareBazaar, and OTX

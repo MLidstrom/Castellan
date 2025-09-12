@@ -229,27 +229,29 @@ const STATUS_CHOICES = [
 
 
 // Enhanced filters for the list view
-const SecurityEventFilters = [
-  // Primary search bar - full text search
-  <SearchInput source="search" alwaysOn placeholder="Search all fields..." />,
-  
-  // Multi-select filters
-  <AutocompleteArrayInput source="eventTypes" label="Event Types" choices={EVENT_TYPE_CHOICES} />,
-  <AutocompleteArrayInput source="riskLevels" label="Risk Levels" choices={RISK_LEVEL_CHOICES} />,
-  
-  // Date range
-  <DateInput source="startDate" label="From Date" />,
-  <DateInput source="endDate" label="To Date" />,
-  
-  // Additional text filters
-  <TextInput source="machine" label="Machine" />,
-  <TextInput source="user" label="User" />,
-  <TextInput source="source" label="Source" />,
-  
-  // Status and MITRE
-  <SelectInput source="status" label="Status" choices={STATUS_CHOICES} />,
-  <TextInput source="mitreTechnique" label="MITRE Technique" />,
-];
+const SecurityEventFilters = () => (
+  <Filter>
+    {/* Primary search bar - full text search */}
+    <SearchInput source="search" alwaysOn placeholder="Search all fields..." />
+    
+    {/* Multi-select filters */}
+    <AutocompleteArrayInput source="eventTypes" label="Event Types" choices={EVENT_TYPE_CHOICES} />
+    <AutocompleteArrayInput source="riskLevels" label="Risk Levels" choices={RISK_LEVEL_CHOICES} />
+    
+    {/* Date range */}
+    <DateInput source="startDate" label="From Date" />
+    <DateInput source="endDate" label="To Date" />
+    
+    {/* Additional text filters */}
+    <TextInput source="machine" label="Machine" />
+    <TextInput source="user" label="User" />
+    <TextInput source="source" label="Source" />
+    
+    {/* Status and MITRE */}
+    <SelectInput source="status" label="Status" choices={STATUS_CHOICES} />
+    <TextInput source="mitreTechnique" label="MITRE Technique" />
+  </Filter>
+);
 
 // Aside filters for better organization
 const SecurityEventFilterSidebar = () => (
@@ -330,7 +332,7 @@ export const SecurityEventList = () => (
   <Box>
     <SecurityEventsHeader />
     <List 
-      filters={SecurityEventFilters}
+      filters={<SecurityEventFilters />}
       sort={{ field: 'timestamp', order: 'DESC' }}
       perPage={25}
       title=" "

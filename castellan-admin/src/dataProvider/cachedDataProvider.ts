@@ -21,34 +21,34 @@ const RESOURCE_CACHE_CONFIG: Record<string, CacheConfig> = {
   'configuration': { ttl: CACHE_TTL.VERY_SLOW, enableLogging: true },
 };
 
-// Generate cache key for data provider operations
+// Generate cache key for data provider operations - optimized for performance
 function generateCacheKey(resource: string, method: string, params?: any): string {
   const baseKey = `dp_${method}_${resource}`;
   
   if (method === 'getList') {
-    const { pagination, sort } = params || {};
+    const { pagination, sort, filter } = params || {};
     const page = pagination?.page || 1;
     const perPage = pagination?.perPage || 25;
     const sortField = sort?.field || 'id';
     const sortOrder = sort?.order || 'ASC';
     
-    // Create simple, consistent cache key
-    const cacheKey = `${baseKey}_p${page}_pp${perPage}_s${sortField}_o${sortOrder}`;
-    console.log(`🔑 Generated cache key for ${resource}: ${cacheKey}`);
+    // Only include filters in key if they exist to reduce cache key variations
+    const filterHash = filter && Object.keys(filter).length > 0 
+      ? `_f${JSON.stringify(filter).slice(0, 20)}` 
+      : '';
+    
+    // Simplified cache key - only essential parameters
+    const cacheKey = `${baseKey}_p${page}_pp${perPage}_s${sortField}_o${sortOrder}${filterHash}`;
     return cacheKey;
   }
   
   if (method === 'getOne') {
-    const cacheKey = `${baseKey}_${params?.id}`;
-    console.log(`🔑 Generated cache key for ${resource}: ${cacheKey}`);
-    return cacheKey;
+    return `${baseKey}_${params?.id}`;
   }
   
   if (method === 'getMany') {
     const ids = params?.ids?.sort().join(',') || '';
-    const cacheKey = `${baseKey}_${ids.substring(0, 20)}`;
-    console.log(`🔑 Generated cache key for ${resource}: ${cacheKey}`);
-    return cacheKey;
+    return `${baseKey}_${ids.substring(0, 20)}`;
   }
   
   return baseKey;
@@ -95,47 +95,20 @@ export function createCachedDataProvider(baseDataProvider: DataProvider): DataPr
   return {
     ...baseDataProvider,
 
-    // Cached getList implementation
+    // Cached getList implementation - optimized for performance
     getList: async (resource, params) => {
       const config = RESOURCE_CACHE_CONFIG[resource] || { ttl: CACHE_TTL.NORMAL_REFRESH };
       const cacheKey = generateCacheKey(resource, 'getList', params);
       
-      console.log(`🔍 Checking cache for ${resource} getList...`);
-      console.log(`📋 Params:`, params);
+      // Single cache key lookup - no complex patterns
+      const cached = dashboardCache.get(cacheKey);
       
-      // Try multiple cache key patterns to find existing cache
-      let cached = null;
-      const keysToTry = [
-        cacheKey, // Exact generated key
-        `dp_getList_${resource}_default`, // Simplified key
-        `dp_getList_${resource}_p1_pp25_sid_oASC`, // Common pattern 1
-        `dp_getList_${resource}_p1_pp10_sid_oASC`, // Common pattern 2
-        `dp_getList_${resource}_p1_pp25_stimestamp_oDESC` // Common pattern 3
-      ];
-      
-      for (const keyToTry of keysToTry) {
-        cached = dashboardCache.get(keyToTry);
-        if (cached) {
-          console.log(`📦 Cache HIT with key: ${keyToTry}`);
-          break;
-        }
+      if (cached && isCacheFresh(cacheKey, config.ttl)) {
+        log(`⚡ INSTANT LOAD: Cache HIT for ${resource} getList`, resource);
+        return cached as any;
       }
       
-      if (!cached) {
-        console.log(`📦 Cache MISS - tried ${keysToTry.length} key patterns`);
-      }
-      
-      if (cached) {
-        const isFresh = isCacheFresh(cacheKey, config.ttl);
-        console.log(`⏰ Cache freshness:`, isFresh ? 'FRESH' : 'STALE');
-        
-        if (isFresh) {
-          log(`⚡ INSTANT NAVIGATION: Cache HIT for ${resource} getList - no loading spinner!`, resource);
-          return cached as any;
-        }
-      }
-      
-      // Check preloaded data
+      // Check preloaded data as fallback
       const preloadedData = cachePreloader.getPreloadedData(cacheKey);
       if (preloadedData && !cached) {
         log(`⚡ Using PRELOADED data for ${resource} getList`, resource);
@@ -148,26 +121,19 @@ export function createCachedDataProvider(baseDataProvider: DataProvider): DataPr
         // Fetch from API
         const result = await baseDataProvider.getList(resource, params);
         
-        // Cache the result with multiple keys for better hit rate
+        // Cache the result with timestamp
         const cacheValue = {
           ...result,
           timestamp: Date.now()
         };
         
-        // Store with multiple common key patterns
-        const keysToStore = [
-          cacheKey, // Exact key
-          `dp_getList_${resource}_default`, // Default pattern
-          `dp_getList_${resource}_p1_pp25_sid_oASC`, // Common React Admin default
-          `dp_getList_${resource}_p1_pp10_sid_oASC`  // Another common pattern
-        ];
+        // Store with single optimized key to reduce cache bloat
+        dashboardCache.set(cacheKey, cacheValue, config.ttl);
         
-        keysToStore.forEach(keyToStore => {
-          dashboardCache.set(keyToStore, cacheValue, config.ttl);
-        });
-        
-        console.log(`💾 CACHED with ${keysToStore.length} keys: ${result.data.length} items for ${config.ttl}ms`);
-        console.log(`🔑 Cache keys:`, keysToStore);
+        // Only log in development to reduce performance overhead
+        if (process.env.NODE_ENV === 'development') {
+          console.log(`💾 CACHED ${resource}: ${result.data.length} items (TTL: ${config.ttl}ms)`);
+        }
         
         log(`💾 Cached ${resource} getList result (${result.data.length} items)`, resource);
         return result;
@@ -363,43 +329,43 @@ export function createCachedDataProvider(baseDataProvider: DataProvider): DataPr
   };
 }
 
-// Enhanced preloader that works with data provider cache keys
+// Enhanced preloader that works with simplified cache keys
 export function preloadDataProviderCache(): void {
-  console.log('🚀 Preloading React Admin data provider caches...');
+  if (process.env.NODE_ENV === 'development') {
+    console.log('🚀 Preloading React Admin data provider caches...');
+  }
   
   const resourcesToPreload = Object.keys(RESOURCE_CACHE_CONFIG);
   let preloadedCount = 0;
   
   resourcesToPreload.forEach(resource => {
-    // Try multiple common cache key patterns
-    const commonParams = [
-      { pagination: { page: 1, perPage: 25 }, sort: { field: 'id', order: 'ASC' } },
-      { pagination: { page: 1, perPage: 10 }, sort: { field: 'id', order: 'ASC' } },
-      { pagination: { page: 1, perPage: 25 }, sort: { field: 'timestamp', order: 'DESC' } },
-    ];
+    // Check most common cache pattern only
+    const defaultParams = { pagination: { page: 1, perPage: 25 }, sort: { field: 'id', order: 'ASC' } };
+    const listCacheKey = generateCacheKey(resource, 'getList', defaultParams);
+    const cached = dashboardCache.get(listCacheKey);
     
-    commonParams.forEach(params => {
-      const listCacheKey = generateCacheKey(resource, 'getList', params);
-      const cached = dashboardCache.get(listCacheKey);
-      
-      if (cached) {
-        preloadedCount++;
-        console.log(`✅ Found existing cache for ${resource}: ${listCacheKey}`);
-      } else {
-        console.log(`❌ No cache found for ${resource}: ${listCacheKey}`);
+    if (cached) {
+      preloadedCount++;
+      if (process.env.NODE_ENV === 'development') {
+        console.log(`✅ Found existing cache for ${resource}`);
       }
-    });
+    }
   });
   
-  console.log(`📊 Data provider cache preload check complete: ${preloadedCount} cached entries found`);
-  
-  // Debug: List all current cache keys
-  console.log('🔍 Current cache keys:');
-  if ((dashboardCache as any).memoryCache) {
-    (dashboardCache as any).memoryCache.forEach((_value: any, key: string) => {
-      if (key.startsWith('dp_')) {
-        console.log(`  - ${key}`);
-      }
-    });
+  if (process.env.NODE_ENV === 'development') {
+    console.log(`📊 Data provider cache preload: ${preloadedCount}/${resourcesToPreload.length} resources cached`);
+    
+    // Debug: List current cache keys (development only)
+    console.log('🔍 Current dp_ cache keys:');
+    if ((dashboardCache as any).memoryCache) {
+      let dpKeyCount = 0;
+      (dashboardCache as any).memoryCache.forEach((_value: any, key: string) => {
+        if (key.startsWith('dp_')) {
+          dpKeyCount++;
+          console.log(`  - ${key}`);
+        }
+      });
+      console.log(`Total dp_ cache keys: ${dpKeyCount}`);
+    }
   }
 }

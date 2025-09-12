@@ -103,7 +103,7 @@ interface ThreatScan {
   [key: string]: any;
 }
 
-export const Dashboard = () => {
+const Dashboard = React.memo(() => {
   const [timeRange, setTimeRange] = useState('24h');
   const [refreshing, setRefreshing] = useState(false);
   const [lastRefresh, setLastRefresh] = useState(new Date());
@@ -1157,4 +1157,6 @@ export const Dashboard = () => {
       </Box>
     </Box>
   );
-};
+});
+
+export { Dashboard };

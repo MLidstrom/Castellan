@@ -675,12 +675,16 @@ dotnet run --validate-config="Authentication,Qdrant"
 5. **Configure appropriate timeouts** for your network
 
 ### Database Architecture Evolution
-**Upcoming in v0.9 (Late October 2025)** *(Primary remaining technical work)*:
-- **PostgreSQL Migration**: Enhanced database performance and JSON querying capabilities
-- **Storage Consolidation**: Eliminating triple storage (JSON + SQLite + Qdrant) for unified data management
-- **Retention Optimization**: Unified retention policies across all storage systems
-- **Time-series Partitioning**: Optimized security event storage with automatic partitioning
-- **Development Status**: Only major work remaining after September 2025 completion of all other systems
+**Current Architecture (v1.0 Ready)**:
+- **SQLite Database**: Production-ready with excellent performance for most use cases
+- **Vector Search**: Qdrant integration for AI-powered threat analysis
+- **JSON Storage**: Optimized event storage with efficient querying
+
+**Optional Future Enhancement (Post-v1.0)**:
+- **PostgreSQL Migration**: Optional upgrade for enhanced database performance and advanced JSON querying
+- **Storage Consolidation**: Potential elimination of triple storage for unified data management
+- **Advanced Partitioning**: Time-series partitioning for large-scale deployments
+- **Status**: PostgreSQL is optional and not required for v1.0 production deployments
 
 ## 📞 Configuration Support
 

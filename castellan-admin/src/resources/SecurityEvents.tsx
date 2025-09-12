@@ -131,18 +131,18 @@ const useMitreTechniques = () => {
   return { techniques, loading, error, fetchTechniques };
 };
 
-// Custom header component with shield icon
-const SecurityEventsHeader = () => (
+// Custom header component with shield icon - memoized for performance
+const SecurityEventsHeader = React.memo(() => (
   <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
     <SecurityIcon sx={{ mr: 1, color: 'primary.main' }} />
     <Typography variant="h4" component="h1">
       Security Events
     </Typography>
   </Box>
-);
+));
 
-// Custom component for risk level with color coding
-const RiskLevelField = ({ source }: any) => {
+// Custom component for risk level with color coding - memoized for performance
+const RiskLevelField = React.memo(({ source }: any) => {
   const record = useRecordContext();
   
   const getRiskColor = (level: string) => {
@@ -165,7 +165,7 @@ const RiskLevelField = ({ source }: any) => {
       size="small"
     />
   );
-};
+});
 
 // Custom component for MITRE ATT&CK techniques with database-driven tooltips
 const MitreTechniquesField = ({ source }: any) => {
@@ -357,10 +357,11 @@ const MitreTechniquesField = ({ source }: any) => {
   );
 };
 
-// Filters for the list view
-const SecurityEventFilters = [
-  <TextInput source="eventType" label="Event Type" alwaysOn />,
+// React Admin v5.11.1 - filters are passed as array directly to List component
+const securityEventFilters = [
+  <TextInput key="eventType" source="eventType" label="Event Type" alwaysOn />,
   <SelectInput 
+    key="riskLevel"
     source="riskLevel" 
     label="Risk Level"
     choices={[
@@ -371,12 +372,16 @@ const SecurityEventFilters = [
     ]}
     alwaysOn
   />,
-  <TextInput source="machine" label="Machine" />,
-  <TextInput source="user" label="User" />,
-  <TextInput source="source" label="Source" />,
+  <TextInput key="machine" source="machine" label="Machine" />,
+  <TextInput key="user" source="user" label="User" />,
+  <TextInput key="source" source="source" label="Source" />
 ];
 
 export const SecurityEventList = () => {
+  // CACHE BUSTER - Force refresh at 12:44 PM
+  const cacheKey = `security-events-fixed-${Date.now()}`;
+  console.log('SecurityEventList rendering with cache key:', cacheKey);
+  
   // Use the advanced search hook with URL synchronization
   const {
     state,
@@ -455,10 +460,10 @@ export const SecurityEventList = () => {
   );
 
   return (
-    <Box>
+    <Box key={`security-events-${Date.now()}`}>
       <SecurityEventsHeader />
       <List 
-        filters={<Filter>{SecurityEventFilters}</Filter>}
+        filters={securityEventFilters}
         sort={{ field: 'timestamp', order: 'DESC' }}
         perPage={25}
         title=" "
@@ -636,3 +641,4 @@ export const SecurityEventCreate = () => (
     </Create>
   </Box>
 );
+

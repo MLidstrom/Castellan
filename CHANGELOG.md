@@ -28,15 +28,54 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Created comprehensive caching improvements guide (docs/CACHING_IMPROVEMENTS.md)
 - Updated troubleshooting guide with startup script issues
 - Added Cache Inspector usage instructions
-## [0.5.0] - 2025-XX-XX *(In Planning)*
+## [0.5.0-alpha] - 2025-09-12 *(✅ PHASE 1 COMPLETE - Advanced Search Frontend)*
 
-### Planned
-- **🔄 Advanced Search & Filtering**: Enhanced security event search capabilities
-  - Multi-criteria search with date ranges, risk levels, event types
-  - Advanced filter drawer with persistent URL state
-  - Full-text search across security event messages
-  - MITRE technique-based filtering
-  - Performance-optimized database queries with proper indexing
+### Added
+- **✅ Advanced Search & Filtering Frontend**: Complete UI implementation for enhanced security event search
+  - **AdvancedSearchDrawer Component**: Comprehensive search interface with accordion-style filter sections
+    - Multi-criteria filtering: date ranges, risk levels, event types, MITRE ATT&CK techniques
+    - Full-text search with exact match and fuzzy search options
+    - Numeric range sliders for confidence, correlation, burst, and anomaly scores
+    - MITRE technique filtering with 25+ common security techniques organized by tactic
+    - Real-time filter counting and active filter indicators
+  - **Supporting Components**: Complete component library for advanced filtering
+    - FullTextSearchInput with search mode toggles and help tooltips
+    - DateRangePicker with quick presets (24h, 7d, 30d, 90d) and manual input
+    - MultiSelectFilter with color coding and bulk operations
+    - RangeSliderFilter with dual-thumb sliders and manual input fields
+    - MitreTechniqueFilter with searchable technique database and tactic grouping
+  - **State Management**: Complete React hook and API service implementation
+    - useAdvancedSearch hook with URL synchronization for bookmarkable searches
+    - advancedSearchService API client with error handling and export functionality
+    - Debounced search with loading states and comprehensive error management
+    - Export functionality for CSV, JSON, XLSX formats
+  - **SecurityEvents Integration**: Seamless integration into existing SecurityEvents page
+    - Custom toolbar with Advanced Search, Share, and Export buttons
+    - Real-time search result summaries with performance metrics
+    - URL persistence for shareable search states
+    - Professional loading and error states with user-friendly feedback
+  - **TypeScript Support**: Complete type definitions for all API interactions
+    - Full type coverage for search requests, responses, and UI state
+    - Type-safe filter conversion between UI and API formats
+
+### Performance
+- **Database Optimization**: Enhanced SQLite performance with FTS5 full-text search
+  - Composite indexes on security events for complex query optimization
+  - SQLite FTS5 virtual table for high-performance text search
+  - Database migration system with rollback support
+  - Optimized query patterns for sub-2-second response times
+
+### Code Quality
+- **ESLint Cleanup**: Significant codebase maintenance and optimization
+  - Reduced ESLint warnings from 100+ to ~70 (major improvement)
+  - Fixed critical useEffect dependency issues to prevent infinite loops
+  - Removed unused imports and variables across component library
+  - Enhanced TypeScript compatibility and type safety
+
+### Planned (Phase 2)
+- **Analytics & Reporting**: Dashboard widgets and trend analysis
+- **Saved Searches**: Bookmark and manage frequently used search configurations
+- **Advanced Correlation**: Machine learning-based event correlation
 
 ## [0.4.0] - 2025-09-11 *(✅ COMPLETE - Phase 3 UI/UX Completion)*
 
