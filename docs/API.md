@@ -1084,6 +1084,105 @@ Content-Type: application/json
 GET /api/reports/{reportId}/export?format=pdf
 ```
 
+## 🔧 Threat Intelligence Configuration API
+
+### Get Threat Intelligence Configuration
+```http
+GET /api/settings/threat-intelligence
+```
+
+**Response:**
+```json
+{
+  "data": {
+    "id": "threat-intelligence",
+    "virusTotal": {
+      "enabled": true,
+      "apiKey": "your-api-key",
+      "rateLimitPerMinute": 4,
+      "cacheEnabled": true,
+      "cacheTtlMinutes": 60
+    },
+    "malwareBazaar": {
+      "enabled": true,
+      "rateLimitPerMinute": 10,
+      "cacheEnabled": true,
+      "cacheTtlMinutes": 30
+    },
+    "alienVaultOtx": {
+      "enabled": false,
+      "apiKey": "",
+      "rateLimitPerMinute": 10,
+      "cacheEnabled": true,
+      "cacheTtlMinutes": 60
+    }
+  }
+}
+```
+
+### Update Threat Intelligence Configuration
+```http
+PUT /api/settings/threat-intelligence
+Content-Type: application/json
+
+{
+  "id": "threat-intelligence",
+  "virusTotal": {
+    "enabled": true,
+    "apiKey": "your-virustotal-api-key",
+    "rateLimitPerMinute": 4,
+    "cacheEnabled": true,
+    "cacheTtlMinutes": 90
+  },
+  "malwareBazaar": {
+    "enabled": true,
+    "rateLimitPerMinute": 15,
+    "cacheEnabled": true,
+    "cacheTtlMinutes": 45
+  },
+  "alienVaultOtx": {
+    "enabled": true,
+    "apiKey": "your-otx-api-key",
+    "rateLimitPerMinute": 10,
+    "cacheEnabled": true,
+    "cacheTtlMinutes": 60
+  }
+}
+```
+
+**Validation Rules:**
+- `rateLimitPerMinute`: 1-1000 for VirusTotal and AlienVault OTX, 1-60 for MalwareBazaar
+- `cacheTtlMinutes`: 1-1440 minutes (1 minute to 24 hours)
+- API keys required when provider is enabled (except MalwareBazaar)
+
+**Response:**
+```json
+{
+  "data": {
+    "id": "threat-intelligence",
+    "virusTotal": {
+      "enabled": true,
+      "apiKey": "your-virustotal-api-key",
+      "rateLimitPerMinute": 4,
+      "cacheEnabled": true,
+      "cacheTtlMinutes": 90
+    }
+    // ... updated configuration
+  }
+}
+```
+
+**Error Response (Validation Failed):**
+```json
+{
+  "message": "Validation failed",
+  "errors": [
+    "VirusTotal rate limit must be between 1 and 1000 requests per minute",
+    "VirusTotal cache TTL must be between 1 and 1440 minutes"
+  ]
+}
+```
+
 ## 🔧 Configuration API
 
 ### Get Configuration
