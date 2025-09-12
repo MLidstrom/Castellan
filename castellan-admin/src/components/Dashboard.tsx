@@ -54,7 +54,6 @@ import { PerformanceDashboard } from './PerformanceDashboard';
 import { ThreatIntelligenceHealthDashboard } from './ThreatIntelligenceHealthDashboard';
 import { CacheStatusIndicator } from './CacheStatusIndicator';
 import { ApiDiagnostic } from './ApiDiagnostic';
-import { YaraDashboardWidget } from './YaraDashboardWidget';
 import { YaraDashboardWidgetSimple } from './YaraDashboardWidgetSimple';
 import { YaraSummaryCard } from './YaraSummaryCard';
 import '../utils/debugCache'; // Import debug utilities
@@ -392,12 +391,6 @@ export const Dashboard = () => {
     return 'unknown';
   };
   
-  // Helper function to extract event type with flexible field mapping
-  const getEventType = (event: any): string => {
-    return event.eventType || event.event_type || event.type || 
-           event.category || event.alert_type || event.rule_name || 
-           event.detection_type || 'Unknown Event';
-  };
   
   const criticalEvents = securityEvents?.filter((e: SecurityEvent) => {
     const risk = getRiskLevel(e);
@@ -430,26 +423,19 @@ export const Dashboard = () => {
   const avgComplianceScore = (complianceReports?.reduce((sum: number, r: ComplianceReport) => sum + (r.complianceScore || r.ComplianceScore || 0), 0) || 0) / (complianceReports?.length || 1) || 0;
 
   // Recent activity and trends
-  const recentEvents = securityEvents?.slice(0, 10) || [];
   const recentComplianceReports = complianceReports?.slice(0, 5) || [];
   const recentThreatScans = threatScanner?.slice(0, 10) || [];
   
   // Real-time metrics
-  const eventsInLastHour = securityEvents?.filter((e: SecurityEvent) => 
-    new Date(e.timestamp) > new Date(Date.now() - 60 * 60 * 1000)
-  ).length || 0;
   
   const eventsInLast24Hours = securityEvents?.filter((e: SecurityEvent) => 
     new Date(e.timestamp) > new Date(Date.now() - 24 * 60 * 60 * 1000)
   ).length || 0;
   
-  // Event velocity (events per hour)
-  const eventVelocity = eventsInLast24Hours / 24;
   
   // Threat scanner metrics
   const totalScans = threatScanner?.length || 0;
   const activeScanners = threatScanner?.filter((s: ThreatScan) => s.status === 'running' || s.status === 'active').length || 0;
-  const completedScans = threatScanner?.filter((s: ThreatScan) => s.status === 'completed').length || 0;
   const threatsDetected = threatScanner?.reduce((sum: number, scan: ThreatScan) => sum + (scan.threatsFound || 0), 0) || 0;
   const scansToday = threatScanner?.filter((s: ThreatScan) => 
     new Date(s.timestamp || s.startTime || '') > new Date(Date.now() - 24 * 60 * 60 * 1000)
@@ -504,7 +490,6 @@ export const Dashboard = () => {
 
   // System performance metrics - using response time and component health as performance indicators
   const avgResponseTime = (systemStatus?.reduce((sum: number, s: SystemStatus) => sum + (s.responseTime || 0), 0) || 0) / (systemStatus?.length || 1) || 0;
-  const avgCpuUsage = Math.min(avgResponseTime * 2, 100); // Simulate CPU based on response time
   const unhealthyComponents = (systemStatus?.filter((s: SystemStatus) => s.status?.toLowerCase() !== 'healthy') || []).length;
   const avgMemoryUsage = unhealthyComponents * 15 + 25; // Base memory usage
   const avgDiskUsage = (systemStatus?.reduce((sum: number, s: SystemStatus) => sum + (s.errorCount || 0) + (s.warningCount || 0), 0) || 0) * 5 + 20; // Disk usage based on errors/warnings

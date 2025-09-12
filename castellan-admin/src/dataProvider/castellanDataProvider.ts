@@ -1,5 +1,5 @@
 import { DataProvider, fetchUtils, HttpError } from 'react-admin';
-import { createCachedDataProvider, preloadDataProviderCache } from './cachedDataProvider';
+import { createCachedDataProvider } from './cachedDataProvider';
 
 // Castellan Open Source Data Provider - All features enabled
 // This is the free version with no premium restrictions

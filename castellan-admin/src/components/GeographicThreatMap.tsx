@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   Card,
   CardContent,
@@ -6,7 +6,6 @@ import {
   Typography,
   Box,
   Chip,
-  Tooltip,
   LinearProgress,
   FormControl,
   InputLabel,
@@ -35,17 +34,7 @@ interface GeographicThreat {
   events: any[];
 }
 
-interface CountryThreatSummary {
-  countryCode: string;
-  country: string;
-  totalThreats: number;
-  riskLevel: 'low' | 'medium' | 'high' | 'critical';
-  cities: string[];
-  eventTypes: string[];
-}
-
 export const GeographicThreatMap: React.FC = () => {
-  const [timeRange, setTimeRange] = useState('24h');
   const [selectedCountry, setSelectedCountry] = useState<string>('');
 
   // Fetch security events

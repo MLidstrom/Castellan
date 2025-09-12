@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Box, Chip, Tooltip, IconButton } from '@mui/material';
-import { Speed as SpeedIcon, Cached as CachedIcon, Refresh as RefreshIcon } from '@mui/icons-material';
+import { Speed as SpeedIcon, Refresh as RefreshIcon } from '@mui/icons-material';
 import { dashboardCache } from '../utils/cacheManager';
 import { cachePreloader } from '../utils/cachePreloader';
 

@@ -13,12 +13,18 @@ public class SecurityEventsController : ControllerBase
     private readonly ILogger<SecurityEventsController> _logger;
     private readonly IVectorStore _vectorStore;
     private readonly ISecurityEventStore _securityEventStore;
+    private readonly IAdvancedSearchService _advancedSearchService;
 
-    public SecurityEventsController(ILogger<SecurityEventsController> logger, IVectorStore vectorStore, ISecurityEventStore securityEventStore)
+    public SecurityEventsController(
+        ILogger<SecurityEventsController> logger, 
+        IVectorStore vectorStore, 
+        ISecurityEventStore securityEventStore,
+        IAdvancedSearchService advancedSearchService)
     {
         _logger = logger;
         _vectorStore = vectorStore;
         _securityEventStore = securityEventStore;
+        _advancedSearchService = advancedSearchService;
     }
 
     [HttpGet]
@@ -87,8 +93,12 @@ public class SecurityEventsController : ControllerBase
                 if (riskLevelList.Any()) filterCriteria["riskLevels"] = riskLevelList;
             }
             
-            // Full-text search
-            if (!string.IsNullOrEmpty(search)) filterCriteria["search"] = search;
+            // Full-text search - v0.5.0 Enhancement with FTS5
+            if (!string.IsNullOrEmpty(search)) 
+            {
+                filterCriteria["search"] = search;
+                filterCriteria["useFullTextSearch"] = true;  // Enable FTS5 search
+            }
             
             // Numeric range filters
             if (minConfidence.HasValue) filterCriteria["minConfidence"] = minConfidence.Value;
@@ -142,6 +152,42 @@ public class SecurityEventsController : ControllerBase
         {
             _logger.LogError(ex, "Error getting security event: {Id}", id);
             return Task.FromResult<IActionResult>(StatusCode(500, new { message = "Internal server error" }));
+        }
+    }
+
+    /// <summary>
+    /// Advanced search endpoint with enhanced filtering and full-text search capabilities
+    /// v0.5.0 Feature
+    /// </summary>
+    [HttpPost("search")]
+    public async Task<IActionResult> AdvancedSearch([FromBody] AdvancedSearchRequest request)
+    {
+        try
+        {
+            _logger.LogInformation("Advanced search request: {@Request}", request);
+
+            var searchResult = await _advancedSearchService.SearchAsync(request);
+            
+            var response = new
+            {
+                data = searchResult.Results.Select(ConvertToDto).ToList(),
+                total = searchResult.TotalCount,
+                page = request.Page,
+                perPage = request.PageSize,
+                searchMetadata = new
+                {
+                    queryTime = searchResult.QueryTimeMs,
+                    useFullTextSearch = !string.IsNullOrEmpty(request.FullTextQuery),
+                    appliedFilters = searchResult.AppliedFilters
+                }
+            };
+
+            return Ok(response);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error performing advanced search");
+            return StatusCode(500, new { message = "Internal server error" });
         }
     }
 

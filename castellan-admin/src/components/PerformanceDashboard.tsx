@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   Card,
   CardContent,
@@ -236,7 +236,7 @@ export const PerformanceDashboard: React.FC = () => {
     return 0;
   };
 
-  const calculateMetrics = (security: SecurityEvent[], compliance: ComplianceReport[], system: SystemStatus[], threats: ThreatScanResult[]): DashboardMetrics => {
+  const calculateMetrics = useCallback((security: SecurityEvent[], compliance: ComplianceReport[], system: SystemStatus[], threats: ThreatScanResult[]): DashboardMetrics => {
     // Ensure arrays are valid
     const safeSecurityEvents = Array.isArray(security) ? security.filter(e => e && e.id) : [];
     const safeComplianceReports = Array.isArray(compliance) ? compliance.filter(r => r && r.id) : [];
@@ -286,7 +286,7 @@ export const PerformanceDashboard: React.FC = () => {
         }))
       }
     };
-  };
+  }, []);
 
   // Update metrics when cached data changes
   useEffect(() => {
@@ -302,7 +302,8 @@ export const PerformanceDashboard: React.FC = () => {
     securityEventsApi.data,
     complianceReportsApi.data, 
     systemStatusApi.data,
-    threatScannerApi.data
+    threatScannerApi.data,
+    calculateMetrics
   ]);
 
   const loadAllData = async () => {

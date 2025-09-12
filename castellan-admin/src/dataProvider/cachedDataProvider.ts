@@ -26,7 +26,7 @@ function generateCacheKey(resource: string, method: string, params?: any): strin
   const baseKey = `dp_${method}_${resource}`;
   
   if (method === 'getList') {
-    const { pagination, sort, filter } = params || {};
+    const { pagination, sort } = params || {};
     const page = pagination?.page || 1;
     const perPage = pagination?.perPage || 25;
     const sortField = sort?.field || 'id';

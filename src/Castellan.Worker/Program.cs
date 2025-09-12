@@ -208,6 +208,9 @@ builder.Services.AddSingleton<IExportService, ExportService>();
 // Register Timeline Service
 builder.Services.AddScoped<ITimelineService, TimelineService>();
 
+// Register Advanced Search Service - v0.5.0
+builder.Services.AddScoped<IAdvancedSearchService, AdvancedSearchService>();
+
 // Register YARA services
 builder.Services.Configure<YaraScanningOptions>(builder.Configuration.GetSection(YaraScanningOptions.SectionName));
 builder.Services.AddSingleton<IYaraRuleStore, FileBasedYaraRuleStore>();

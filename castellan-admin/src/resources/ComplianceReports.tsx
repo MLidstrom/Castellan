@@ -5,7 +5,6 @@ import {
   TextField,
   DateField,
   NumberField,
-  ShowButton,
   Show,
   SimpleShowLayout,
   Filter,

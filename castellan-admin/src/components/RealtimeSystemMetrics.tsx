@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { 
   Card, 
   CardContent, 
@@ -32,12 +32,6 @@ interface SystemMetric {
   networkIO?: number;
 }
 
-interface SystemMetricsData {
-  data: SystemMetric[];
-  lastUpdated: string;
-  systemHealth: string;
-  overallStatus: 'healthy' | 'warning' | 'critical';
-}
 
 export const RealtimeSystemMetrics: React.FC = () => {
   const authToken = localStorage.getItem('auth_token');
@@ -91,15 +85,6 @@ export const RealtimeSystemMetrics: React.FC = () => {
     systemMetricsApi.refetch();
   };
 
-  const getStatusColor = (status: string) => {
-    switch (status?.toLowerCase()) {
-      case 'healthy': return 'success.main';
-      case 'warning': return 'warning.main';
-      case 'critical': 
-      case 'error': return 'error.main';
-      default: return 'text.secondary';
-    }
-  };
 
   if (loading && !metricsData) {
     return (
