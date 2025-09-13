@@ -172,6 +172,9 @@ docker-compose.override.yml
 # Runtime data directory (Qdrant and session data)
 data/
 
+# Local archives
+.archive/
+
 
 
 
