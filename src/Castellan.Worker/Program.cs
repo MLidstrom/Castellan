@@ -109,16 +109,7 @@ builder.Services.AddMemoryCache(); // For IP enrichment caching
 builder.Services.AddSingleton<QdrantConnectionPool>();
 builder.Services.AddSingleton<IQdrantConnectionPool>(provider => provider.GetRequiredService<QdrantConnectionPool>());
 
-// Phase 2B: Intelligent Caching Layer Services
-builder.Services.Configure<CacheOptions>(builder.Configuration.GetSection(CacheOptions.SectionName));
-builder.Services.AddSingleton<ICacheService, MemoryCacheService>();
-builder.Services.AddSingleton<TextHashingService>(provider =>
-{
-    var cacheOptions = provider.GetRequiredService<IOptionsMonitor<CacheOptions>>();
-    var logger = provider.GetRequiredService<ILogger<TextHashingService>>();
-    return new TextHashingService(cacheOptions.CurrentValue.Embedding, logger);
-});
-builder.Services.AddSingleton<EmbeddingCacheService>();
+// Removed caching layer services to simplify architecture
 
 // Add SQLite Database
 var dbPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "data", "castellan.db");
@@ -213,13 +204,15 @@ builder.Services.AddScoped<IAdvancedSearchService, AdvancedSearchService>();
 
 // Register YARA services
 builder.Services.Configure<YaraScanningOptions>(builder.Configuration.GetSection(YaraScanningOptions.SectionName));
-builder.Services.AddSingleton<IYaraRuleStore, FileBasedYaraRuleStore>();
+builder.Services.AddSingleton<DatabaseYaraRuleStore>();
+builder.Services.AddSingleton<IYaraRuleStore>(sp => sp.GetRequiredService<DatabaseYaraRuleStore>());
 builder.Services.AddSingleton<IYaraScanService, YaraScanService>();
 builder.Services.AddHostedService<YaraScanService>(provider => 
     (YaraScanService)provider.GetRequiredService<IYaraScanService>());
 builder.Services.AddHostedService<Pipeline>();
 builder.Services.AddHostedService<StartupOrchestratorService>(); // Automatically start all required services
 builder.Services.AddHostedService<MitreImportStartupService>(); // Auto-import MITRE data if needed
+builder.Services.AddHostedService<DailyRefreshHostedService>(); // Daily refresh for MITRE/YARA
 
 // Add Web API services
 builder.Services.AddControllers();
@@ -287,10 +280,7 @@ try
         typeof(ILlmClient),
         typeof(INotificationService),
         typeof(IPerformanceMonitor),
-        // Phase 2B Caching Services
-        typeof(ICacheService),
-        typeof(TextHashingService),
-        typeof(EmbeddingCacheService),
+        // Removed caching services
         // v0.4.0 Export Service
         typeof(IExportService)
     };
@@ -317,13 +307,11 @@ try
     var authOptions = configScope.ServiceProvider.GetRequiredService<IOptionsMonitor<AuthenticationOptions>>();
     var qdrantOptions = configScope.ServiceProvider.GetRequiredService<IOptionsMonitor<QdrantOptions>>();
     var pipelineOptions = configScope.ServiceProvider.GetRequiredService<IOptionsMonitor<PipelineOptions>>();
-    var cacheOptions = configScope.ServiceProvider.GetRequiredService<IOptionsMonitor<CacheOptions>>();
     
     // Accessing .Value will trigger validation
     _ = authOptions.CurrentValue;
     _ = qdrantOptions.CurrentValue;
     _ = pipelineOptions.CurrentValue;
-    _ = cacheOptions.CurrentValue;
     
     Console.WriteLine("✅ All configuration options validated successfully");
 }

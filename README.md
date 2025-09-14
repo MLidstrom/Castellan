@@ -32,7 +32,7 @@
 
 - **🧠 AI-Powered Analysis** - LLM-based threat classification with vector similarity search
 - **🛡️ Real-time Detection** - Live Windows Event Log monitoring with instant threat correlation  
-- **📊 Enterprise Scale** - 12K+ events/sec processing with intelligent caching (30-50% boost)
+- **📊 Enterprise Scale** - 12K+ events/sec processing with optimized performance
 - **🔔 Smart Notifications** - Rich Teams/Slack alerts with adaptive rate limiting
 - **🎯 MITRE Integration** - Auto-updated 800+ ATT&CK techniques with threat mapping
 - **🔍 Threat Intelligence** - VirusTotal, MalwareBazaar, AlienVault OTX with configuration UI
@@ -96,7 +96,7 @@
 ### 🎆 **Production-Ready Enterprise Platform**
 - **MIT Licensed** - 100% open source with complete transparency
 - **5-Minute Setup** - From clone to monitoring in minutes
-- **Enterprise Scale** - 12K+ events/sec with intelligent caching
+- **Enterprise Scale** - 12K+ events/sec with optimized performance
 - **AI-First** - Vector search + LLM analysis built-in
 - **Zero Vendor Lock-in** - Fork, modify, deploy anywhere
 

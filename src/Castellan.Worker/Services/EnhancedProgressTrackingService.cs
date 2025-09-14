@@ -206,7 +206,6 @@ public class EnhancedProgressTrackingService : IEnhancedProgressTrackingService
     private readonly IThreatScanner _threatScanner;
     private readonly SystemHealthService _systemHealth;
     private readonly IPerformanceMonitor _performanceMonitor;
-    private readonly ICacheService _cacheService;
     private readonly IVirusTotalService _virusTotalService;
     private readonly IMalwareBazaarService _malwareBazaarService;
     private readonly IOtxService _otxService;
@@ -220,7 +219,6 @@ public class EnhancedProgressTrackingService : IEnhancedProgressTrackingService
         IThreatScanner threatScanner,
         SystemHealthService systemHealth,
         IPerformanceMonitor performanceMonitor,
-        ICacheService cacheService,
         IVirusTotalService virusTotalService,
         IMalwareBazaarService malwareBazaarService,
         IOtxService otxService,
@@ -231,7 +229,6 @@ public class EnhancedProgressTrackingService : IEnhancedProgressTrackingService
         _threatScanner = threatScanner;
         _systemHealth = systemHealth;
         _performanceMonitor = performanceMonitor;
-        _cacheService = cacheService;
         _virusTotalService = virusTotalService;
         _malwareBazaarService = malwareBazaarService;
         _otxService = otxService;
@@ -304,7 +301,7 @@ public class EnhancedProgressTrackingService : IEnhancedProgressTrackingService
     }
 
     /// <summary>
-    /// Get cache statistics from various caching systems
+    /// Get cache statistics (simplified after cache removal)
     /// </summary>
     public async Task<EnhancedCacheStatistics> GetCacheStatisticsAsync()
     {
@@ -312,21 +309,20 @@ public class EnhancedProgressTrackingService : IEnhancedProgressTrackingService
         {
             var stats = new EnhancedCacheStatistics();
 
-            // Get embedding cache statistics
-            // This would be expanded based on actual cache implementation
+            // Embedding cache disabled - return empty stats
             stats.Embedding = new EmbeddingCacheStats
             {
-                TotalEntries = 0, // Placeholder
-                HitRate = 0.0, // Placeholder
-                MemoryUsageMB = 0 // Placeholder
+                TotalEntries = 0,
+                HitRate = 0.0,
+                MemoryUsageMB = 0
             };
 
-            // Get general cache statistics
+            // Only basic memory statistics available
             stats.General = new GeneralCacheStats
             {
                 TotalMemoryUsageMB = GC.GetTotalMemory(false) / (1024 * 1024),
-                ActiveCaches = 3, // Embedding, Threat Intelligence, General
-                MemoryPressure = 0.0 // Would be calculated based on available memory
+                ActiveCaches = 1, // Only system memory cache remains
+                MemoryPressure = 0.0 
             };
 
             return stats;

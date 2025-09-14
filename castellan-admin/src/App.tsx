@@ -17,9 +17,6 @@ import {
 import { enhancedCastellanDataProvider } from './dataProvider/castellanDataProvider';
 import { enhancedAuthProvider } from './auth/authProvider';
 import { Layout } from './components/Layout';
-import { initializeCachePreloader } from './utils/cachePreloader';
-import './utils/cacheInspector'; // Load cache debugging tools
-import './utils/performanceTesting'; // Load performance testing suite
 
 // Lazy load Dashboard for better performance
 const Dashboard = React.lazy(() => import('./components/Dashboard').then(module => ({ default: module.Dashboard })));
@@ -83,11 +80,6 @@ const LoadingFallback = () => (
 );
 
 const App = () => {
-  // Initialize cache preloader for immediate data availability
-  useEffect(() => {
-    initializeCachePreloader();
-  }, []);
-
   return (
     <Suspense fallback={<LoadingFallback />}>
       <Admin

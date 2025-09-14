@@ -576,25 +576,15 @@ public sealed class Pipeline(
         {
             try
             {
-                // Phase 2B: Cache-first embedding generation with performance metrics
+                // Generate embedding directly (caching removed for simplicity)
                 var embeddingStartTime = DateTimeOffset.UtcNow;
                 
-                // Try to get embedding from cache first, then generate if needed
-                var embeddingResult = await GetOrGenerateEmbeddingWithCache(preparedText, logEvent, ct);
+                var embeddingResult = await GenerateEmbedding(preparedText, logEvent, ct);
                 var embedding = embeddingResult.Embedding;
                 var embeddingTime = embeddingResult.RetrievalTimeMs;
                 
-                // Log cache performance for monitoring
-                if (embeddingResult.WasCached)
-                {
-                    log.LogDebug("Embedding cache HIT for event {EventId} (speedup: {Speedup:F1}x)", 
-                        logEvent.EventId, embeddingResult.SpeedupRatio);
-                }
-                else
-                {
-                    log.LogDebug("Embedding cache MISS for event {EventId} (generation: {GenTime:F1}ms)", 
-                        logEvent.EventId, embeddingResult.GenerationTimeMs);
-                }
+                log.LogDebug("Generated embedding for event {EventId} (generation: {GenTime:F1}ms)", 
+                    logEvent.EventId, embeddingResult.GenerationTimeMs);
                 
                 log.LogDebug("Pipeline: embedding length={EmbeddingLength} for event {EventId}", embedding.Length, logEvent.EventId);
                 
@@ -1048,57 +1038,52 @@ public sealed class Pipeline(
     }
 
     /// <summary>
-    /// Gets or generates an embedding using Phase 2B cache-first approach with performance metrics
+    /// Generates an embedding for the given text with performance metrics
     /// </summary>
-    private async Task<EmbeddingResult> GetOrGenerateEmbeddingWithCache(string text, LogEvent logEvent, CancellationToken ct)
+    private async Task<EmbeddingResult> GenerateEmbedding(string text, LogEvent logEvent, CancellationToken ct)
     {
-        try
+        var startTime = DateTimeOffset.UtcNow;
+        var embedding = await embedder.EmbedAsync(text, ct);
+        var generationTime = (DateTimeOffset.UtcNow - startTime).TotalMilliseconds;
+        
+        return new EmbeddingResult
         {
-            // Check if embedding cache service is available (Phase 2B feature)
-            var embeddingCacheService = serviceProvider.GetService<EmbeddingCacheService>();
-            if (embeddingCacheService == null)
-            {
-                // Fallback to direct embedding generation if cache service not available
-                log.LogDebug("EmbeddingCacheService not available, using direct embedding generation");
-                var startTime = DateTimeOffset.UtcNow;
-                var embedding = await embedder.EmbedAsync(text, ct);
-                var generationTime = (DateTimeOffset.UtcNow - startTime).TotalMilliseconds;
-                
-                return new EmbeddingResult
-                {
-                    Embedding = embedding,
-                    WasCached = false,
-                    RetrievalTimeMs = generationTime,
-                    GenerationTimeMs = generationTime
-                };
-            }
-            
-            // Use cache-first approach with context from the event
-            var context = $"{logEvent.Channel}:{logEvent.EventId}";
-            return await embeddingCacheService.GetOrGenerateEmbeddingAsync(
-                text,
-                async (textToEmbed, token) => await embedder.EmbedAsync(textToEmbed, token),
-                context,
-                ct);
-        }
-        catch (Exception ex)
-        {
-            log.LogWarning(ex, "Error in embedding cache integration for event {EventId}, falling back to direct generation", 
-                logEvent.EventId);
-            
-            // Fallback to direct embedding generation on any cache errors
-            var startTime = DateTimeOffset.UtcNow;
-            var embedding = await embedder.EmbedAsync(text, ct);
-            var generationTime = (DateTimeOffset.UtcNow - startTime).TotalMilliseconds;
-            
-            return new EmbeddingResult
-            {
-                Embedding = embedding,
-                WasCached = false,
-                RetrievalTimeMs = generationTime,
-                GenerationTimeMs = generationTime
-            };
-        }
+            Embedding = embedding,
+            WasCached = false,
+            RetrievalTimeMs = generationTime,
+            GenerationTimeMs = generationTime
+        };
+    }
+
+    /// <summary>
+    /// Result of an embedding generation operation with performance metrics.
+    /// </summary>
+    private class EmbeddingResult
+    {
+        /// <summary>
+        /// The embedding array.
+        /// </summary>
+        public float[] Embedding { get; set; } = Array.Empty<float>();
+
+        /// <summary>
+        /// Whether the embedding was retrieved from cache (always false after cache removal).
+        /// </summary>
+        public bool WasCached { get; set; }
+
+        /// <summary>
+        /// Total time for retrieval (generation) in milliseconds.
+        /// </summary>
+        public double RetrievalTimeMs { get; set; }
+
+        /// <summary>
+        /// Time taken for embedding generation in milliseconds.
+        /// </summary>
+        public double GenerationTimeMs { get; set; }
+
+        /// <summary>
+        /// Performance improvement ratio (always 1.0 after cache removal).
+        /// </summary>
+        public double SpeedupRatio => 1.0;
     }
     
     /// <summary>

@@ -69,12 +69,12 @@ This guide covers common issues you might encounter while using Castellan and th
 **Root Cause**: The issue was caused by MITRE API endpoints returning `{ techniques: [...] }` format while the dataProvider expected standard array responses. This has been fixed in the castellanDataProvider.ts transformation logic.
 
 ### Threat Scanner Buttons Not Working
-If the "Quick Scan" or "Full Scan" buttons in the React Admin interface don't work:
+If the \"Quick Scan\" or \"Full Scan\" buttons in the React Admin interface don't work:
 
 1. **Check Backend Connection**: Ensure backend is running on `http://localhost:5000`
    ```powershell
    # Test backend API directly with your configured credentials
-   curl -X POST "http://localhost:5000/api/auth/login" -H "Content-Type: application/json" -d "{\"username\":\"your-username\",\"password\":\"your-password\"}"
+   curl -X POST \"http://localhost:5000/api/auth/login\" -H \"Content-Type: application/json\" -d \"{\\\"username\\\":\\\"your-username\\\",\\\"password\\\":\\\"your-password\\\"}\"
    ```
 
 2. **Verify Frontend Compilation**: Check for TypeScript errors in the React app console
@@ -84,6 +84,56 @@ If the "Quick Scan" or "Full Scan" buttons in the React Admin interface don't wo
 3. **Authentication Issues**: Make sure you're logged in with correct credentials
    - Use the credentials you configured via environment variables
    - See [AUTHENTICATION_SETUP.md](AUTHENTICATION_SETUP.md) for detailed setup instructions
+
+### React Server Fails to Start in Background
+
+If `npm start` or `npm run start` fails when running as a background job with `Start-Job`:
+
+1.  **Use `Start-Process`**: The recommended way to run the React server in the background is with `Start-Process`.
+    ```powershell
+    Start-Process -FilePath "npm.cmd" -ArgumentList "start" -WindowStyle Hidden
+    ```
+
+### Frontend "Failed to fetch" Errors
+
+**Symptom**: React Admin Interface shows "Failed to fetch" errors and won't load properly at http://localhost:8080
+
+**Quick Fix**: Use the approved startup script to start both backend and frontend properly:
+```powershell
+# From the project root directory
+.\scripts\start.ps1 -NoBuild
+```
+
+**Manual Troubleshooting Steps**:
+
+1. **Verify Backend API is Running**: Check that port 5000 is responding
+   ```powershell
+   Test-NetConnection -ComputerName localhost -Port 5000
+   Invoke-WebRequest -Uri "http://localhost:5000/api/system-status/test" -Method GET
+   ```
+
+2. **Check Frontend Server Status**: Verify port 8080 is listening
+   ```powershell
+   Test-NetConnection -ComputerName localhost -Port 8080
+   ```
+
+3. **Install Frontend Dependencies**: Ensure React dependencies are current
+   ```powershell
+   cd castellan-admin
+   npm ci
+   ```
+
+4. **Start Frontend Manually** (if the script doesn't work):
+   ```powershell
+   cd castellan-admin
+   npm start
+   ```
+   - This will start the dev server on http://localhost:8080
+   - The app will proxy API requests to http://localhost:5000 automatically
+
+**Root Cause**: The React frontend server wasn't running. The backend API on port 5000 was working correctly, but without the frontend server on port 8080, users see "Failed to fetch" errors because there's no web interface to serve the React application.
+
+**Prevention**: Always use `.\scripts\start.ps1` to start both backend and frontend services together. This ensures proper service orchestration and avoids port conflicts.
 
 ### Common Port Issues
 - **Backend API**: Always runs on `http://localhost:5000`

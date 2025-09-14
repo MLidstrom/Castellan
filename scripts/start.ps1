@@ -82,7 +82,7 @@ function Build-Project {
 function Start-ReactAdmin {
     Write-Host "Checking React Admin UI..." -ForegroundColor Yellow
     
-    # Check if React Admin is already running
+    # Check if React Admin is already running (dev server or static serve)
     $nodeProcesses = Get-CimInstance Win32_Process -Filter "Name='node.exe'" -ErrorAction SilentlyContinue | Where-Object {
         $_.CommandLine -like "*castellan-admin*" -or $_.CommandLine -like "*:8080*"
     }
@@ -98,8 +98,34 @@ function Start-ReactAdmin {
         Write-Host "WARNING: React Admin directory not found - skipping UI startup" -ForegroundColor Yellow
         return $false
     }
+
+    # Prefer production build if present
+    $buildIndexPath = Join-Path $reactAdminPath "build\index.html"
+    if (Test-Path $buildIndexPath) {
+        try {
+            Write-Host "Starting React Admin (production build) on http://localhost:8080 ..." -ForegroundColor Yellow
+            $startInfo = New-Object System.Diagnostics.ProcessStartInfo
+            $startInfo.FileName = "cmd.exe"
+            # Use npx to serve the static build (-s) on port 8080; --yes auto-installs 'serve' if needed
+            $startInfo.Arguments = "/c npx --yes serve -s build -l 8080"
+            $startInfo.WorkingDirectory = $reactAdminPath
+            $startInfo.UseShellExecute = $false
+            $startInfo.CreateNoWindow = $true
+            $process = [System.Diagnostics.Process]::Start($startInfo)
+            if ($process) {
+                Write-Host "OK: React Admin (prod) starting in background (PID: $($process.Id))" -ForegroundColor Green
+                return $true
+            } else {
+                Write-Host "WARNING: Failed to launch production server; falling back to dev server" -ForegroundColor Yellow
+            }
+        }
+        catch {
+            Write-Host "WARNING: Failed to launch production server: $_" -ForegroundColor Yellow
+            Write-Host "Falling back to dev server (npm start)" -ForegroundColor Yellow
+        }
+    }
     
-    # Check if node_modules exists
+    # Ensure dependencies for dev server
     $nodeModulesPath = Join-Path $reactAdminPath "node_modules"
     if (-not (Test-Path $nodeModulesPath)) {
         Write-Host "Installing React Admin dependencies..." -ForegroundColor Yellow
@@ -108,7 +134,6 @@ function Start-ReactAdmin {
             & npm install --silent
             $installSuccess = $LASTEXITCODE -eq 0
             Pop-Location
-            
             if (-not $installSuccess) {
                 Write-Host "WARNING: Failed to install dependencies - skipping UI startup" -ForegroundColor Yellow
                 return $false
@@ -121,11 +146,9 @@ function Start-ReactAdmin {
         }
     }
     
-    # Start React Admin in background
+    # Start React Admin dev server in background
     try {
-        Write-Host "Starting React Admin UI..." -ForegroundColor Yellow
-        
-        # Use cmd.exe to properly handle npm on Windows
+        Write-Host "Starting React Admin (dev server) on http://localhost:8080 ..." -ForegroundColor Yellow
         $startInfo = New-Object System.Diagnostics.ProcessStartInfo
         $startInfo.FileName = "cmd.exe"
         $startInfo.Arguments = "/c npm start"
@@ -134,21 +157,18 @@ function Start-ReactAdmin {
         $startInfo.CreateNoWindow = $true
         $startInfo.RedirectStandardOutput = $false
         $startInfo.RedirectStandardError = $false
-        
         $process = [System.Diagnostics.Process]::Start($startInfo)
-        
         if ($process) {
-            Write-Host "OK: React Admin starting in background (PID: $($process.Id))" -ForegroundColor Green
+            Write-Host "OK: React Admin (dev) starting in background (PID: $($process.Id))" -ForegroundColor Green
             Write-Host "  UI will be available at: http://localhost:8080" -ForegroundColor Gray
             return $true
-        }
-        else {
-            Write-Host "WARNING: Failed to start React Admin" -ForegroundColor Yellow
+        } else {
+            Write-Host "WARNING: Failed to start React Admin dev server" -ForegroundColor Yellow
             return $false
         }
     }
     catch {
-        Write-Host "WARNING: Failed to start React Admin: $_" -ForegroundColor Yellow
+        Write-Host "WARNING: Failed to start React Admin dev server: $_" -ForegroundColor Yellow
         return $false
     }
 }

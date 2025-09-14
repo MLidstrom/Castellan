@@ -1,7 +1,7 @@
 # Castellan API Documentation
 
 **Status**: ✅ **Production Ready**  
-**Last Updated**: September 11, 2025
+**Last Updated**: September 14, 2025
 **API Version**: v1
 
 ## 🎯 Overview
@@ -265,59 +265,139 @@ GET /api/vector/stats
 
 ### Get Performance Metrics
 ```http
-GET /api/metrics/performance
+GET /api/performance/metrics?timeRange=1h
+```
+
+**Query Parameters:**
+- `timeRange` - Time range: `1h`, `6h`, `24h`, `7d` (default: 1h)
+
+**Response:**
+```json
+{
+  "timeRange": "1h",
+  "dataPoints": [
+    {
+      "timestamp": "2025-09-14T12:00:00Z",
+      "eventsPerSecond": 12450,
+      "avgProcessingTime": 0.082,
+      "queueDepth": 15
+    }
+  ],
+  "summary": {
+    "avgEventsPerSecond": 12450,
+    "peakEventsPerSecond": 15200,
+    "avgProcessingTime": 0.082,
+    "totalEventsProcessed": 45000
+  },
+  "lastUpdated": "2025-09-14T12:30:00Z"
+}
+```
+
+### Get Performance Alerts
+```http
+GET /api/performance/alerts
 ```
 
 **Response:**
 ```json
 {
-  "eventProcessing": {
-    "eventsPerSecond": 12450,
-    "avgProcessingTime": 0.082,
-    "queueDepth": 15
-  },
-  "ai_analysis": {
-    "avgAnalysisTime": 3.2,
-    "analysesPerMinute": 185,
-    "cacheHitRate": 0.67
-  },
-  "vectorOperations": {
-    "avgSearchTime": 0.023,
-    "avgInsertTime": 0.045,
-    "cacheHitRate": 0.78
-  },
-  "connectionPool": {
-    "activeConnections": 0,
-    "poolUtilization": 0.0,
-    "healthyInstances": 2,
-    "totalInstances": 2
+  "active": [
+    {
+      "id": "alert-123",
+      "severity": "warning",
+      "message": "High memory usage detected",
+      "threshold": 80,
+      "currentValue": 85,
+      "timestamp": "2025-09-14T12:25:00Z"
+    }
+  ],
+  "history": [],
+  "summary": {
+    "totalActive": 1,
+    "criticalCount": 0,
+    "warningCount": 1,
+    "lastCheck": "2025-09-14T12:30:00Z"
   }
 }
 ```
 
-### Get Resource Usage
+### Get Cache Statistics
 ```http
-GET /api/metrics/resources
+GET /api/performance/cache-stats
 ```
 
 **Response:**
 ```json
 {
-  "memory": {
-    "used": "445MB",
-    "available": "1603MB",
-    "utilization": 0.217
+  "hitRate": 0.78,
+  "missRate": 0.22,
+  "memoryUsage": "125MB",
+  "totalRequests": 15420,
+  "effectivenessRatio": 0.85,
+  "cacheEntries": 2340,
+  "averageResponseTime": 0.023,
+  "lastUpdated": "2025-09-14T12:30:00Z"
+}
+```
+
+### Get Database Performance
+```http
+GET /api/performance/database
+```
+
+**Response:**
+```json
+{
+  "connectionPool": {
+    "active": 5,
+    "total": 20,
+    "utilization": 0.25,
+    "peakConnections": 12
   },
+  "queryPerformance": {
+    "avgResponseTime": 0.045,
+    "slowQueries": 2,
+    "totalQueries": 15420,
+    "queriesPerSecond": 125.3
+  },
+  "qdrantMetrics": {
+    "avgOperationTime": 0.023,
+    "vectorCount": 2350000,
+    "collectionStatus": "healthy",
+    "batchOperationTime": 0.156
+  },
+  "lastUpdated": "2025-09-14T12:30:00Z"
+}
+```
+
+### Get System Resources
+```http
+GET /api/performance/system-resources
+```
+
+**Response:**
+```json
+{
   "cpu": {
     "usage": 12.5,
     "cores": 8,
-    "threads": 16
+    "loadAverage": 1.2,
+    "processUsage": 8.3
+  },
+  "memory": {
+    "usage": 0.217,
+    "total": "2048MB",
+    "available": "1603MB",
+    "processMemory": "445MB"
   },
   "disk": {
-    "used": "1.2GB",
+    "usage": 0.024,
+    "total": "50GB",
     "available": "48.8GB",
-    "utilization": 0.024
-  }
+    "readSpeed": "125MB/s",
+    "writeSpeed": "95MB/s"
+  },
+  "lastUpdated": "2025-09-14T12:30:00Z"
 }
 ```
 

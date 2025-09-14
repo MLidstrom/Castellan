@@ -68,6 +68,14 @@ npm install
 npm start  # Runs on http://localhost:8080
 ```
 
+### Troubleshooting
+
+If `npm start` fails when running as a background job, you can use `Start-Process` to run the server in the background:
+
+```powershell
+Start-Process -FilePath "npm.cmd" -ArgumentList "start" -WindowStyle Hidden
+```
+
 ## 📝 Coding Standards
 
 ### C# Guidelines

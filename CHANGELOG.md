@@ -8,26 +8,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [2.0.1] - 2025-09-09
 
 ### Added
-- **Cache Inspector Tool**: Comprehensive debugging tool for monitoring cache behavior in browser console
-- **localStorage Persistence**: Cache now persists across page refreshes for better user experience
 - **Troubleshooting Documentation**: Added known issues for start.ps1 hanging and Worker API status false negatives
-
-### Changed
-- **Optimized Cache TTLs**: Increased cache retention times for better performance
-  - FAST_REFRESH: 10s → 30s
-  - NORMAL_REFRESH: 20s → 2 minutes
-  - SLOW_REFRESH: 1 minute → 5 minutes
-  - VERY_SLOW: 2 minutes → 10 minutes
-- **Cache Storage**: Enabled localStorage for persistent caching (was memory-only)
 
 ### Fixed
 - **MITRE Technique Fetch Errors**: Better error handling for missing MITRE data
-- **Cache Key Matching**: Improved cache key generation for better hit rates
 
 ### Documentation
-- Created comprehensive caching improvements guide (docs/CACHING_IMPROVEMENTS.md)
 - Updated troubleshooting guide with startup script issues
-- Added Cache Inspector usage instructions
+
+### Removed
+- **Frontend Caching Features**: Cache Inspector Tool, localStorage persistence, and optimized cache TTLs were removed during development phase
 ## [0.5.0-alpha] - 2025-09-12 *(✅ PHASE 1 COMPLETE - Advanced Search Frontend)*
 
 ### Added
@@ -85,7 +75,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     - `GET /api/settings/threat-intelligence` - Retrieve current configuration with defaults
     - `PUT /api/settings/threat-intelligence` - Update configuration with validation
   - **Persistent Storage**: File-based JSON storage in `data/threat-intelligence-config.json`
-  - **Comprehensive Validation**: Rate limits (1-1000/min), cache TTL (1-1440min), API key management
+  - **Comprehensive Validation**: Rate limits (1-1000/min), API key management
   - **Multi-Provider Support**: VirusTotal, MalwareBazaar, AlienVault OTX configuration
   - **React Admin Integration**: Enhanced dataProvider with configuration resource mapping
   - **Default Fallbacks**: Sensible defaults when no configuration file exists
@@ -131,7 +121,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     - Three-panel layout: VirusTotal, MalwareBazaar, AlienVault OTX providers
     - Provider toggle switches with conditional field display
     - Password-type API key fields with show/hide functionality
-    - Rate limit and cache TTL validation controls (1-1000/min, 1-1440min)
+    - Rate limit validation controls (1-1000/min)
     - Real-time configuration validation with detailed error messages
   - **Security Features**: Secure configuration management
     - API keys stored as password fields in UI (no plaintext display)
@@ -175,11 +165,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Additional performance indicators for malware detection workflows
   - Real-time system resource monitoring with health dashboards
 
-- **✅ Advanced Caching Improvements**: Frontend optimization enhancements
-  - Cache debugging tools and inspection utilities
-  - Performance indicators for cache effectiveness
-  - Navigation-aware caching for better user experience
-  - localStorage persistence for improved page load performance
 
 ### Planned *(Accelerated Timeline - Major Work Complete September 2025)*
 - **Database Architecture Consolidation (v0.9 - Late October 2025)**: PostgreSQL migration *(primary remaining work)*

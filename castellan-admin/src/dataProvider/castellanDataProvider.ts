@@ -1,5 +1,4 @@
 import { DataProvider, fetchUtils, HttpError } from 'react-admin';
-import { createCachedDataProvider } from './cachedDataProvider';
 
 // Castellan Open Source Data Provider - All features enabled
 // This is the free version with no premium restrictions
@@ -773,25 +772,7 @@ const baseEnhancedCastellanDataProvider = {
     }
 };
 
-// Create cached version of the enhanced data provider for instant navigation
-export const enhancedCastellanDataProvider = {
-    ...createCachedDataProvider(baseEnhancedCastellanDataProvider as DataProvider),
-    // Preserve custom methods that don't need caching
-    getDashboardMetrics: baseEnhancedCastellanDataProvider.getDashboardMetrics,
-    getSystemHealth: baseEnhancedCastellanDataProvider.getSystemHealth,
-    exportComplianceReport: baseEnhancedCastellanDataProvider.exportComplianceReport,
-    uploadFile: baseEnhancedCastellanDataProvider.uploadFile,
-    advancedSearch: baseEnhancedCastellanDataProvider.advancedSearch,
-    healthCheck: baseEnhancedCastellanDataProvider.healthCheck,
-    testNotificationConnection: baseEnhancedCastellanDataProvider.testNotificationConnection,
-    getNotificationHealth: baseEnhancedCastellanDataProvider.getNotificationHealth,
-    custom: baseEnhancedCastellanDataProvider.custom,
-    // Timeline-specific methods
-    getTimelineData: baseEnhancedCastellanDataProvider.getTimelineData,
-    getTimelineEvents: baseEnhancedCastellanDataProvider.getTimelineEvents,
-    getTimelineHeatmap: baseEnhancedCastellanDataProvider.getTimelineHeatmap,
-    getTimelineStats: baseEnhancedCastellanDataProvider.getTimelineStats,
-    getTimelineAnomalies: baseEnhancedCastellanDataProvider.getTimelineAnomalies
-};
+// Enhanced data provider without caching for development
+export const enhancedCastellanDataProvider = baseEnhancedCastellanDataProvider;
 
 export default enhancedCastellanDataProvider;

@@ -378,9 +378,9 @@ const securityEventFilters = [
 ];
 
 export const SecurityEventList = () => {
-  // CACHE BUSTER - Force refresh at 12:44 PM
-  const cacheKey = `security-events-fixed-${Date.now()}`;
-  console.log('SecurityEventList rendering with cache key:', cacheKey);
+  // Cache clearing removed for development - no caching in use
+  
+  // Remove cache key logging to prevent render loop
   
   // Use the advanced search hook with URL synchronization
   const {
@@ -460,7 +460,7 @@ export const SecurityEventList = () => {
   );
 
   return (
-    <Box key={`security-events-${Date.now()}`}>
+    <Box>
       <SecurityEventsHeader />
       <List 
         filters={securityEventFilters}

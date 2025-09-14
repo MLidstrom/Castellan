@@ -131,7 +131,7 @@ dotnet run
 # Start React Admin (new terminal)
 cd castellan-admin
 npm install
-npm start
+npm start # Runs on http://localhost:8080
 ```
 
 </details>

@@ -2,8 +2,6 @@ import React from 'react';
 import { Layout as RaLayout, AppBar } from 'react-admin';
 import { Typography, Box, Chip } from '@mui/material';
 import { Security } from '@mui/icons-material';
-import { CachePerformanceIndicator } from './CachePerformanceIndicator';
-import { NavigationCacheIndicator } from './NavigationCacheIndicator';
 
 const CustomAppBar = () => (
   <AppBar
@@ -38,14 +36,10 @@ const CustomAppBar = () => (
           mr: 2
         }}
       />
-      <CachePerformanceIndicator />
     </Box>
   </AppBar>
 );
 
 export const Layout = (props: any) => (
-  <>
-    <RaLayout {...props} appBar={CustomAppBar} />
-    <NavigationCacheIndicator />
-  </>
+  <RaLayout {...props} appBar={CustomAppBar} />
 );
