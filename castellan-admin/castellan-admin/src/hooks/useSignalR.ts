@@ -274,7 +274,7 @@ export const useSignalR = (options: UseSignalROptions = {}) => {
       onError?.(error as Error);
       notify('Failed to connect to real-time updates', { type: 'error' });
     }
-  }, [enabled, onConnect, onDisconnect, onError, onScanProgress, onSystemMetrics, onScanComplete, onScanError, onThreatIntelligenceStatus, notify]);
+  }, [enabled]); // Removed callback dependencies to prevent infinite loops
 
   const disconnect = useCallback(async () => {
     if (connectionRef.current) {
@@ -339,7 +339,7 @@ export const useSignalR = (options: UseSignalROptions = {}) => {
     return () => {
       disconnect();
     };
-  }, [enabled, connect, disconnect]);
+  }, [enabled]); // Removed connect and disconnect from dependencies to prevent infinite loops
 
   return {
     connectionState,

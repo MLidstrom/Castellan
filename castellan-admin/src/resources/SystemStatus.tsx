@@ -22,7 +22,7 @@ import {
   IconButton,
   Tooltip 
 } from '@mui/material';
-import { 
+import {
   CheckCircle as HealthyIcon,
   Error as ErrorIcon,
   Warning as WarningIcon,
@@ -34,8 +34,13 @@ import {
   Cloud as CloudIcon,
   Security as SecurityIcon,
   DataObject as DatabaseIcon,
-  Refresh as RefreshIcon
+  Refresh as RefreshIcon,
+  SignalWifi4Bar as ConnectedIcon,
+  SignalWifiOff as DisconnectedIcon
 } from '@mui/icons-material';
+
+// Import SignalR context for real-time updates
+import { useSignalRContext } from '../contexts/SignalRContext';
 
 // Custom header component with shield icon
 const SystemStatusHeader = () => (
@@ -262,11 +267,29 @@ const SystemStatusFilters = [
 ];
 
 // Custom list actions with refresh all button
-const SystemStatusListActions = () => (
-  <TopToolbar>
-    <RefreshButton />
-  </TopToolbar>
-);
+const SystemStatusListActions = () => {
+  const { isConnected: signalRConnected, connectionState } = useSignalRContext();
+
+  return (
+    <TopToolbar>
+      <RefreshButton />
+
+      {/* SignalR Connection Status */}
+      <Tooltip title={`Real-time updates: ${connectionState}`}>
+        <Box sx={{ display: 'flex', alignItems: 'center', ml: 1 }}>
+          {signalRConnected ? (
+            <ConnectedIcon color="success" fontSize="small" />
+          ) : (
+            <DisconnectedIcon color="error" fontSize="small" />
+          )}
+          <Typography variant="caption" sx={{ ml: 0.5, color: signalRConnected ? 'success.main' : 'error.main' }}>
+            {signalRConnected ? 'Live' : 'Offline'}
+          </Typography>
+        </Box>
+      </Tooltip>
+    </TopToolbar>
+  );
+};
 
 export const SystemStatusList = () => (
   <Box>

@@ -392,7 +392,8 @@ public class YaraRulesController_MatchesTests : IDisposable
         var returnedMatches = dataProperty!.GetValue(response) as IEnumerable<YaraMatch>;
         var total = (int)totalProperty!.GetValue(response)!;
         
-        returnedMatches.Should().BeNull();
+        returnedMatches.Should().NotBeNull();
+        returnedMatches.Should().BeEmpty();
         total.Should().Be(0);
     }
 

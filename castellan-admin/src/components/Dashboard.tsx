@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { 
   Card, 
   CardContent, 
@@ -11,7 +11,8 @@ import {
   LinearProgress,
   Chip,
   IconButton,
-  Tooltip as MuiTooltip
+  Tooltip as MuiTooltip,
+  Badge
 } from '@mui/material';
 import { useNotify } from 'react-admin';
 import { 
@@ -40,7 +41,10 @@ import {
   Download as DownloadIcon,
   Fullscreen as FullscreenIcon,
   Shield as ShieldIcon,
-  Scanner as ScannerIcon
+  Scanner as ScannerIcon,
+  Circle as ConnectionIcon,
+  SignalWifi4Bar as ConnectedIcon,
+  SignalWifiOff as DisconnectedIcon
 } from '@mui/icons-material';
 
 import { ConnectionPoolMonitor } from './ConnectionPoolMonitor';
@@ -51,6 +55,16 @@ import { ThreatIntelligenceHealthDashboard } from './ThreatIntelligenceHealthDas
 import { ApiDiagnostic } from './ApiDiagnostic';
 import { YaraDashboardWidgetSimple } from './YaraDashboardWidgetSimple';
 import { YaraSummaryCard } from './YaraSummaryCard';
+
+// Import SignalR context for persistent connection
+import { useSignalRContext } from '../contexts/SignalRContext';
+import { SystemMetricsUpdate } from '../hooks/useSignalR';
+
+// Import Dashboard data caching context
+import { useDashboardDataContext } from '../contexts/DashboardDataContext';
+
+// API Configuration - Use same base URL as data provider
+const API_URL = process.env.REACT_APP_CASTELLANPRO_API_URL || 'http://localhost:5000/api';
 
 // Type interfaces for dashboard data
 interface SecurityEvent {
@@ -100,6 +114,7 @@ export const Dashboard = React.memo(() => {
   const [timeRange, setTimeRange] = useState('24h');
   const [refreshing, setRefreshing] = useState(false);
   const [lastRefresh, setLastRefresh] = useState(new Date());
+  const [initialLoad, setInitialLoad] = useState(true);
   const notify = useNotify();
 
   const authToken = localStorage.getItem('auth_token');
@@ -114,16 +129,23 @@ export const Dashboard = React.memo(() => {
   // Test backend connectivity
   useEffect(() => {
     const testBackend = async () => {
+      if (!authToken) return;
       try {
         console.log('🔧 Testing backend connectivity...');
-        const response = await fetch('http://localhost:5000/api/system-status', { method: 'GET' });
+        const response = await fetch(`${API_URL}/system-status`, { 
+          method: 'GET',
+          headers: {
+            'Authorization': `Bearer ${authToken}`,
+            'Content-Type': 'application/json'
+          }
+        });
         console.log('🚑 Backend health check:', response.status);
       } catch (error) {
         console.error('🚨 Backend connectivity failed:', error);
       }
     };
     testBackend();
-  }, []);
+  }, [authToken]);
 
   // State for all dashboard data - no caching, fresh API calls
   const [securityEventsData, setSecurityEventsData] = useState<{ events: SecurityEvent[], total: number }>({ events: [], total: 0 });
@@ -142,143 +164,369 @@ export const Dashboard = React.memo(() => {
   const [threatScannerLoading, setThreatScannerLoading] = useState(true);
   const [threatScannerError, setThreatScannerError] = useState<string | null>(null);
 
-  // Fetch security events
+  // Use SignalR context for persistent real-time connection
+  const {
+    connectionState,
+    isConnected: signalRConnected,
+    realtimeMetrics,
+    triggerSystemUpdate
+  } = useSignalRContext();
+
+  // Use dashboard data caching context
+  const {
+    getCachedData,
+    setCachedData,
+    isCacheValid,
+    clearCache
+  } = useDashboardDataContext();
+
+  const [lastRealTimeUpdate, setLastRealTimeUpdate] = useState<Date | null>(null);
+
+  // Enhanced polling system as SignalR fallback
+  const [pollingEnabled, setPollingEnabled] = useState(true);
+  const [pollingInterval, setPollingInterval] = useState<NodeJS.Timeout | null>(null);
+
+  // Set connection state based on SignalR or polling
+  const isConnected = signalRConnected || pollingEnabled;
+
+  // Update last real-time update when metrics change
   useEffect(() => {
-    const fetchSecurityEvents = async () => {
-      try {
-        setSecurityEventsLoading(true);
-        setSecurityEventsError(null);
-        console.log('🚀 Fetching Security Events...');
-        const response = await fetch('/api/security-events?sort=timestamp&order=desc', {
-          headers: {
-            'Authorization': `Bearer ${authToken}`,
-            'Content-Type': 'application/json'
-          }
-        });
-        console.log('📡 Security Events Response Status:', response.status);
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
-        }
-        const data = await response.json();
-        const result = {
-          events: data.data || data || [],
-          total: data.total || 0
-        };
-        console.log('🔍 Security Events API Response:', result);
-        setSecurityEventsData(result);
-      } catch (error) {
-        console.error('💥 Security Events API Failed:', error);
-        setSecurityEventsError(error instanceof Error ? error.message : 'Failed to fetch');
-      } finally {
-        setSecurityEventsLoading(false);
-      }
-    };
+    if (realtimeMetrics) {
+      setLastRealTimeUpdate(new Date());
 
-    if (authToken) {
-      fetchSecurityEvents();
-    }
-  }, [authToken, timeRange]);
-
-  // Fetch compliance reports
-  useEffect(() => {
-    const fetchComplianceReports = async () => {
-      try {
-        setComplianceReportsLoading(true);
-        setComplianceReportsError(null);
-        console.log('🚀 Fetching Compliance Reports...');
-        const response = await fetch('/api/compliance-reports?sort=generated&order=desc', {
-          headers: {
-            'Authorization': `Bearer ${authToken}`,
-            'Content-Type': 'application/json'
-          }
-        });
-        console.log('📡 Compliance Reports Response Status:', response.status);
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
-        }
-        const data = await response.json();
-        const result = data.data || data || [];
-        console.log('🔍 Compliance Reports API Response:', { status: response.status, dataLength: Array.isArray(result) ? result.length : 'not array', sample: Array.isArray(result) ? result.slice(0, 2) : result });
-        setComplianceReports(result);
-      } catch (error) {
-        console.error('💥 Compliance Reports API Failed:', error);
-        setComplianceReportsError(error instanceof Error ? error.message : 'Failed to fetch');
-      } finally {
-        setComplianceReportsLoading(false);
-      }
-    };
-
-    if (authToken) {
-      fetchComplianceReports();
-    }
-  }, [authToken, timeRange]);
-
-  // Fetch system status
-  useEffect(() => {
-    const fetchSystemStatus = async () => {
-      try {
-        setSystemStatusLoading(true);
-        setSystemStatusError(null);
-        console.log('🚀 Fetching System Status...');
-        const response = await fetch('/api/system-status', {
-          headers: {
-            'Authorization': `Bearer ${authToken}`,
-            'Content-Type': 'application/json'
-          }
-        });
-        console.log('📡 System Status Response Status:', response.status);
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
-        }
-        const data = await response.json();
-        const result = data.data || data || [];
-        console.log('🔍 System Status API Response:', { status: response.status, dataLength: Array.isArray(result) ? result.length : 'not array', sample: Array.isArray(result) ? result.slice(0, 2) : result });
-        setSystemStatus(result);
-      } catch (error) {
-        console.error('💥 System Status API Failed:', error);
-        setSystemStatusError(error instanceof Error ? error.message : 'Failed to fetch');
-      } finally {
+      // Auto-update derived system status data from real-time metrics
+      if (realtimeMetrics.health?.components) {
+        const statusArray = Object.entries(realtimeMetrics.health.components).map(([component, health]) => ({
+          id: component,
+          component,
+          status: health.isHealthy ? 'healthy' : 'error',
+          responseTime: health.responseTimeMs || 0,
+          errorCount: health.isHealthy ? 0 : 1,
+          warningCount: 0,
+          lastCheck: health.lastCheck || new Date().toISOString(),
+          uptime: realtimeMetrics.health.systemUptime || '0m',
+          details: health.details || health.status
+        }));
+        setSystemStatus(statusArray);
         setSystemStatusLoading(false);
+        setSystemStatusError(null);
       }
-    };
-
-    if (authToken) {
-      fetchSystemStatus();
     }
-  }, [authToken, timeRange]);
-
-  // Fetch threat scanner data
-  useEffect(() => {
-    const fetchThreatScanner = async () => {
-      try {
-        setThreatScannerLoading(true);
-        setThreatScannerError(null);
-        console.log('🚀 Fetching Threat Scanner...');
-        const response = await fetch('/api/threat-scanner?sort=timestamp&order=desc', {
-          headers: {
-            'Authorization': `Bearer ${authToken}`,
-            'Content-Type': 'application/json'
-          }
-        });
-        console.log('📡 Threat Scanner Response Status:', response.status);
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
+  }, [realtimeMetrics]);
+  
+  // Enhanced polling system for real-time updates
+  const fetchSystemMetrics = useCallback(async () => {
+    if (!authToken || signalRConnected) return; // Skip if no auth or SignalR is working
+    
+    try {
+      console.log('🔄 Polling system metrics...');
+      const response = await fetch(`${API_URL}/system-status`, {
+        headers: {
+          'Authorization': `Bearer ${authToken}`,
+          'Content-Type': 'application/json'
         }
+      });
+      
+      if (response.ok) {
         const data = await response.json();
-        const result = data.data || data || [];
-        console.log('🔍 Threat Scanner API Response:', { status: response.status, dataLength: Array.isArray(result) ? result.length : 'not array', sample: Array.isArray(result) ? result.slice(0, 2) : result });
-        setThreatScanner(result);
-      } catch (error) {
-        console.error('💥 Threat Scanner API Failed:', error);
-        setThreatScannerError(error instanceof Error ? error.message : 'Failed to fetch');
-      } finally {
+        // Simulate SignalR system metrics format
+        const mockSystemMetrics: SystemMetricsUpdate = {
+          timestamp: new Date().toISOString(),
+          health: {
+            isHealthy: data.data?.every((item: any) => item.isHealthy) ?? true,
+            totalComponents: data.data?.length ?? 0,
+            healthyComponents: data.data?.filter((item: any) => item.isHealthy)?.length ?? 0,
+            systemUptime: data.data?.[0]?.uptime ?? 'Unknown',
+            components: data.data?.reduce((acc: any, item: any) => {
+              acc[item.component] = {
+                isHealthy: item.isHealthy,
+                status: item.status,
+                lastCheck: item.lastCheck,
+                responseTimeMs: item.responseTime,
+                details: item.details
+              };
+              return acc;
+            }, {}) ?? {}
+          },
+          performance: {
+            cpuUsagePercent: Math.random() * 100, // Mock data - replace with real API
+            memoryUsageMB: 1024 + Math.random() * 512,
+            threadCount: 50 + Math.floor(Math.random() * 20),
+            handleCount: 1000 + Math.floor(Math.random() * 500),
+            eventProcessing: {
+              eventsPerSecond: Math.floor(Math.random() * 10),
+              totalEventsProcessed: Math.floor(Math.random() * 1000),
+              queuedEvents: Math.floor(Math.random() * 50),
+              failedEvents: Math.floor(Math.random() * 5)
+            },
+            vectorOperations: {
+              vectorsPerSecond: Math.floor(Math.random() * 5),
+              averageEmbeddingTime: '50ms',
+              averageUpsertTime: '25ms',
+              averageSearchTime: '10ms',
+              batchOperations: Math.floor(Math.random() * 10)
+            }
+          },
+          threatIntelligence: {
+            isEnabled: true,
+            services: {},
+            totalQueries: 0,
+            cacheHits: 0,
+            cacheHitRate: 0,
+            lastQuery: ''
+          },
+          cache: {
+            embedding: { totalEntries: 0, hits: 0, misses: 0, hitRate: 0, memoryUsageMB: 0 },
+            threatIntelligence: { totalHashes: 0, cachedResults: 0, cacheUtilization: 0, oldestEntry: '', expiredEntries: 0 },
+            general: { totalMemoryUsageMB: 256, activeCaches: 1, memoryPressure: 0, evictedEntries: 0 }
+          },
+          activeScans: {
+            hasActiveScan: false,
+            queuedScans: 0,
+            recentScans: []
+          }
+        };
+        
+        // Direct state updates to avoid callback dependency
+        // Note: realtimeMetrics is now managed by SignalR context
+        setLastRealTimeUpdate(new Date());
+        
+        // Update system status from metrics
+        if (mockSystemMetrics.health?.components) {
+          const statusArray = Object.entries(mockSystemMetrics.health.components).map(([component, health]) => ({
+            id: component,
+            component,
+            status: health.isHealthy ? 'healthy' : 'error',
+            responseTime: health.responseTimeMs || 0,
+            errorCount: health.isHealthy ? 0 : 1,
+            warningCount: 0,
+            lastCheck: health.lastCheck || new Date().toISOString(),
+            uptime: mockSystemMetrics.health.systemUptime || '0m',
+            details: health.details || health.status
+          }));
+          setSystemStatus(statusArray);
+          setSystemStatusLoading(false);
+          setSystemStatusError(null);
+        }
+        console.log('✅ Polling update successful');
+      } else {
+        console.warn('⚠️ Polling failed:', response.status);
+      }
+    } catch (error) {
+      console.error('❌ Polling error:', error);
+    }
+  }, [authToken, signalRConnected]);
+  
+  // Set up polling interval
+  useEffect(() => {
+    if (pollingEnabled && !signalRConnected && authToken) {
+      console.log('📡 Starting enhanced polling mode (30s interval)');
+      
+      // Initial fetch
+      fetchSystemMetrics();
+      
+      // Set up interval
+      const interval = setInterval(fetchSystemMetrics, 30000); // 30 seconds
+      setPollingInterval(interval);
+      
+      return () => {
+        if (interval) {
+          clearInterval(interval);
+          console.log('🚫 Stopped polling');
+        }
+      };
+    } else if (pollingInterval) {
+      clearInterval(pollingInterval);
+      setPollingInterval(null);
+    }
+  }, [pollingEnabled, signalRConnected, authToken]);
+
+  // Track previous timeRange to detect changes
+  const prevTimeRangeRef = useRef(timeRange);
+
+  // ⚡ Optimized: Fetch all dashboard data with caching
+  useEffect(() => {
+    const fetchAllDashboardData = async () => {
+      if (!authToken) return;
+
+      // Clear cache if timeRange changed (new filters need fresh data)
+      if (prevTimeRangeRef.current !== timeRange && timeRange !== 'refresh-trigger') {
+        console.log(`🔄 Time range changed from ${prevTimeRangeRef.current} to ${timeRange} - clearing cache`);
+        clearCache();
+        prevTimeRangeRef.current = timeRange;
+      }
+
+      // Check if we have valid cached data first (only if timeRange didn't change)
+      const cachedData = getCachedData();
+      if (cachedData && isCacheValid(30000) && timeRange !== 'refresh-trigger') { // Cache valid for 30 seconds
+        console.log('📦 Using cached dashboard data');
+
+        // Set data from cache
+        setSecurityEventsData({
+          events: cachedData.securityEvents || [],
+          total: cachedData.securityEvents?.length || 0
+        });
+        setComplianceReports(cachedData.complianceReports || []);
+        setSystemStatus(cachedData.systemStatus || []);
+        setThreatScanner(cachedData.threatScanner || []);
+
+        // Set loading states to false immediately
+        setSecurityEventsLoading(false);
+        setComplianceReportsLoading(false);
+        setSystemStatusLoading(false);
         setThreatScannerLoading(false);
+        setInitialLoad(false);
+
+        // Clear any previous errors
+        setSecurityEventsError(null);
+        setComplianceReportsError(null);
+        setSystemStatusError(null);
+        setThreatScannerError(null);
+
+        console.log('✅ Dashboard loaded from cache');
+        return;
+      }
+
+      console.log('🚀 Fetching Dashboard Data in Parallel...');
+
+      // Set all loading states to true
+      setSecurityEventsLoading(true);
+      setComplianceReportsLoading(true);
+      setSystemStatusLoading(true);
+      setThreatScannerLoading(true);
+
+      // Clear previous errors
+      setSecurityEventsError(null);
+      setComplianceReportsError(null);
+      setSystemStatusError(null);
+      setThreatScannerError(null);
+
+      const headers = {
+        'Authorization': `Bearer ${authToken}`,
+        'Content-Type': 'application/json'
+      };
+
+      try {
+        // Execute all API calls in parallel
+        const [
+          securityEventsResponse,
+          complianceReportsResponse,
+          systemStatusResponse,
+          threatScannerResponse
+        ] = await Promise.all([
+          fetch(`${API_URL}/security-events?sort=timestamp&order=desc`, { headers }),
+          fetch(`${API_URL}/compliance-reports?sort=generated&order=desc`, { headers }),
+          fetch(`${API_URL}/system-status`, { headers }),
+          fetch(`${API_URL}/threat-scanner?sort=timestamp&order=desc`, { headers })
+        ]);
+
+        console.log('📡 All API Response Status:', {
+          securityEvents: securityEventsResponse.status,
+          complianceReports: complianceReportsResponse.status,
+          systemStatus: systemStatusResponse.status,
+          threatScanner: threatScannerResponse.status
+        });
+
+        // Initialize data containers for caching
+        let securityEventsResult: any[] = [];
+        let complianceReportsResult: any[] = [];
+        let systemStatusResult: any[] = [];
+        let threatScannerResult: any[] = [];
+
+        // Process Security Events
+        try {
+          if (securityEventsResponse.ok) {
+            const securityData = await securityEventsResponse.json();
+            securityEventsResult = securityData.data || securityData || [];
+            const securityResult = {
+              events: securityEventsResult,
+              total: securityData.total || 0
+            };
+            console.log('✅ Security Events loaded:', securityResult.events.length);
+            setSecurityEventsData(securityResult);
+          } else {
+            throw new Error(`Security Events HTTP ${securityEventsResponse.status}`);
+          }
+        } catch (error) {
+          console.error('❌ Security Events Failed:', error);
+          setSecurityEventsError(error instanceof Error ? error.message : 'Failed to fetch');
+        }
+
+        // Process Compliance Reports
+        try {
+          if (complianceReportsResponse.ok) {
+            const complianceData = await complianceReportsResponse.json();
+            complianceReportsResult = complianceData.data || complianceData || [];
+            console.log('✅ Compliance Reports loaded:', complianceReportsResult.length);
+            setComplianceReports(complianceReportsResult);
+          } else {
+            throw new Error(`Compliance Reports HTTP ${complianceReportsResponse.status}`);
+          }
+        } catch (error) {
+          console.error('❌ Compliance Reports Failed:', error);
+          setComplianceReportsError(error instanceof Error ? error.message : 'Failed to fetch');
+        }
+
+        // Process System Status
+        try {
+          if (systemStatusResponse.ok) {
+            const systemData = await systemStatusResponse.json();
+            systemStatusResult = systemData.data || systemData || [];
+            console.log('✅ System Status loaded:', systemStatusResult.length);
+            setSystemStatus(systemStatusResult);
+          } else {
+            throw new Error(`System Status HTTP ${systemStatusResponse.status}`);
+          }
+        } catch (error) {
+          console.error('❌ System Status Failed:', error);
+          setSystemStatusError(error instanceof Error ? error.message : 'Failed to fetch');
+        }
+
+        // Process Threat Scanner
+        try {
+          if (threatScannerResponse.ok) {
+            const threatData = await threatScannerResponse.json();
+            threatScannerResult = threatData.data || threatData || [];
+            console.log('✅ Threat Scanner loaded:', threatScannerResult.length);
+            setThreatScanner(threatScannerResult);
+          } else {
+            throw new Error(`Threat Scanner HTTP ${threatScannerResponse.status}`);
+          }
+        } catch (error) {
+          console.error('❌ Threat Scanner Failed:', error);
+          setThreatScannerError(error instanceof Error ? error.message : 'Failed to fetch');
+        }
+
+        // Cache the successfully fetched data
+        setCachedData({
+          securityEvents: securityEventsResult,
+          complianceReports: complianceReportsResult,
+          systemStatus: systemStatusResult,
+          threatScanner: threatScannerResult,
+          timestamp: Date.now()
+        });
+        console.log('💾 Dashboard data cached');
+
+      } catch (error) {
+        console.error('💥 Dashboard Data Fetch Failed:', error);
+        // Set errors for all failed endpoints
+        const errorMessage = error instanceof Error ? error.message : 'Network error';
+        setSecurityEventsError(errorMessage);
+        setComplianceReportsError(errorMessage);
+        setSystemStatusError(errorMessage);
+        setThreatScannerError(errorMessage);
+      } finally {
+        // Set all loading states to false
+        setSecurityEventsLoading(false);
+        setComplianceReportsLoading(false);
+        setSystemStatusLoading(false);
+        setThreatScannerLoading(false);
+        setInitialLoad(false);
+        console.log('⚡ Dashboard loading complete');
       }
     };
 
-    if (authToken) {
-      fetchThreatScanner();
-    }
+    fetchAllDashboardData();
   }, [authToken, timeRange]);
 
   // Extract derived data
@@ -330,15 +578,36 @@ export const Dashboard = React.memo(() => {
     }
   }, [securityEvents]);
 
-  // Refresh all data
+  // Refresh all data - now integrated with SignalR and cache clearing
   const handleRefresh = async () => {
     setRefreshing(true);
     setLastRefresh(new Date());
-    
+
     try {
-      // Trigger all data fetches by changing dependencies
-      // In a real scenario, you might want to call the fetch functions directly
-      notify('Dashboard data refreshed', { type: 'info' });
+      // Clear cache to force fresh data fetch
+      clearCache();
+      console.log('🗑️ Cleared dashboard cache for fresh data');
+
+      if (isConnected) {
+        // If SignalR is connected, trigger a real-time update
+        console.log('📡 Triggering SignalR system update...');
+        await triggerSystemUpdate();
+        notify('Real-time data refresh triggered', { type: 'info' });
+
+        // Also trigger useEffect to fetch fresh data
+        const currentRange = timeRange;
+        setTimeRange('refresh-trigger');
+        setTimeout(() => setTimeRange(currentRange), 100);
+      } else {
+        // Fallback to manual API calls when SignalR is not connected
+        console.log('🔄 SignalR disconnected - falling back to manual refresh');
+        notify('Refreshing data manually (real-time unavailable)', { type: 'warning' });
+
+        // Re-trigger the existing useEffect hooks by toggling timeRange briefly
+        const currentRange = timeRange;
+        setTimeRange('refresh-trigger');
+        setTimeout(() => setTimeRange(currentRange), 100);
+      }
     } catch (error) {
       console.error('Refresh failed:', error);
       notify('Failed to refresh dashboard data', { type: 'error' });
@@ -407,6 +676,30 @@ export const Dashboard = React.memo(() => {
   const systemHealthChartData = processSystemHealthData();
   const threatScanChartData = processThreatScanData();
 
+  // Show loading overlay on initial load
+  if (initialLoad) {
+    return (
+      <Box
+        sx={{
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          height: '50vh',
+          gap: 2
+        }}
+      >
+        <CircularProgress size={50} />
+        <Typography variant="h6" color="text.secondary">
+          Loading Dashboard...
+        </Typography>
+        <Typography variant="body2" color="text.secondary">
+          Fetching security data in parallel
+        </Typography>
+      </Box>
+    );
+  }
+
   return (
     <Box sx={{ flexGrow: 1, p: 3 }}>
       {/* Header */}
@@ -429,17 +722,35 @@ export const Dashboard = React.memo(() => {
           </ButtonGroup>
           
           {/* Refresh Button */}
+          {/* Connection Status Indicator */}
+          <MuiTooltip title={`Real-time connection: ${connectionState}${lastRealTimeUpdate ? ` | Last update: ${lastRealTimeUpdate.toLocaleTimeString()}` : ''}`}>
+            <Box display="flex" alignItems="center" gap={1}>
+              {connectionState === 'Connected' ? (
+                <ConnectedIcon color="success" fontSize="small" />
+              ) : connectionState === 'Connecting' || connectionState === 'Reconnecting' ? (
+                <CircularProgress size={16} />
+              ) : (
+                <DisconnectedIcon color="error" fontSize="small" />
+              )}
+              <Typography variant="caption" color="text.secondary">
+                {isConnected ? 'Live' : 'Offline'}
+              </Typography>
+            </Box>
+          </MuiTooltip>
+          
+          {/* Refresh Button - now adaptive */}
           <Button
             startIcon={<RefreshIcon />}
             onClick={handleRefresh}
             disabled={refreshing}
-            variant="outlined"
+            variant={isConnected ? "outlined" : "contained"}
+            color={isConnected ? "primary" : "warning"}
           >
-            {refreshing ? 'Refreshing...' : 'Refresh'}
+            {refreshing ? 'Refreshing...' : isConnected ? 'Update Now' : 'Manual Refresh'}
           </Button>
           
           <Typography variant="caption" color="text.secondary">
-            Last updated: {lastRefresh.toLocaleTimeString()}
+            Last updated: {(lastRealTimeUpdate || lastRefresh).toLocaleTimeString()}
           </Typography>
         </Box>
       </Box>
@@ -648,7 +959,10 @@ export const Dashboard = React.memo(() => {
         <Card sx={{ flex: 1 }}>
           <CardHeader title="System Metrics" />
           <CardContent>
-            <RealtimeSystemMetrics />
+            <RealtimeSystemMetrics 
+              metrics={realtimeMetrics} 
+              connectionStatus={connectionState}
+            />
           </CardContent>
         </Card>
       </Box>

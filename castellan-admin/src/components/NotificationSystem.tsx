@@ -37,7 +37,7 @@ import {
   Delete as DeleteIcon,
   Circle as CircleIcon
 } from '@mui/icons-material';
-import { useRealtime } from '../hooks/useRealtime';
+import { useSignalRContext } from '../contexts/SignalRContext';
 
 interface SystemNotification {
   id: string;
@@ -124,27 +124,8 @@ export const NotificationSystem: React.FC<NotificationSystemProps> = ({
     }
   }, [settings.desktopEnabled]);
 
-  // WebSocket integration for real-time notifications
-  const { isConnected } = useRealtime({
-    enabled: enableRealtime && settings.enabled,
-    onMessage: (message) => {
-      if (message.type === 'notification') {
-        const notification: SystemNotification = {
-          id: Date.now().toString(),
-          type: message.data?.type || 'system',
-          severity: message.severity || 'info',
-          title: message.data?.title || 'System Notification',
-          message: message.message || '',
-          timestamp: new Date().toISOString(),
-          read: false,
-          dismissible: true,
-          metadata: message.data
-        };
-        
-        addNotification(notification);
-      }
-    }
-  });
+  // SignalR integration for real-time notifications
+  const { isConnected } = useSignalRContext();
 
   const addNotification = useCallback((notification: SystemNotification) => {
     // Check if notification should be shown based on settings

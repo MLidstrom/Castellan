@@ -39,7 +39,7 @@ public class YaraRulesController_ValidationTests : IDisposable
     [InlineData("", false, "Rule content cannot be empty")]
     [InlineData("   ", false, "Rule content cannot be empty")]
     [InlineData(null, false, "Rule content cannot be empty")]
-    public void ValidateYaraRule_EmptyOrNullContent_ReturnsFalse(string ruleContent, bool expectedValid, string expectedError)
+    public void ValidateYaraRule_EmptyOrNullContent_ReturnsFalse(string? ruleContent, bool expectedValid, string expectedError)
     {
         // Act
         var result = InvokeValidateYaraRule(ruleContent);
@@ -283,7 +283,7 @@ public class YaraRulesController_ValidationTests : IDisposable
     
     #region Helper Methods for Private Method Testing
 
-    private (bool IsValid, string? Error) InvokeValidateYaraRule(string ruleContent)
+    private (bool IsValid, string? Error) InvokeValidateYaraRule(string? ruleContent)
     {
         return _controller.ValidateYaraRule(ruleContent);
     }

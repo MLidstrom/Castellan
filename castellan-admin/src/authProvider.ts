@@ -50,8 +50,8 @@ export const authProvider: AuthProvider = {
     if (token) {
       return Promise.resolve();
     }
-    // Don't log 'No token found' error - this is expected for login page
-    return Promise.reject({ message: 'Please log in', silent: true });
+    // Silently reject for login page - no error message needed
+    return Promise.reject();
   },
   
   getPermissions: () => {

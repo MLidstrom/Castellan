@@ -14,6 +14,9 @@ import {
 } from '@mui/icons-material';
 import { useDataProvider } from 'react-admin';
 
+// API Configuration - Use same base URL as data provider
+const API_URL = process.env.REACT_APP_CASTELLANPRO_API_URL || 'http://localhost:5000/api';
+
 // Simplified YARA statistics for summary card
 interface YaraSummary {
   totalRules: number;
@@ -48,7 +51,7 @@ export const YaraSummaryCard = () => {
       
       // Load YARA service status
       const authToken = localStorage.getItem('auth_token');
-      const statusResponse = await fetch('http://localhost:5000/api/yara-rules/status', {
+      const statusResponse = await fetch(`${API_URL}/yara-rules/status`, {
         headers: {
           'Authorization': `Bearer ${authToken}`,
           'Content-Type': 'application/json'

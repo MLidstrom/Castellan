@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Options;
 using Castellan.Worker.Models.ThreatIntelligence;
@@ -7,7 +8,7 @@ namespace Castellan.Worker.Controllers;
 
 [ApiController]
 [Route("api/settings/threat-intelligence")]
-// [Authorize] - Temporarily disabled for testing
+[Authorize]
 public class ThreatIntelligenceConfigController : ControllerBase
 {
     private readonly ILogger<ThreatIntelligenceConfigController> _logger;

@@ -70,6 +70,12 @@ public class JwtValidationMiddleware
 
     private static bool RequiresAuthentication(HttpContext context)
     {
+        // Skip SignalR paths completely
+        if (context.Request.Path.StartsWithSegments("/hubs"))
+        {
+            return false;
+        }
+        
         // Check if the endpoint requires authentication
         var endpoint = context.GetEndpoint();
         if (endpoint?.Metadata?.GetMetadata<Microsoft.AspNetCore.Authorization.IAuthorizeData>() != null)

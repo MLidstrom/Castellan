@@ -41,7 +41,12 @@ import {
   CheckCircle as MatchIcon,
   Warning as ThreatIcon,
   Description as FileIcon,
+  SignalWifi4Bar as ConnectedIcon,
+  SignalWifiOff as DisconnectedIcon,
 } from '@mui/icons-material';
+
+// Import SignalR context for real-time malware alerts
+import { useSignalRContext } from '../contexts/SignalRContext';
 
 // Custom field to display threat level with color coding
 const ThreatLevelField = () => {
@@ -194,6 +199,30 @@ const PerformanceField = () => {
   );
 };
 
+// Custom actions for YARA matches list
+const YaraMatchesActions = () => {
+  const { isConnected: signalRConnected, connectionState } = useSignalRContext();
+
+  return (
+    <TopToolbar>
+      <FilterButton />
+      <ExportButton />
+
+      {/* SignalR Connection Status for real-time malware alerts */}
+      <Box sx={{ display: 'flex', alignItems: 'center', ml: 1 }}>
+        {signalRConnected ? (
+          <ConnectedIcon color="success" fontSize="small" />
+        ) : (
+          <DisconnectedIcon color="error" fontSize="small" />
+        )}
+        <Typography variant="caption" sx={{ ml: 0.5, color: signalRConnected ? 'success.main' : 'error.main' }}>
+          {signalRConnected ? 'Live Alerts' : 'Offline'}
+        </Typography>
+      </Box>
+    </TopToolbar>
+  );
+};
+
 // List view for YARA matches
 export const YaraMatchesList = () => (
   <List
@@ -214,6 +243,7 @@ export const YaraMatchesList = () => (
     ]}
     sort={{ field: 'matchTime', order: 'DESC' }}
     perPage={25}
+    actions={<YaraMatchesActions />}
   >
     <Datagrid rowClick="show">
       <DateField source="matchTime" label="Detection Time" showTime />

@@ -235,7 +235,8 @@ public class FileBasedYaraRuleStore : IYaraRuleStore
                 match.Id = Guid.NewGuid().ToString();
             }
             
-            match.MatchTime = DateTime.UtcNow;
+            if (match.MatchTime == default)
+                match.MatchTime = DateTime.UtcNow;
             matches.Add(match);
             
             // Keep only recent matches (last 1000)

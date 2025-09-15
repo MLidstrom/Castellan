@@ -28,6 +28,8 @@ public class PipelineIntegrationTests : IDisposable
     private readonly Mock<IPerformanceMonitor> _mockPerformanceMonitor;
     private readonly Mock<ISecurityEventStore> _mockSecurityEventStore;
     private readonly Mock<IAutomatedResponseService> _mockAutomatedResponseService;
+    private readonly Mock<IYaraScanService> _mockYaraScanService;
+    private readonly Mock<IYaraRuleStore> _mockYaraRuleStore;
     private readonly SecurityEventDetector _securityEventDetector;
     private readonly AlertOptions _alertOptions;
     private readonly NotificationOptions _notificationOptions;
@@ -48,6 +50,8 @@ public class PipelineIntegrationTests : IDisposable
         _mockPerformanceMonitor = new Mock<IPerformanceMonitor>();
         _mockSecurityEventStore = new Mock<ISecurityEventStore>();
         _mockAutomatedResponseService = new Mock<IAutomatedResponseService>();
+        _mockYaraScanService = new Mock<IYaraScanService>();
+        _mockYaraRuleStore = new Mock<IYaraRuleStore>();
         var mockSecurityEventDetectorLogger = new Mock<ILogger<SecurityEventDetector>>();
         var mockRulesEngineLogger = new Mock<ILogger<RulesEngine>>();
 
@@ -83,6 +87,8 @@ public class PipelineIntegrationTests : IDisposable
         services.AddSingleton(_mockPerformanceMonitor.Object);
         services.AddSingleton(_mockSecurityEventStore.Object);
         services.AddSingleton(_mockAutomatedResponseService.Object);
+        services.AddSingleton(_mockYaraScanService.Object);
+        services.AddSingleton(_mockYaraRuleStore.Object);
         services.AddSingleton(Options.Create(_alertOptions));
         services.AddSingleton(Options.Create(_notificationOptions));
         
@@ -130,6 +136,11 @@ public class PipelineIntegrationTests : IDisposable
             MinAnomalyScore = 0.5,
             MinTotalScore = 1.0
         }));
+        services.Configure<YaraScanningOptions>(opt => 
+        {
+            opt.Enabled = true;
+            opt.ScanTimeoutSeconds = 5;
+        });
         services.AddSingleton<SecurityEventDetector>();
         services.AddSingleton<RulesEngine>();
         services.AddSingleton<Pipeline>();
@@ -624,6 +635,8 @@ public class PipelineIntegrationTests : IDisposable
         services.AddSingleton<IPerformanceMonitor>(new Mock<IPerformanceMonitor>().Object);
         services.AddSingleton<ISecurityEventStore>(new Mock<ISecurityEventStore>().Object);
         services.AddSingleton<IAutomatedResponseService>(new Mock<IAutomatedResponseService>().Object);
+        services.AddSingleton<IYaraScanService>(new Mock<IYaraScanService>().Object);
+        services.AddSingleton<IYaraRuleStore>(new Mock<IYaraRuleStore>().Object);
         services.AddSingleton(Options.Create(new NotificationOptions()));
         services.AddSingleton(Options.Create(new CorrelationOptions
         {
@@ -633,6 +646,11 @@ public class PipelineIntegrationTests : IDisposable
             MinAnomalyScore = 0.5,
             MinTotalScore = 1.0
         }));
+        services.Configure<YaraScanningOptions>(opt => 
+        {
+            opt.Enabled = true;
+            opt.ScanTimeoutSeconds = 5;
+        });
 
         var newServiceProvider = services.BuildServiceProvider();
         var pipeline = newServiceProvider.GetRequiredService<Pipeline>();
@@ -737,8 +755,15 @@ public class PipelineIntegrationTests : IDisposable
         services.AddSingleton<IPerformanceMonitor>(new Mock<IPerformanceMonitor>().Object);
         services.AddSingleton<ISecurityEventStore>(new Mock<ISecurityEventStore>().Object);
         services.AddSingleton<IAutomatedResponseService>(new Mock<IAutomatedResponseService>().Object);
+        services.AddSingleton<IYaraScanService>(new Mock<IYaraScanService>().Object);
+        services.AddSingleton<IYaraRuleStore>(new Mock<IYaraRuleStore>().Object);
         services.AddSingleton(Options.Create(new NotificationOptions()));
         services.AddSingleton(Options.Create(new Castellan.Worker.Configuration.CorrelationOptions()));
+        services.Configure<YaraScanningOptions>(opt => 
+        {
+            opt.Enabled = true;
+            opt.ScanTimeoutSeconds = 5;
+        });
 
         var newServiceProvider = services.BuildServiceProvider();
         var pipeline = newServiceProvider.GetRequiredService<Pipeline>();
@@ -851,6 +876,8 @@ public class PipelineIntegrationTests : IDisposable
         services.AddSingleton<IPerformanceMonitor>(new Mock<IPerformanceMonitor>().Object);
         services.AddSingleton<ISecurityEventStore>(new Mock<ISecurityEventStore>().Object);
         services.AddSingleton<IAutomatedResponseService>(new Mock<IAutomatedResponseService>().Object);
+        services.AddSingleton<IYaraScanService>(new Mock<IYaraScanService>().Object);
+        services.AddSingleton<IYaraRuleStore>(new Mock<IYaraRuleStore>().Object);
         services.AddSingleton(Options.Create(new NotificationOptions()));
         services.AddSingleton(Options.Create(new CorrelationOptions
         {
@@ -860,6 +887,11 @@ public class PipelineIntegrationTests : IDisposable
             MinAnomalyScore = 0.5,
             MinTotalScore = 1.0
         }));
+        services.Configure<YaraScanningOptions>(opt => 
+        {
+            opt.Enabled = true;
+            opt.ScanTimeoutSeconds = 5;
+        });
 
         var newServiceProvider = services.BuildServiceProvider();
         var pipeline = newServiceProvider.GetRequiredService<Pipeline>();
@@ -929,6 +961,8 @@ public class PipelineIntegrationTests : IDisposable
         services.AddSingleton<IPerformanceMonitor>(new Mock<IPerformanceMonitor>().Object);
         services.AddSingleton<ISecurityEventStore>(new Mock<ISecurityEventStore>().Object);
         services.AddSingleton<IAutomatedResponseService>(new Mock<IAutomatedResponseService>().Object);
+        services.AddSingleton<IYaraScanService>(new Mock<IYaraScanService>().Object);
+        services.AddSingleton<IYaraRuleStore>(new Mock<IYaraRuleStore>().Object);
         services.AddSingleton(Options.Create(new NotificationOptions()));
         services.AddSingleton(Options.Create(new CorrelationOptions
         {
@@ -938,6 +972,11 @@ public class PipelineIntegrationTests : IDisposable
             MinAnomalyScore = 0.5,
             MinTotalScore = 1.0
         }));
+        services.Configure<YaraScanningOptions>(opt => 
+        {
+            opt.Enabled = true;
+            opt.ScanTimeoutSeconds = 5;
+        });
 
         var newServiceProvider = services.BuildServiceProvider();
         var pipeline = newServiceProvider.GetRequiredService<Pipeline>();
@@ -1058,6 +1097,8 @@ public class PipelineIntegrationTests : IDisposable
         services.AddSingleton<IPerformanceMonitor>(new Mock<IPerformanceMonitor>().Object);
         services.AddSingleton<ISecurityEventStore>(new Mock<ISecurityEventStore>().Object);
         services.AddSingleton<IAutomatedResponseService>(new Mock<IAutomatedResponseService>().Object);
+        services.AddSingleton<IYaraScanService>(new Mock<IYaraScanService>().Object);
+        services.AddSingleton<IYaraRuleStore>(new Mock<IYaraRuleStore>().Object);
         services.AddSingleton(Options.Create(new CorrelationOptions
         {
             EnableLowScoreEvents = true,
@@ -1066,6 +1107,11 @@ public class PipelineIntegrationTests : IDisposable
             MinAnomalyScore = 0.5,
             MinTotalScore = 1.0
         }));
+        services.Configure<YaraScanningOptions>(opt => 
+        {
+            opt.Enabled = true;
+            opt.ScanTimeoutSeconds = 5;
+        });
 
         var serviceProvider = services.BuildServiceProvider();
         var pipeline = serviceProvider.GetRequiredService<Pipeline>();
@@ -1158,10 +1204,17 @@ public class PipelineIntegrationTests : IDisposable
         services.AddSingleton<IPerformanceMonitor>(new Mock<IPerformanceMonitor>().Object);
         services.AddSingleton<ISecurityEventStore>(new Mock<ISecurityEventStore>().Object);
         services.AddSingleton<IAutomatedResponseService>(new Mock<IAutomatedResponseService>().Object);
+        services.AddSingleton<IYaraScanService>(new Mock<IYaraScanService>().Object);
+        services.AddSingleton<IYaraRuleStore>(new Mock<IYaraRuleStore>().Object);
         services.AddSingleton(Options.Create(new CorrelationOptions
         {
             EnableLowScoreEvents = true
         }));
+        services.Configure<YaraScanningOptions>(opt => 
+        {
+            opt.Enabled = true;
+            opt.ScanTimeoutSeconds = 5;
+        });
 
         var serviceProvider = services.BuildServiceProvider();
         var pipeline = serviceProvider.GetRequiredService<Pipeline>();
@@ -1254,10 +1307,17 @@ public class PipelineIntegrationTests : IDisposable
         services.AddSingleton<IPerformanceMonitor>(new Mock<IPerformanceMonitor>().Object);
         services.AddSingleton<ISecurityEventStore>(new Mock<ISecurityEventStore>().Object);
         services.AddSingleton<IAutomatedResponseService>(new Mock<IAutomatedResponseService>().Object);
+        services.AddSingleton<IYaraScanService>(new Mock<IYaraScanService>().Object);
+        services.AddSingleton<IYaraRuleStore>(new Mock<IYaraRuleStore>().Object);
         services.AddSingleton(Options.Create(new CorrelationOptions
         {
             EnableLowScoreEvents = true
         }));
+        services.Configure<YaraScanningOptions>(opt => 
+        {
+            opt.Enabled = true;
+            opt.ScanTimeoutSeconds = 5;
+        });
 
         var serviceProvider = services.BuildServiceProvider();
         var pipeline = serviceProvider.GetRequiredService<Pipeline>();

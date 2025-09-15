@@ -33,7 +33,7 @@ import {
   DialogActions,
   Paper
 } from '@mui/material';
-import { 
+import {
   Security as SecurityIcon,
   BugReport as ThreatIcon,
   Warning as WarningIcon,
@@ -41,8 +41,13 @@ import {
   Cancel as CancelIcon,
   PlayArrow as ScanIcon,
   Refresh as RefreshIcon,
-  Timeline as AnalyticsIcon
+  Timeline as AnalyticsIcon,
+  SignalWifi4Bar as ConnectedIcon,
+  SignalWifiOff as DisconnectedIcon
 } from '@mui/icons-material';
+
+// Import SignalR context for real-time scan updates
+import { useSignalRContext } from '../contexts/SignalRContext';
 
 // Custom header component with shield icon
 const ThreatScannerHeader = () => (
@@ -450,6 +455,9 @@ const ScanActions = () => {
   const refresh = useRefresh();
   const [progressOpen, setProgressOpen] = useState(false);
   const [scanType, setScanType] = useState('');
+
+  // SignalR connection for real-time scan updates
+  const { isConnected: signalRConnected, connectionState } = useSignalRContext();
   
   // Get API base URL from environment or default to localhost:5000
   const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || 'http://localhost:5000';
@@ -520,6 +528,18 @@ const ScanActions = () => {
         <IconButton onClick={() => refresh()}>
           <RefreshIcon />
         </IconButton>
+
+        {/* SignalR Connection Status */}
+        <Box sx={{ display: 'flex', alignItems: 'center', ml: 1 }}>
+          {signalRConnected ? (
+            <ConnectedIcon color="success" fontSize="small" />
+          ) : (
+            <DisconnectedIcon color="error" fontSize="small" />
+          )}
+          <Typography variant="caption" sx={{ ml: 0.5, color: signalRConnected ? 'success.main' : 'error.main' }}>
+            {signalRConnected ? 'Live' : 'Offline'}
+          </Typography>
+        </Box>
       </TopToolbar>
       
       <ScanProgressDialog 

@@ -25,17 +25,22 @@ import {
   // ReferenceField, // Not used
 } from 'react-admin';
 import { Chip, Box, Typography, Tooltip, CircularProgress, Alert } from '@mui/material';
-import { 
+import {
   Security as SecurityIcon,
   FilterList as FilterListIcon,
   Share as ShareIcon,
-  Download as DownloadIcon
+  Download as DownloadIcon,
+  SignalWifi4Bar as ConnectedIcon,
+  SignalWifiOff as DisconnectedIcon
 } from '@mui/icons-material';
 
 // Import our advanced search components
 import { AdvancedSearchDrawer } from '../components/AdvancedSearchDrawer';
 import { useAdvancedSearch } from '../hooks/useAdvancedSearch';
 import type { AdvancedSearchFilters } from '../components/AdvancedSearchDrawer';
+
+// Import SignalR context for real-time updates
+import { useSignalRContext } from '../contexts/SignalRContext';
 
 // Interface for MITRE technique data from the database
 interface MitreTechnique {
@@ -379,9 +384,12 @@ const securityEventFilters = [
 
 export const SecurityEventList = () => {
   // Cache clearing removed for development - no caching in use
-  
+
   // Remove cache key logging to prevent render loop
-  
+
+  // SignalR connection for real-time updates
+  const { isConnected: signalRConnected, connectionState } = useSignalRContext();
+
   // Use the advanced search hook with URL synchronization
   const {
     state,
@@ -456,6 +464,20 @@ export const SecurityEventList = () => {
           disabled={state.isLoading}
         />
       )}
+
+      {/* SignalR Connection Status */}
+      <Tooltip title={`Real-time updates: ${connectionState}`}>
+        <Box sx={{ display: 'flex', alignItems: 'center', ml: 1 }}>
+          {signalRConnected ? (
+            <ConnectedIcon color="success" fontSize="small" />
+          ) : (
+            <DisconnectedIcon color="error" fontSize="small" />
+          )}
+          <Typography variant="caption" sx={{ ml: 0.5, color: signalRConnected ? 'success.main' : 'error.main' }}>
+            {signalRConnected ? 'Live' : 'Offline'}
+          </Typography>
+        </Box>
+      </Tooltip>
     </TopToolbar>
   );
 

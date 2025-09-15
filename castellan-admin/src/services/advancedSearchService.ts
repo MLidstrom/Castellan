@@ -63,80 +63,68 @@ class AdvancedSearchService {
 
   /**
    * Get saved searches for the current user
+   * Note: This feature is not yet implemented in the backend
    */
   async getSavedSearches(): Promise<SavedSearchesResponse> {
     try {
-      const response: AxiosResponse<SavedSearchesResponse> = await axios.get(
-        `${this.baseURL}/security-events/search/saved`
-      );
-
-      return response.data;
+      // Backend endpoint not implemented yet - return empty response
+      console.log('Saved searches feature not yet available in backend');
+      return {
+        savedSearches: []
+      };
     } catch (error) {
       console.error('Failed to get saved searches:', error);
-      throw this.handleError(error);
+      return {
+        savedSearches: []
+      };
     }
   }
 
   /**
    * Save a search query
+   * Note: This feature is not yet implemented in the backend
    */
   async saveSearch(name: string, description: string, filters: AdvancedSearchRequest): Promise<SavedSearch> {
     try {
-      const response: AxiosResponse<SavedSearch> = await axios.post(
-        `${this.baseURL}/security-events/search/saved`,
-        {
-          name,
-          description,
-          filters
-        },
-        {
-          headers: {
-            'Content-Type': 'application/json'
-          }
-        }
-      );
-
-      return response.data;
+      // Backend endpoint not implemented yet - return mock response
+      console.log('Save search feature not yet available in backend');
+      throw new Error('Save search feature not yet implemented in backend');
     } catch (error) {
       console.error('Failed to save search:', error);
-      throw this.handleError(error);
+      throw error;
     }
   }
 
   /**
    * Delete a saved search
+   * Note: This feature is not yet implemented in the backend
    */
   async deleteSavedSearch(searchId: string): Promise<void> {
     try {
-      await axios.delete(`${this.baseURL}/security-events/search/saved/${searchId}`);
+      // Backend endpoint not implemented yet
+      console.log('Delete saved search feature not yet available in backend');
+      throw new Error('Delete saved search feature not yet implemented in backend');
     } catch (error) {
       console.error('Failed to delete saved search:', error);
-      throw this.handleError(error);
+      throw error;
     }
   }
 
   /**
    * Update a saved search
+   * Note: This feature is not yet implemented in the backend
    */
   async updateSavedSearch(
     searchId: string,
     updates: Partial<Pick<SavedSearch, 'name' | 'description' | 'filters'>>
   ): Promise<SavedSearch> {
     try {
-      const response: AxiosResponse<SavedSearch> = await axios.put(
-        `${this.baseURL}/security-events/search/saved/${searchId}`,
-        updates,
-        {
-          headers: {
-            'Content-Type': 'application/json'
-          }
-        }
-      );
-
-      return response.data;
+      // Backend endpoint not implemented yet
+      console.log('Update saved search feature not yet available in backend');
+      throw new Error('Update saved search feature not yet implemented in backend');
     } catch (error) {
       console.error('Failed to update saved search:', error);
-      throw this.handleError(error);
+      throw error;
     }
   }
 

@@ -310,7 +310,7 @@ public class YaraRulesController : ControllerBase
     {
         try
         {
-            IEnumerable<YaraMatch> matches;
+            IEnumerable<YaraMatch>? matches;
             
             if (!string.IsNullOrWhiteSpace(securityEventId))
             {
@@ -320,6 +320,8 @@ public class YaraRulesController : ControllerBase
             {
                 matches = await _ruleStore.GetRecentMatchesAsync(count);
             }
+            
+            matches ??= Enumerable.Empty<YaraMatch>();
             
             return Ok(new
             {

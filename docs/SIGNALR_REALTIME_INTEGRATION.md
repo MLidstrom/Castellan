@@ -93,6 +93,32 @@ export const useSignalR = (options: SignalROptions) => {
 - Error handling and reconnection
 - Type-safe event handling
 
+#### 2. **NEW: Global SignalR Context** (`SignalRContext.tsx`)
+**Location**: `castellan-admin/src/contexts/SignalRContext.tsx`
+
+```typescript
+export const SignalRProvider: React.FC = ({ children }) => {
+    // Provides persistent SignalR connection across entire app
+    return (
+        <SignalRContext.Provider value={contextValue}>
+            {children}
+        </SignalRContext.Provider>
+    );
+};
+
+export const useSignalRContext = () => {
+    // Hook for accessing global SignalR state
+    const context = useContext(SignalRContext);
+    return context;
+};
+```
+
+**✅ Key Benefits**:
+- **Persistent Connection**: Maintains SignalR connection across all page navigation
+- **Global State**: Single source of truth for real-time data
+- **Performance**: One connection shared across all components
+- **Navigation Fix**: Resolves disconnection issues when changing menu pages
+
 #### 2. Real-time System Metrics Component
 **Location**: `castellan-admin/src/components/RealtimeSystemMetrics.tsx`
 
@@ -153,15 +179,35 @@ builder.Services.AddCors(options =>
 npm install @microsoft/signalr
 ```
 
-#### 2. Component Usage
+#### 2. **UPDATED: App-Level Integration**
 
 ```typescript
-import { useSignalR } from '../hooks/useSignalR';
-import { RealtimeSystemMetrics } from '../components/RealtimeSystemMetrics';
+// App.tsx - Wrap entire application
+import { SignalRProvider } from '../contexts/SignalRContext';
+
+function App() {
+    return (
+        <SignalRProvider>
+            <Admin
+                dataProvider={dataProvider}
+                authProvider={authProvider}
+                dashboard={Dashboard}
+            >
+                {/* All resources have access to persistent SignalR */}
+            </Admin>
+        </SignalRProvider>
+    );
+}
+
+// Component usage - now uses global context
+import { useSignalRContext } from '../contexts/SignalRContext';
 
 function Dashboard() {
+    const { isConnected, realtimeMetrics } = useSignalRContext();
+
     return (
         <div>
+            <div>Status: {isConnected ? 'Live' : 'Offline'}</div>
             <RealtimeSystemMetrics />
         </div>
     );
@@ -321,6 +367,18 @@ const response = await fetch('/api/systemmetrics/broadcast', {
 - Verify background service is running
 - Check group subscriptions are active
 - Ensure periodic timer is configured correctly
+
+#### 4. **FIXED: Connection Drops on Page Navigation**
+**Previous Issue**: SignalR connection disconnected when navigating between React Admin pages
+**✅ **Solution Implemented**: Global SignalR Context
+- **Root Cause**: Connection was component-scoped, got destroyed on page changes
+- **Fix**: Moved connection to app-level context provider
+- **Result**: Persistent connection across all navigation
+- **Files Updated**:
+  - `src/contexts/SignalRContext.tsx` (new)
+  - `src/App.tsx` (wrapped with provider)
+  - `src/components/Dashboard.tsx` (uses context)
+  - `src/components/RealtimeSystemMetrics.tsx` (uses context)
 
 ### Debugging
 

@@ -231,11 +231,11 @@ builder.Services.AddCors(options =>
 {
     options.AddDefaultPolicy(policy =>
     {
-        policy.WithOrigins("http://localhost:8080", "http://localhost:3000", "http://localhost:3001", "http://localhost:3002", "http://localhost:3003", "http://localhost:3004")
+        policy.SetIsOriginAllowed(_ => true) // Allow all origins for development
               .AllowAnyHeader()
               .AllowAnyMethod()
               .AllowCredentials() // Required for SignalR
-              .SetIsOriginAllowed(_ => true); // Allow SignalR negotiation
+              .WithExposedHeaders("*"); // Expose all headers
     });
 });
 
@@ -259,6 +259,34 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             ValidAudience = authOptions.Jwt.Audience,
             IssuerSigningKey = new SymmetricSecurityKey(
                 Encoding.UTF8.GetBytes(authOptions.Jwt.SecretKey))
+        };
+        
+        // Configure JWT for SignalR
+        options.Events = new JwtBearerEvents
+        {
+            OnMessageReceived = context =>
+            {
+                var accessToken = context.Request.Query["access_token"];
+                
+                // If the request is for our SignalR hub...
+                var path = context.HttpContext.Request.Path;
+                if (!string.IsNullOrEmpty(accessToken) && 
+                    path.StartsWithSegments("/hubs"))
+                {
+                    // Read the token out of the query string
+                    context.Token = accessToken;
+                }
+                return Task.CompletedTask;
+            },
+            OnAuthenticationFailed = context =>
+            {
+                // Don't fail negotiation for SignalR - allow anonymous negotiation
+                if (context.Request.Path.StartsWithSegments("/hubs"))
+                {
+                    context.NoResult();
+                }
+                return Task.CompletedTask;
+            }
         };
     });
 
@@ -355,7 +383,7 @@ app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
 
-// Map SignalR hub
+// Map SignalR hub - allow anonymous negotiation
 app.MapHub<ScanProgressHub>("/hubs/scan-progress");
 
 // Configure API to listen on port 5000

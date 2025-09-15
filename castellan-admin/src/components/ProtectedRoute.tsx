@@ -1,45 +1,51 @@
 import React from 'react';
-import { Navigate, useLocation } from 'react-router-dom';
-import { usePermissions } from 'react-admin';
-import { Box, Alert, Typography, Button } from '@mui/material';
+import { Box, CircularProgress, Typography, Alert, Button } from '@mui/material';
 import { Lock as LockIcon, Home as HomeIcon } from '@mui/icons-material';
+import { Navigate, useLocation } from 'react-router-dom';
+import { useAuth } from '../contexts/AuthContext';
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
   requiredPermissions?: string[];
   requiredRoles?: string[];
   redirectTo?: string;
-  fallback?: React.ReactNode;
   showAccessDenied?: boolean;
+  fallback?: React.ReactNode;
 }
 
 export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   children,
   requiredPermissions = [],
   requiredRoles = [],
-  redirectTo = '/dashboard',
-  fallback,
-  showAccessDenied = true
+  redirectTo = '/login',
+  showAccessDenied = true,
+  fallback
 }) => {
-  const { permissions, isLoading } = usePermissions();
+  const { isAuthenticated, isLoading, user } = useAuth();
   const location = useLocation();
 
   // Show loading state while permissions are being fetched
   if (isLoading) {
     return (
       <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
-        <Typography>Loading...</Typography>
+        <CircularProgress />
+        <Typography sx={{ ml: 2 }}>Loading...</Typography>
       </Box>
     );
   }
 
+  // Check if user is authenticated
+  if (!isAuthenticated) {
+    return <Navigate to={redirectTo} replace state={{ from: location }} />;
+  }
+
   // Check if user has required permissions
   const hasRequiredPermissions = requiredPermissions.length === 0 || 
-    requiredPermissions.every(permission => permissions?.includes(permission));
+    requiredPermissions.every(permission => user?.permissions?.includes(permission));
 
   // Check if user has required roles
   const hasRequiredRoles = requiredRoles.length === 0 || 
-    requiredRoles.some(role => permissions?.roles?.includes(role));
+    requiredRoles.some(role => user?.roles?.includes(role));
 
   // If user doesn't have access
   if (!hasRequiredPermissions || !hasRequiredRoles) {

@@ -15,6 +15,7 @@ public class SecurityEventsControllerTests : IDisposable
     private readonly Mock<ILogger<SecurityEventsController>> _mockLogger;
     private readonly Mock<ISecurityEventStore> _mockSecurityEventStore;
     private readonly Mock<IVectorStore> _mockVectorStore;
+    private readonly Mock<IAdvancedSearchService> _mockAdvancedSearchService;
     private readonly SecurityEventsController _controller;
 
     public SecurityEventsControllerTests()
@@ -22,7 +23,8 @@ public class SecurityEventsControllerTests : IDisposable
         _mockLogger = new Mock<ILogger<SecurityEventsController>>();
         _mockSecurityEventStore = new Mock<ISecurityEventStore>();
         _mockVectorStore = new Mock<IVectorStore>();
-        _controller = new SecurityEventsController(_mockLogger.Object, _mockVectorStore.Object, _mockSecurityEventStore.Object);
+        _mockAdvancedSearchService = new Mock<IAdvancedSearchService>();
+        _controller = new SecurityEventsController(_mockLogger.Object, _mockVectorStore.Object, _mockSecurityEventStore.Object, _mockAdvancedSearchService.Object);
     }
 
     public void Dispose()
@@ -34,7 +36,7 @@ public class SecurityEventsControllerTests : IDisposable
     public void Constructor_ValidParameters_CreatesController()
     {
         // Arrange & Act
-        var controller = new SecurityEventsController(_mockLogger.Object, _mockVectorStore.Object, _mockSecurityEventStore.Object);
+        var controller = new SecurityEventsController(_mockLogger.Object, _mockVectorStore.Object, _mockSecurityEventStore.Object, _mockAdvancedSearchService.Object);
 
         // Assert
         controller.Should().NotBeNull();
@@ -45,7 +47,7 @@ public class SecurityEventsControllerTests : IDisposable
     public void Constructor_NullLogger_DoesNotThrowImmediately()
     {
         // Arrange, Act & Assert - The actual controller doesn't validate parameters
-        Action act = () => new SecurityEventsController(null!, _mockVectorStore.Object, _mockSecurityEventStore.Object);
+        Action act = () => new SecurityEventsController(null!, _mockVectorStore.Object, _mockSecurityEventStore.Object, _mockAdvancedSearchService.Object);
         act.Should().NotThrow();
     }
 
@@ -53,7 +55,7 @@ public class SecurityEventsControllerTests : IDisposable
     public void Constructor_NullSecurityEventStore_DoesNotThrowImmediately()
     {
         // Arrange, Act & Assert - The actual controller doesn't validate parameters
-        Action act = () => new SecurityEventsController(_mockLogger.Object, _mockVectorStore.Object, null!);
+        Action act = () => new SecurityEventsController(_mockLogger.Object, _mockVectorStore.Object, null!, _mockAdvancedSearchService.Object);
         act.Should().NotThrow();
     }
 

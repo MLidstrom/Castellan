@@ -10,15 +10,16 @@ const API_URL = process.env.REACT_APP_CASTELLANPRO_API_URL || 'http://localhost:
 
 // HTTP Client with authentication and error handling
 const httpClient = (url: string, options: fetchUtils.Options = {}) => {
+    // Initialize headers object once
+    options.headers = new Headers(options.headers);
+    
     // Add authentication token if available
     const token = localStorage.getItem('auth_token');
     if (token) {
-        options.headers = new Headers(options.headers);
         options.headers.set('Authorization', `Bearer ${token}`);
     }
 
     // Set default headers
-    options.headers = new Headers(options.headers);
     options.headers.set('Content-Type', 'application/json');
     options.headers.set('Accept', 'application/json');
 

@@ -8,7 +8,6 @@ namespace Castellan.Worker.Hubs;
 /// SignalR Hub for broadcasting real-time scan progress and system metrics to connected clients.
 /// Provides live updates for threat scanning operations, system health, and performance metrics.
 /// </summary>
-[Authorize]
 public class ScanProgressHub : Hub
 {
     private readonly ILogger<ScanProgressHub> _logger;
@@ -25,13 +24,18 @@ public class ScanProgressHub : Hub
     {
         _logger.LogInformation("Client connected to ScanProgressHub: {ConnectionId}", Context.ConnectionId);
         
-        // Add client to general progress updates group
+        // Check if user is authenticated (optional - allows anonymous for dashboard viewing)
+        var isAuthenticated = Context.User?.Identity?.IsAuthenticated ?? false;
+        _logger.LogInformation("Client {ConnectionId} authenticated: {IsAuthenticated}", Context.ConnectionId, isAuthenticated);
+        
+        // Add client to general progress updates group (allows anonymous viewers)
         await Groups.AddToGroupAsync(Context.ConnectionId, "ScanProgressUpdates");
         
         // Send initial connection confirmation
         await Clients.Caller.SendAsync("Connected", new { 
             message = "Connected to scan progress updates",
             connectionId = Context.ConnectionId,
+            authenticated = isAuthenticated,
             timestamp = DateTime.UtcNow
         });
 

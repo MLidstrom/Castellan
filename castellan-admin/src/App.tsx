@@ -17,9 +17,14 @@ import {
 import { enhancedCastellanDataProvider } from './dataProvider/castellanDataProvider';
 import { enhancedAuthProvider } from './auth/authProvider';
 import { Layout } from './components/Layout';
+import { SignalRProvider } from './contexts/SignalRContext';
+import { DashboardDataProvider } from './contexts/DashboardDataContext';
 
 // Lazy load Dashboard for better performance
 const Dashboard = React.lazy(() => import('./components/Dashboard').then(module => ({ default: module.Dashboard })));
+
+// Import custom Login component
+const Login = React.lazy(() => import('./components/Login').then(module => ({ default: module.Login })));
 
 // Lazy-loaded resource imports for better performance and code splitting
 const SecurityEventList = React.lazy(() => import('./resources/SecurityEvents').then(module => ({ default: module.SecurityEventList })));
@@ -82,108 +87,113 @@ const LoadingFallback = () => (
 const App = () => {
   return (
     <Suspense fallback={<LoadingFallback />}>
-      <Admin
-        dataProvider={enhancedCastellanDataProvider}
-        authProvider={enhancedAuthProvider}
-        layout={Layout}
-        dashboard={Dashboard}
-      >
-    {/* Security Events Resource - Available in CastellanProFree */}
-    <Resource
-      name="security-events"
-      list={SecurityEventList}
-      show={SecurityEventShow}
-      edit={SecurityEventEdit}
-      create={SecurityEventCreate}
-      icon={SecurityIcon}
-      recordRepresentation={(record) => `${record.eventType} - ${record.id}`}
-    />
+      <SignalRProvider>
+        <DashboardDataProvider>
+          <Admin
+            dataProvider={enhancedCastellanDataProvider}
+            authProvider={enhancedAuthProvider}
+            layout={Layout}
+            dashboard={Dashboard}
+            loginPage={Login}
+          >
+            {/* Security Events Resource - Available in CastellanProFree */}
+                    <Resource
+              name="security-events"
+              list={SecurityEventList}
+              show={SecurityEventShow}
+              edit={SecurityEventEdit}
+              create={SecurityEventCreate}
+              icon={SecurityIcon}
+              recordRepresentation={(record) => `${record.eventType} - ${record.id}`}
+            />
     
-    {/* MITRE ATT&CK Techniques Resource - Available in CastellanProFree */}
-    <Resource
-      name="mitre-techniques"
-      list={MitreTechniquesList}
-      show={MitreTechniquesShow}
-      icon={MitreIcon}
-      recordRepresentation={(record) => `${record.techniqueId} - ${record.name}`}
-    />
+            {/* MITRE ATT&CK Techniques Resource - Available in CastellanProFree */}
+            <Resource
+              name="mitre-techniques"
+              list={MitreTechniquesList}
+              show={MitreTechniquesShow}
+              icon={MitreIcon}
+              recordRepresentation={(record) => `${record.techniqueId} - ${record.name}`}
+            />
     
-    {/* YARA Rules Resource - Available in CastellanProFree */}
-    <Resource
-      name="yara-rules"
-      list={YaraRulesList}
-      show={YaraRulesShow}
-      create={YaraRulesCreate}
-      edit={YaraRulesEdit}
-      icon={YaraRulesIcon}
-      recordRepresentation={(record) => `${record.name} - ${record.category}`}
-    />
+            {/* YARA Rules Resource - Available in CastellanProFree */}
+            <Resource
+              name="yara-rules"
+              list={YaraRulesList}
+              show={YaraRulesShow}
+              create={YaraRulesCreate}
+              edit={YaraRulesEdit}
+              icon={YaraRulesIcon}
+              recordRepresentation={(record) => `${record.name} - ${record.category}`}
+            />
     
-    {/* YARA Matches Resource - Available in CastellanProFree */}
-    <Resource
-      name="yara-matches"
-      list={YaraMatchesList}
-      show={YaraMatchesShow}
-      icon={YaraMatchesIcon}
-      recordRepresentation={(record) => `${record.ruleName} - ${record.targetFile}`}
-    />
+            {/* YARA Matches Resource - Available in CastellanProFree */}
+            <Resource
+              name="yara-matches"
+              list={YaraMatchesList}
+              show={YaraMatchesShow}
+              icon={YaraMatchesIcon}
+              recordRepresentation={(record) => `${record.ruleName} - ${record.targetFile}`}
+            />
     
-    {/* Timeline Resource - Available in CastellanProFree */}
-    <Resource
-      name="timeline"
-      list={TimelineList}
-      icon={TimelineIcon}
-      recordRepresentation={() => 'Security Event Timeline'}
-    />
+            {/* Timeline Resource - Available in CastellanProFree */}
+            <Resource
+              name="timeline"
+              list={TimelineList}
+              icon={TimelineIcon}
+              recordRepresentation={() => 'Security Event Timeline'}
+            />
     
-    {/* Compliance Reports Resource - Now Available */}
-    <Resource
-      name="compliance-reports"
-      list={ComplianceReportList}
-      show={ComplianceReportShow}
-      create={ComplianceReportCreate}
-      icon={ComplianceIcon}
-      recordRepresentation={(record) => `${record.framework} - ${record.reportType}`}
-    />
+            {/* Compliance Reports Resource - Now Available */}
+            <Resource
+              name="compliance-reports"
+              list={ComplianceReportList}
+              show={ComplianceReportShow}
+              create={ComplianceReportCreate}
+              icon={ComplianceIcon}
+              recordRepresentation={(record) => `${record.framework} - ${record.reportType}`}
+            />
     
-    {/* System Status Resource - Available in CastellanProFree */}
-    <Resource
-      name="system-status"
-      list={SystemStatusList}
-      show={SystemStatusShow}
-      icon={SystemIcon}
-      recordRepresentation={(record) => `${record.component} - ${record.status}`}
-    />
+            {/* System Status Resource - Available in CastellanProFree */}
+            <Resource
+              name="system-status"
+              list={SystemStatusList}
+              show={SystemStatusShow}
+              icon={SystemIcon}
+              recordRepresentation={(record) => `${record.component} - ${record.status}`}
+            />
     
-    {/* Threat Scanner Resource - Now Available */}
-    <Resource
-      name="threat-scanner"
-      list={ThreatScannerList}
-      show={ThreatScannerShow}
-      icon={ThreatScannerIcon}
-      recordRepresentation={(record) => `${record.scanType} - ${record.id}`}
-    />
+            {/* Threat Scanner Resource - Now Available */}
+            <Resource
+              name="threat-scanner"
+              list={ThreatScannerList}
+              show={ThreatScannerShow}
+              icon={ThreatScannerIcon}
+              recordRepresentation={(record) => `${record.scanType} - ${record.id}`}
+            />
     
-    {/* Notification Settings Resource - Available in CastellanProFree */}
-    <Resource
-      name="notification-settings"
-      list={NotificationSettingsList}
-      show={NotificationSettingsShow}
-      create={NotificationSettingsCreate}
-      edit={NotificationSettingsEdit}
-      icon={NotificationsIcon}
-      recordRepresentation={(record) => `${record.name || 'Notification Config'}`}
-    />
+            {/* Notification Settings Resource - Available in CastellanProFree */}
+            <Resource
+              name="notification-settings"
+              list={NotificationSettingsList}
+              show={NotificationSettingsShow}
+              create={NotificationSettingsCreate}
+              edit={NotificationSettingsEdit}
+              icon={NotificationsIcon}
+              recordRepresentation={(record) => `${record.name || 'Notification Config'}`}
+            />
     
-    {/* Configuration Resource - Available in CastellanProFree */}
-    <Resource
-      name="configuration"
-      list={ConfigurationList}
-      show={ConfigurationShow}
-      icon={ConfigurationIcon}
-      recordRepresentation={() => 'System Configuration'}
-    />
-  </Admin>
+            {/* Configuration Resource - Available in CastellanProFree */}
+            <Resource
+              name="configuration"
+              list={ConfigurationList}
+              show={ConfigurationShow}
+              icon={ConfigurationIcon}
+              recordRepresentation={() => 'System Configuration'}
+            />
+          </Admin>
+        </DashboardDataProvider>
+      </SignalRProvider>
     </Suspense>
   );
 };

@@ -117,7 +117,7 @@ public class ConnectionPoolIntegrationTests
         Assert.NotNull(metrics);
         Assert.Equal("Qdrant", metrics.PoolName);
         Assert.Equal("Vector Database", metrics.PoolType);
-        Assert.Equal(1, metrics.InstanceMetrics.Count);
+        Assert.Single(metrics.InstanceMetrics);
         Assert.True(metrics.Timestamp <= DateTimeOffset.UtcNow);
     }
 

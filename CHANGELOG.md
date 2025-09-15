@@ -5,6 +5,23 @@ All notable changes to the Castellan Security Platform will be documented in thi
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.0.2] - 2025-09-15
+
+### Fixed
+- **✅ SignalR Connection Persistence**: Resolved critical issue where real-time connection disconnected on page navigation
+  - **Root Cause**: SignalR connection was component-scoped in Dashboard, got destroyed on React Admin page changes
+  - **Solution**: Implemented global SignalR context provider at application level
+  - **Impact**: Real-time updates now persist seamlessly across all menu navigation
+  - **Files Updated**: `SignalRContext.tsx` (new), `App.tsx`, `Dashboard.tsx`, `RealtimeSystemMetrics.tsx`, `NotificationSystem.tsx`
+
+### Added
+- **Global SignalR Context**: New context provider for persistent real-time connections
+- **Navigation Stability**: Users can now switch between Security Events, System Status, and other pages without losing live updates
+
+### Documentation
+- Updated `SIGNALR_REALTIME_INTEGRATION.md` with new context-based architecture
+- Added troubleshooting section for navigation-related connection issues
+
 ## [2.0.1] - 2025-09-09
 
 ### Added

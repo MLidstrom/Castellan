@@ -186,16 +186,17 @@ export const authProvider: AuthProvider = {
   // Check authentication status
   checkAuth: async () => {
     const token = TokenManager.getToken();
-    
+
     if (!token) {
-      return Promise.reject(new Error('No token found'));
+      // Silently reject without error message for login page
+      return Promise.reject();
     }
 
     // Try to refresh token if needed
     const tokenValid = await TokenManager.refreshTokenIfNeeded();
-    
+
     if (!tokenValid) {
-      return Promise.reject(new Error('Token expired and refresh failed'));
+      return Promise.reject(new Error('Session expired'));
     }
 
     return Promise.resolve();
@@ -204,18 +205,19 @@ export const authProvider: AuthProvider = {
   // Check error for authentication issues
   checkError: (error) => {
     const status = error.status;
-    
+
     if (status === 401 || status === 403) {
       TokenManager.clearTokenData();
-      return Promise.reject(new Error('Authentication required'));
+      // Silently redirect to login without error message
+      return Promise.reject();
     }
-    
+
     // Check for network errors that might indicate server issues
     if (status === 0 || !status) {
       // Don't logout on network errors, just show error
       return Promise.resolve();
     }
-    
+
     return Promise.resolve();
   },
 

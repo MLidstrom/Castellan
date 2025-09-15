@@ -7,7 +7,7 @@ namespace Castellan.Worker.Controllers;
 
 [ApiController]
 [Route("api/system-status")]
-// [Authorize] - Temporarily disabled for testing
+[Authorize]
 public class SystemStatusController : ControllerBase
 {
     private readonly ILogger<SystemStatusController> _logger;
