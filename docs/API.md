@@ -1,8 +1,8 @@
 # Castellan API Documentation
 
-**Status**: ✅ **Production Ready**  
-**Last Updated**: September 14, 2025
-**API Version**: v1
+**Status**: ✅ **Production Ready**
+**Last Updated**: September 16, 2025
+**API Version**: v1.1
 
 ## 🎯 Overview
 
@@ -1195,6 +1195,278 @@ Content-Type: application/json
 GET /api/reports/{reportId}/export?format=pdf
 ```
 
+## 🔍 Advanced Search APIs
+
+### Search History API
+
+#### Get Search History
+```http
+GET /api/search-history?limit=20
+```
+
+**Query Parameters:**
+- `limit` - Maximum number of history entries to return (default: 20, max: 100)
+
+**Response:**
+```json
+{
+  "data": [
+    {
+      "id": "hist-uuid-123",
+      "searchCriteria": {
+        "fullTextQuery": "powershell suspicious",
+        "riskLevels": ["high", "critical"],
+        "startDate": "2025-09-10T00:00:00Z",
+        "endDate": "2025-09-16T23:59:59Z",
+        "mitreTechniques": ["T1059.001"]
+      },
+      "resultCount": 45,
+      "executionTimeMs": 234,
+      "timestamp": "2025-09-15T10:30:00Z",
+      "userId": "user-123"
+    }
+  ]
+}
+```
+
+#### Record Search in History
+```http
+POST /api/search-history
+Content-Type: application/json
+
+{
+  "searchCriteria": {
+    "fullTextQuery": "authentication failure",
+    "riskLevels": ["high"],
+    "eventTypes": ["Authentication"]
+  },
+  "resultCount": 12,
+  "executionTimeMs": 156
+}
+```
+
+#### Clear Search History
+```http
+DELETE /api/search-history
+```
+
+### Saved Searches API
+
+#### Get Saved Searches
+```http
+GET /api/saved-searches
+```
+
+**Response:**
+```json
+{
+  "data": [
+    {
+      "id": "search-uuid-456",
+      "name": "Critical Security Events",
+      "description": "High-priority security events requiring immediate attention",
+      "searchCriteria": {
+        "riskLevels": ["critical"],
+        "eventTypes": ["Authentication", "ProcessCreation"],
+        "mitreTechniques": ["T1110", "T1059"]
+      },
+      "isShared": false,
+      "createdAt": "2025-09-10T14:00:00Z",
+      "updatedAt": "2025-09-15T09:00:00Z",
+      "lastUsed": "2025-09-15T16:30:00Z",
+      "useCount": 23,
+      "userId": "user-123"
+    }
+  ]
+}
+```
+
+#### Create Saved Search
+```http
+POST /api/saved-searches
+Content-Type: application/json
+
+{
+  "name": "PowerShell Threats",
+  "description": "Suspicious PowerShell activity detection",
+  "searchCriteria": {
+    "fullTextQuery": "powershell",
+    "riskLevels": ["high", "critical"],
+    "mitreTechniques": ["T1059.001"],
+    "minConfidence": 70
+  },
+  "isShared": false
+}
+```
+
+#### Get Saved Search Details
+```http
+GET /api/saved-searches/{searchId}
+```
+
+#### Update Saved Search
+```http
+PUT /api/saved-searches/{searchId}
+Content-Type: application/json
+
+{
+  "name": "Updated Search Name",
+  "description": "Updated description",
+  "searchCriteria": {
+    "fullTextQuery": "updated query",
+    "riskLevels": ["critical"]
+  }
+}
+```
+
+#### Delete Saved Search
+```http
+DELETE /api/saved-searches/{searchId}
+```
+
+#### Execute Saved Search
+```http
+POST /api/saved-searches/{searchId}/execute
+Content-Type: application/json
+
+{
+  "page": 1,
+  "limit": 50
+}
+```
+
+**Response:**
+```json
+{
+  "searchResults": {
+    "data": [
+      {
+        "id": 1,
+        "eventType": "ProcessCreation",
+        "riskLevel": "high",
+        "summary": "Suspicious PowerShell execution detected"
+      }
+    ],
+    "total": 45,
+    "page": 1,
+    "perPage": 50
+  },
+  "executionTime": 187,
+  "searchCriteria": {
+    "fullTextQuery": "powershell",
+    "riskLevels": ["high", "critical"]
+  }
+}
+```
+
+## 🌐 IP Enrichment Configuration API
+
+### Get IP Enrichment Configuration
+```http
+GET /api/settings/ip-enrichment
+```
+
+**Response:**
+```json
+{
+  "data": {
+    "id": "ip-enrichment",
+    "maxMind": {
+      "enabled": true,
+      "cityDbPath": "data/GeoLite2-City.mmdb",
+      "asnDbPath": "data/GeoLite2-ASN.mmdb",
+      "countryDbPath": "data/GeoLite2-Country.mmdb",
+      "accountId": "your-account-id",
+      "licenseKey": "your-license-key",
+      "autoDownload": true,
+      "lastUpdate": "2025-09-15T02:00:00Z",
+      "nextUpdate": "2025-09-22T02:00:00Z"
+    },
+    "ipInfo": {
+      "enabled": false,
+      "apiKey": "",
+      "rateLimitPerMinute": 1000,
+      "cacheEnabled": true,
+      "cacheTtlMinutes": 1440
+    }
+  }
+}
+```
+
+### Update IP Enrichment Configuration
+```http
+PUT /api/settings/ip-enrichment
+Content-Type: application/json
+
+{
+  "maxMind": {
+    "enabled": true,
+    "accountId": "your-maxmind-account-id",
+    "licenseKey": "your-maxmind-license-key",
+    "autoDownload": true
+  },
+  "ipInfo": {
+    "enabled": true,
+    "apiKey": "your-ipinfo-api-key",
+    "rateLimitPerMinute": 1000,
+    "cacheEnabled": true,
+    "cacheTtlMinutes": 1440
+  }
+}
+```
+
+### Download MaxMind Databases
+```http
+POST /api/settings/ip-enrichment/download-databases
+Content-Type: application/json
+
+{
+  "accountId": "your-maxmind-account-id",
+  "licenseKey": "your-maxmind-license-key"
+}
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "message": "MaxMind databases downloaded successfully",
+  "downloadedDatabases": [
+    {
+      "name": "GeoLite2-City",
+      "size": "68.5MB",
+      "lastModified": "2025-09-15T02:00:00Z",
+      "path": "data/GeoLite2-City.mmdb"
+    },
+    {
+      "name": "GeoLite2-ASN",
+      "size": "15.2MB",
+      "lastModified": "2025-09-15T02:00:00Z",
+      "path": "data/GeoLite2-ASN.mmdb"
+    },
+    {
+      "name": "GeoLite2-Country",
+      "size": "6.8MB",
+      "lastModified": "2025-09-15T02:00:00Z",
+      "path": "data/GeoLite2-Country.mmdb"
+    }
+  ],
+  "nextScheduledUpdate": "2025-09-22T02:00:00Z"
+}
+```
+
+**Error Response:**
+```json
+{
+  "success": false,
+  "message": "Failed to download databases",
+  "errors": [
+    "Authentication failed - check Account ID and License Key",
+    "Network timeout occurred"
+  ]
+}
+```
+
 ## 🔧 Threat Intelligence Configuration API
 
 ### Get Threat Intelligence Configuration
@@ -1445,22 +1717,27 @@ X-RateLimit-Reset: 1693958400
 ```
 
 ### Rate Limits by Endpoint
-|| Endpoint Category | Requests per Minute |
-||------------------|-------------------|
-|| Authentication | 60 |
-|| Security Events | 1000 |
-|| AI Analysis | 100 |
-|| YARA Rules | 200 |
-|| YARA Matches | 300 |
-|| YARA Scanning | 50 |
-|| YARA Testing | 50 |
-|| Timeline Data | 500 |
-|| Timeline Stats | 200 |
-|| Export Operations | 100 |
-|| Export Downloads | 50 |
-|| Vector Search | 500 |
-|| System Status | 200 |
-|| Configuration | 30 |
+| Endpoint Category | Requests per Minute |
+|------------------|-------------------|
+| Authentication | 60 |
+| Security Events | 1000 |
+| Advanced Search APIs | 500 |
+| Search History | 200 |
+| Saved Searches | 200 |
+| AI Analysis | 100 |
+| YARA Rules | 200 |
+| YARA Matches | 300 |
+| YARA Scanning | 50 |
+| YARA Testing | 50 |
+| Timeline Data | 500 |
+| Timeline Stats | 200 |
+| Export Operations | 100 |
+| Export Downloads | 50 |
+| Vector Search | 500 |
+| System Status | 200 |
+| Configuration | 30 |
+| IP Enrichment Config | 50 |
+| Threat Intelligence Config | 50 |
 
 ## 📞 Support and Integration
 

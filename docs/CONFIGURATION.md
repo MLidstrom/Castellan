@@ -1,7 +1,7 @@
 # Castellan Configuration Guide
 
 **Status**: ✅ **Production Ready**  
-**Last Updated**: September 6, 2025
+**Last Updated**: September 16, 2025
 
 ## 🎯 Overview
 
@@ -48,28 +48,28 @@ dotnet run --AUTHENTICATION__JWT__SECRETKEY="your-secret-key"
 ```json
 {
   "Authentication": {
-    "JWT": {
-      "SecretKey": "your-secure-secret-key-minimum-64-characters",
-      "Issuer": "Castellan",
-      "Audience": "CastellanUsers",
-      "TokenExpirationHours": 1,
-      "RefreshTokenExpirationDays": 7,
-      "EnableTokenBlacklist": true
+    "Jwt": {
+      "SecretKey": "",
+      "Issuer": "castellan-security",
+      "Audience": "castellan-admin",
+      "ExpirationHours": 24
     },
     "AdminUser": {
-      "Username": "admin"
-    },
-    "PasswordPolicy": {
-      "MinimumLength": 12,
-      "RequireUppercase": true,
-      "RequireLowercase": true,
-      "RequireDigits": true,
-      "RequireSpecialCharacters": true,
-      "ForbidCommonPasswords": true
+      "Username": "",
+      "Password": "",
+      "Email": "admin@castellan.security",
+      "FirstName": "Castellan",
+      "LastName": "Administrator"
     }
   }
 }
 ```
+
+**Important Security Notes:**
+- **SecretKey**: Must be set via environment variable `AUTHENTICATION__JWT__SECRETKEY` (minimum 64 characters)
+- **Username**: Set via environment variable `AUTHENTICATION__ADMINUSER__USERNAME`
+- **Password**: Set via environment variable `AUTHENTICATION__ADMINUSER__PASSWORD`
+- Never store credentials directly in configuration files
 
 Do not store AdminUser password in files. Set it via environment variable:
 - PowerShell: `$env:AUTHENTICATION__ADMINUSER__PASSWORD = "<secure-password>"`
@@ -82,8 +82,7 @@ $env:AUTHENTICATION__ADMINUSER__USERNAME = "admin"
 $env:AUTHENTICATION__ADMINUSER__PASSWORD = "your-secure-password"
 
 # Optional JWT settings
-$env:AUTHENTICATION__JWT__TOKENEXPIRATIONHOURS = "2"
-$env:AUTHENTICATION__JWT__REFRESHTOKENEXPIRATIONDAYS = "30"
+$env:AUTHENTICATION__JWT__EXPIRATIONHOURS = "24"
 ```
 
 ## 🧠 AI Provider Configuration
@@ -93,18 +92,16 @@ $env:AUTHENTICATION__JWT__REFRESHTOKENEXPIRATIONDAYS = "30"
 {
   "LLM": {
     "Provider": "Ollama",
-    "BaseUrl": "http://localhost:11434",
+    "Endpoint": "http://localhost:11434",
     "Model": "llama3.1:8b-instruct-q8_0",
-    "Temperature": 0.1,
-    "MaxTokens": 2048,
-    "RequestTimeout": "00:05:00"
+    "OpenAIModel": "gpt-4o-mini",
+    "OpenAIKey": ""
   },
   "Embeddings": {
-    "Provider": "Ollama", 
-    "BaseUrl": "http://localhost:11434",
+    "Provider": "Ollama",
+    "Endpoint": "http://localhost:11434",
     "Model": "nomic-embed-text",
-    "Dimensions": 768,
-    "RequestTimeout": "00:02:00"
+    "OpenAIKey": ""
   }
 }
 ```
@@ -114,29 +111,29 @@ $env:AUTHENTICATION__JWT__REFRESHTOKENEXPIRATIONDAYS = "30"
 {
   "LLM": {
     "Provider": "OpenAI",
-    "ApiKey": "${OPENAI_API_KEY}",
-    "Model": "gpt-4",
-    "Temperature": 0.1,
-    "MaxTokens": 2048,
-    "RequestTimeout": "00:03:00"
+    "Endpoint": "https://api.openai.com",
+    "Model": "gpt-4o-mini",
+    "OpenAIModel": "gpt-4o-mini",
+    "OpenAIKey": ""
   },
   "Embeddings": {
     "Provider": "OpenAI",
-    "ApiKey": "${OPENAI_API_KEY}",
+    "Endpoint": "https://api.openai.com",
     "Model": "text-embedding-3-small",
-    "Dimensions": 1536,
-    "RequestTimeout": "00:01:00"
+    "OpenAIKey": ""
   }
 }
 ```
+
+**Security Note**: Set OpenAI API key via environment variable `OPENAI_API_KEY`
 
 ### Environment Variables
 ```powershell
 # Ollama settings
 $env:LLM__PROVIDER = "Ollama"
 $env:EMBEDDINGS__PROVIDER = "Ollama"
-$env:LLM__BASEURL = "http://localhost:11434"
-$env:EMBEDDINGS__BASEURL = "http://localhost:11434"
+$env:LLM__ENDPOINT = "http://localhost:11434"
+$env:EMBEDDINGS__ENDPOINT = "http://localhost:11434"
 
 # OpenAI settings (alternative)
 $env:OPENAI_API_KEY = "your-openai-api-key"
@@ -150,14 +147,14 @@ $env:EMBEDDINGS__PROVIDER = "OpenAI"
 ```json
 {
   "Qdrant": {
+    "UseCloud": false,
     "Host": "localhost",
     "Port": 6333,
-    "UseHttps": false,
-    "ApiKey": null,
-    "CollectionName": "security_events",
-    "Timeout": "00:00:30",
-    "RetryAttempts": 3,
-    "RetryDelay": "00:00:02"
+    "Https": false,
+    "ApiKey": "",
+    "Collection": "log_events",
+    "VectorSize": 768,
+    "Distance": "Cosine"
   }
 }
 ```
@@ -166,21 +163,27 @@ $env:EMBEDDINGS__PROVIDER = "OpenAI"
 ```json
 {
   "Qdrant": {
+    "UseCloud": true,
     "Host": "your-cluster.qdrant.tech",
     "Port": 6333,
-    "UseHttps": true,
-    "ApiKey": "${QDRANT_API_KEY}",
-    "CollectionName": "security_events"
+    "Https": true,
+    "ApiKey": "",
+    "Collection": "log_events",
+    "VectorSize": 768,
+    "Distance": "Cosine"
   }
 }
 ```
+
+**Security Note**: Set Qdrant API key via environment variable `QDRANT__APIKEY`
 
 ### Environment Variables
 ```powershell
 $env:QDRANT__HOST = "localhost"
 $env:QDRANT__PORT = "6333"
-$env:QDRANT__USEHTTPS = "false"
+$env:QDRANT__HTTPS = "false"
 $env:QDRANT__APIKEY = "your-qdrant-api-key"  # For Qdrant Cloud
+$env:QDRANT__USECLOUD = "false"
 ```
 
 ## 🔗 Connection Pool Configuration
@@ -189,26 +192,53 @@ $env:QDRANT__APIKEY = "your-qdrant-api-key"  # For Qdrant Cloud
 ```json
 {
   "ConnectionPools": {
-    "Qdrant": {
+    "QdrantPool": {
       "Instances": [
         {
           "Host": "localhost",
           "Port": 6333,
           "Weight": 100,
-          "UseHttps": false
-        },
-        {
-          "Host": "qdrant-replica",
-          "Port": 6333,
-          "Weight": 80,
-          "UseHttps": false
+          "UseHttps": false,
+          "ApiKey": ""
         }
       ],
-      "MaxConnectionsPerInstance": 10,
+      "MaxConnectionsPerInstance": 50,
+      "HealthCheckInterval": "00:00:30",
       "ConnectionTimeout": "00:00:10",
       "RequestTimeout": "00:01:00",
       "EnableFailover": true,
       "MinHealthyInstances": 1
+    },
+    "HttpClientPools": {
+      "Pools": {
+        "Default": {
+          "MaxConnections": 100,
+          "ConnectionTimeout": "00:00:30",
+          "RequestTimeout": "00:02:00",
+          "MaxRetries": 3,
+          "CircuitBreakerThreshold": 5,
+          "CircuitBreakerTimeout": "00:01:00",
+          "EnableCompression": true
+        },
+        "LLM": {
+          "MaxConnections": 20,
+          "ConnectionTimeout": "00:01:00",
+          "RequestTimeout": "00:05:00",
+          "MaxRetries": 2,
+          "CircuitBreakerThreshold": 3,
+          "CircuitBreakerTimeout": "00:02:00"
+        },
+        "IPEnrichment": {
+          "MaxConnections": 50,
+          "ConnectionTimeout": "00:00:30",
+          "RequestTimeout": "00:01:00",
+          "MaxRetries": 3,
+          "CircuitBreakerThreshold": 5,
+          "CircuitBreakerTimeout": "00:01:00"
+        }
+      },
+      "DefaultPool": "Default",
+      "EnableAutoPoolCreation": true
     },
     "HealthMonitoring": {
       "Enabled": true,
@@ -217,12 +247,38 @@ $env:QDRANT__APIKEY = "your-qdrant-api-key"  # For Qdrant Cloud
       "ConsecutiveFailureThreshold": 3,
       "ConsecutiveSuccessThreshold": 2,
       "EnableAutoRecovery": true,
-      "RecoveryInterval": "00:01:00"
+      "RecoveryInterval": "00:01:00",
+      "HealthHistoryRetention": "24:00:00"
     },
     "LoadBalancing": {
       "Algorithm": "WeightedRoundRobin",
       "EnableHealthAwareRouting": true,
-      "PerformanceWindow": "00:05:00"
+      "PerformanceWindow": "00:05:00",
+      "WeightAdjustment": {
+        "ResponseTimeFactor": 0.4,
+        "ErrorRateFactor": 0.3,
+        "ConcurrencyFactor": 0.3,
+        "MinimumWeightMultiplier": 0.1,
+        "MaximumWeightMultiplier": 3.0
+      },
+      "StickySession": {
+        "Enabled": false,
+        "SessionDuration": "00:30:00",
+        "MaxSessions": 10000
+      }
+    },
+    "GlobalTimeouts": {
+      "DefaultConnectionTimeout": "00:00:30",
+      "DefaultRequestTimeout": "00:02:00",
+      "MaxTimeout": "00:10:00",
+      "DnsTimeout": "00:00:05"
+    },
+    "Metrics": {
+      "Enabled": true,
+      "CollectionInterval": "00:00:10",
+      "RetentionPeriod": "24:00:00",
+      "EnableDetailedMetrics": false,
+      "MaxSamples": 10000
     }
   }
 }
@@ -256,31 +312,69 @@ $env:CONNECTIONPOOLS__LOADBALANCING__ENABLEHEALTHAWAREROUTING = "true"
     "MaxConcurrency": 4,
     "ParallelOperationTimeoutMs": 30000,
     "EnableParallelVectorOperations": true,
-    "EnableVectorBatching": true,
-    "VectorBatchSize": 50,
-    "VectorBatchTimeoutMs": 5000,
-    "VectorBatchProcessingTimeoutMs": 30000,
+    "BatchSize": 100,
+    "ProcessingIntervalMs": 1000,
+    "RetryAttempts": 3,
+    "RetryDelayMs": 1000,
     "EnableSemaphoreThrottling": true,
     "MaxConcurrentTasks": 8,
     "SemaphoreTimeoutMs": 15000,
-    "MemoryHighWaterMarkMB": 1024,
+    "SkipOnThrottleTimeout": false,
+    "EnableAdaptiveThrottling": false,
+    "CpuThrottleThreshold": 80,
     "EventHistoryRetentionMinutes": 60,
-    "EnableDetailedMetrics": true
+    "MaxEventsPerCorrelationKey": 1000,
+    "MemoryHighWaterMarkMB": 1024,
+    "MemoryCleanupIntervalMinutes": 10,
+    "EnableAggressiveGarbageCollection": false,
+    "EnableMemoryPressureMonitoring": true,
+    "MaxQueueDepth": 1000,
+    "EnableQueueBackPressure": true,
+    "DropOldestOnQueueFull": false,
+    "EnableDetailedMetrics": true,
+    "MetricsIntervalMs": 30000,
+    "EnablePerformanceAlerts": true,
+    "EnableVectorBatching": true,
+    "VectorBatchSize": 100,
+    "VectorBatchTimeoutMs": 5000,
+    "VectorBatchProcessingTimeoutMs": 30000
   }
 }
 ```
 
-### Caching Configuration
+### Cache Configuration
 ```json
 {
-  "Caching": {
+  "Cache": {
     "Enabled": true,
-    "MaxCacheSizeMB": 512,
-    "DefaultTTLMinutes": 60,
-    "SimilarityThreshold": 0.95,
-    "EnableLRUEviction": true,
-    "MemoryPressureThreshold": 0.8,
-    "CleanupIntervalMinutes": 15
+    "Provider": "Memory",
+    "DefaultTtlMinutes": 30,
+    "MaxMemoryMb": 512,
+    "EnableMetrics": true,
+    "Embedding": {
+      "Enabled": true,
+      "MaxEntries": 5000,
+      "TtlMinutes": 60,
+      "SimilarityThreshold": 0.95
+    },
+    "IpEnrichment": {
+      "Enabled": true,
+      "MaxEntries": 10000,
+      "TtlMinutes": 240
+    },
+    "LlmResponse": {
+      "Enabled": true,
+      "MaxEntries": 2000,
+      "TtlMinutes": 30,
+      "HighConfidenceTtlMinutes": 60,
+      "LowConfidenceTtlMinutes": 10
+    },
+    "VectorSearch": {
+      "Enabled": true,
+      "MaxEntries": 3000,
+      "TtlMinutes": 15,
+      "SimilarityThreshold": 0.90
+    }
   }
 }
 ```
@@ -302,43 +396,70 @@ $env:CACHING__DEFAULTTTLMINUTES = "60"
 $env:CACHING__SIMILARITYTHRESHOLD = "0.95"
 ```
 
+## 📥 Event Ingestion Configuration
+
+### Windows Event Log Collection
+```json
+{
+  "Ingest": {
+    "Evtx": {
+      "Channels": ["Security", "System"],
+      "XPath": "*[System[TimeCreated[timediff(@SystemTime) <= 30000]]]",
+      "PollSeconds": 5
+    }
+  }
+}
+```
+
+### Environment Variables
+```powershell
+$env:INGEST__EVTX__CHANNELS__0 = "Security"
+$env:INGEST__EVTX__CHANNELS__1 = "System"
+$env:INGEST__EVTX__POLLSECONDS = "5"
+```
+
+## 🚨 Alert Configuration
+
+### Alert Settings
+```json
+{
+  "Alerts": {
+    "MinRiskLevel": "high",
+    "EnableConsoleAlerts": true,
+    "EnableFileLogging": true
+  }
+}
+```
+
+### Environment Variables
+```powershell
+$env:ALERTS__MINRISKLEVEL = "high"
+$env:ALERTS__ENABLECONSOLEALERTS = "true"
+$env:ALERTS__ENABLEFILELOGGING = "true"
+```
+
 ## 🔔 Notification Configuration
 
 ### Desktop Notifications
 ```json
 {
   "Notifications": {
-    "Desktop": {
-      "Enabled": true,
-      "MinRiskLevel": "medium",
-      "ShowIPEnrichment": true,
-      "MaxNotificationsPerMinute": 10
-    }
+    "EnableDesktopNotifications": true,
+    "NotificationLevel": "high",
+    "NotificationTimeout": 5000,
+    "ShowEventDetails": true,
+    "ShowIPEnrichment": true
   }
 }
 ```
 
-### Teams/Slack Integration
-```json
-{
-  "Notifications": {
-    "Webhooks": [
-      {
-        "Name": "Security Team Channel",
-        "Url": "https://outlook.office.com/webhook/...",
-        "Platform": "teams",
-        "Enabled": true,
-        "SeverityFilter": ["critical", "high"],
-        "RateLimiting": {
-          "Critical": "00:00:00",
-          "High": "00:05:00",
-          "Medium": "00:15:00",
-          "Low": "01:00:00"
-        }
-      }
-    ]
-  }
-}
+### Environment Variables
+```powershell
+$env:NOTIFICATIONS__ENABLEDESKTOPNOTIFICATIONS = "true"
+$env:NOTIFICATIONS__NOTIFICATIONLEVEL = "high"
+$env:NOTIFICATIONS__NOTIFICATIONTIMEOUT = "5000"
+$env:NOTIFICATIONS__SHOWEVENTDETAILS = "true"
+$env:NOTIFICATIONS__SHOWIPENRICHMENT = "true"
 ```
 
 ## 📊 Logging Configuration
@@ -490,25 +611,157 @@ $env:CACHING__SIMILARITYTHRESHOLD = "0.95"
 ```json
 {
   "IPEnrichment": {
-    "MaxMind": {
-      "Enabled": true,
-      "DatabasePath": "data/GeoLite2-City.mmdb",
-      "ASNDatabasePath": "data/GeoLite2-ASN.mmdb",
-      "CountryDatabasePath": "data/GeoLite2-Country.mmdb",
-      "CacheSize": 10000,
-      "CacheTTLMinutes": 1440
+    "Enabled": true,
+    "Provider": "MaxMind",
+    "MaxMindCityDbPath": "data/GeoLite2-City.mmdb",
+    "MaxMindASNDbPath": "data/GeoLite2-ASN.mmdb",
+    "MaxMindCountryDbPath": "data/GeoLite2-Country.mmdb",
+    "CacheMinutes": 60,
+    "MaxCacheEntries": 10000,
+    "TimeoutMs": 5000,
+    "EnrichPrivateIPs": false,
+    "HighRiskCountries": ["CN", "RU", "KP", "IR", "SY", "BY"],
+    "HighRiskASNs": [],
+    "EnableDebugLogging": false
+  }
+}
+```
+
+### MaxMind Database Download Setup
+To enable automatic MaxMind GeoLite2 database downloads:
+
+1. **Sign up for MaxMind GeoLite2**: Visit [MaxMind's website](https://www.maxmind.com/en/geolite2/signup) and create a free account
+2. **Generate License Key**: In your MaxMind account portal, generate a license key for GeoLite2 databases
+3. **Configure Environment Variables**:
+```powershell
+# Set MaxMind credentials (never store in config files)
+$env:MAXMIND_ACCOUNT_ID = "your-account-id"
+$env:MAXMIND_LICENSE_KEY = "your-license-key"
+```
+
+4. **Manual Download**: Use the Configuration UI at `http://localhost:8080/#/configuration` → IP ENRICHMENT tab → "Download Databases Now" button
+5. **Automatic Updates**: Databases automatically update weekly (Mondays at 2 AM) when configured
+
+**Supported Databases**:
+- **GeoLite2-City**: City-level IP geolocation
+- **GeoLite2-Country**: Country-level IP geolocation
+- **GeoLite2-ASN**: Autonomous System Number data
+
+**Environment Variables**:
+```powershell
+$env:IPENRICHMENT__MAXMIND__ENABLED = "true"
+$env:IPENRICHMENT__MAXMIND__ACCOUNTID = "your-account-id"
+$env:IPENRICHMENT__MAXMIND__LICENSEKEY = "your-license-key"
+$env:IPENRICHMENT__MAXMIND__AUTODOWNLOAD = "true"
+```
+
+## 🗃️ Security Event Retention Configuration
+
+### Event Retention Settings
+```json
+{
+  "SecurityEventRetention": {
+    "RetentionDays": 30,
+    "RetentionHours": 0,
+    "MaxEventsInMemory": 10000,
+    "CleanupIntervalMinutes": 60,
+    "EnableTieredStorage": false,
+    "HotStorageDays": 7,
+    "WarmStorageDays": 30,
+    "EnableCompression": true,
+    "CompressionThresholdDays": 7
+  }
+}
+```
+
+### Environment Variables
+```powershell
+$env:SECURITYEVENTRETENTION__RETENTIONDAYS = "30"
+$env:SECURITYEVENTRETENTION__MAXEVENTSINMEMORY = "10000"
+$env:SECURITYEVENTRETENTION__CLEANUPINTERVALMINUTES = "60"
+$env:SECURITYEVENTRETENTION__ENABLETIEREDSTORAGE = "false"
+$env:SECURITYEVENTRETENTION__ENABLECOMPRESSION = "true"
+```
+
+## 🛡️ YARA Scanning Configuration
+
+### YARA Detection Settings
+```json
+{
+  "YaraScanning": {
+    "Enabled": true,
+    "MaxFileSizeMB": 100,
+    "ScanTimeoutSeconds": 30,
+    "MaxConcurrentScans": 4,
+    "AutoScanSecurityEvents": true,
+    "MinThreatLevel": "Medium",
+    "Compilation": {
+      "EnableFastMatching": true,
+      "MaxMemoryMB": 256,
+      "PrecompileOnStartup": true,
+      "RefreshIntervalMinutes": 1440
     },
-    "RiskAssessment": {
-      "Enabled": true,
-      "HighRiskCountries": ["CN", "RU", "KP"],
-      "HighRiskASNs": [4134, 4837],
-      "TorExitNodeDetection": true
+    "Performance": {
+      "EnableMetrics": true,
+      "SlowScanThresholdSeconds": 10,
+      "ThreadsPerCore": 1,
+      "StreamBufferSizeKB": 64
     }
   }
 }
 ```
 
+### Environment Variables
+```powershell
+$env:YARASCANNING__ENABLED = "true"
+$env:YARASCANNING__MAXFILESIZEMB = "100"
+$env:YARASCANNING__SCANTIMEOUTSECONDS = "30"
+$env:YARASCANNING__MAXCONCURRENTSCANS = "4"
+$env:YARASCANNING__AUTOSCANSECURITYEVENTS = "true"
+$env:YARASCANNING__MINTHREATLEVEL = "Medium"
+```
+
+## 🎯 MITRE ATT&CK Configuration
+
+### MITRE Integration Settings
+```json
+{
+  "Mitre": {
+    "AutoImportOnStartup": true,
+    "RefreshIntervalDays": 1
+  }
+}
+```
+
+### Environment Variables
+```powershell
+$env:MITRE__AUTOIMPORTONSTARTUP = "true"
+$env:MITRE__REFRESHINTERVALDAYS = "1"
+```
+
 ## ⚙️ System Configuration
+
+### Startup Configuration
+```json
+{
+  "Startup": {
+    "AutoStart": {
+      "Enabled": true,
+      "Qdrant": true,
+      "ReactAdmin": true,
+      "SystemTray": true
+    }
+  }
+}
+```
+
+### Environment Variables
+```powershell
+$env:STARTUP__AUTOSTART__ENABLED = "true"
+$env:STARTUP__AUTOSTART__QDRANT = "true"
+$env:STARTUP__AUTOSTART__REACTADMIN = "true"
+$env:STARTUP__AUTOSTART__SYSTEMTRAY = "true"
+```
 
 ### Health Check Settings
 ```json

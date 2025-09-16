@@ -18,18 +18,22 @@
 - **Match History** - Complete audit trail with detailed forensic analysis
 - **Advanced Filtering** - Category-based organization with color-coded threat levels
 - **Tier 1 Threat Intelligence** - Fully operational VirusTotal, MalwareBazaar, and AlienVault OTX integration for enhanced malware detection
-- **IP Reputation & Geolocation** - MaxMind GeoLite2 databases for IP enrichment and threat correlation
+- **IP Reputation & Geolocation** - MaxMind GeoLite2 database integration with automated downloads, real IP geolocation, ASN data, and secure HTTP Basic Authentication
 
 ## 📊 **Monitoring & Analysis**
-- **Advanced Search & Filtering** - Comprehensive security event search system
-  - **Multi-Criteria Filtering** - Date ranges, risk levels, event types, MITRE ATT&CK techniques
+- **Advanced Search & Filtering** - Comprehensive security event search system with complete v0.5.0 implementation
+  - **Enhanced Search Interface** - Advanced search drawer with collapsible sections and intuitive controls
+  - **Multi-Criteria Filtering** - Date ranges, risk levels, event types, MITRE ATT&CK techniques, machines, users, sources
   - **Full-Text Search** - High-performance SQLite FTS5 with exact match and fuzzy search options
-  - **MITRE Technique Filtering** - 25+ common security techniques organized by tactic categories
-  - **Numeric Range Filters** - Confidence, correlation, burst, and anomaly score filtering
-  - **URL Synchronization** - Bookmarkable and shareable search states with persistent filters
-  - **Real-time Results** - Search summaries with performance metrics and result counts
-  - **Export Integration** - Direct CSV, JSON, XLSX export from filtered results
-  - **Professional UI** - Responsive drawer interface with loading states and error handling
+  - **MITRE Technique Filtering** - 25+ common security techniques organized by tactic categories with multi-select
+  - **Numeric Range Filters** - Confidence, correlation, burst, and anomaly score filtering with dual sliders
+  - **URL Synchronization** - Bookmarkable and shareable search states with persistent filters and real-time URL updates
+  - **Search History** - Recently used search queries with quick access and one-click reapplication
+  - **Saved Searches** - Bookmark frequently used search configurations with custom names and descriptions
+  - **Search Management** - Full CRUD operations for saved searches with backend persistence
+  - **Real-time Results** - Search summaries with performance metrics, result counts, and loading states
+  - **Export Integration** - Direct CSV, JSON, XLSX export from filtered results with applied search criteria
+  - **Professional UI** - Responsive Material-UI drawer interface with accordion sections and error handling
 - **Real-time System Monitoring** - Live system health, performance metrics, and threat intelligence status via SignalR
 - **Enhanced Performance Dashboard** - Full-stack monitoring with 7 API endpoints, real-time charts, and configurable alerts
 - **Threat Intelligence Health Dashboard** - Comprehensive service health monitoring for VirusTotal, MalwareBazaar, and OTX
@@ -59,11 +63,12 @@
   - **Notification Configuration** - Teams/Slack webhook integration under Configuration tab
 - **Configuration Management** - Centralized configuration system with tabbed interface
   - **Threat Intelligence Tab** - VirusTotal, MalwareBazaar, AlienVault OTX configuration panels
+  - **IP Enrichment Tab** - MaxMind GeoLite2 configuration with automated database downloads
   - **Notifications Tab** - Teams and Slack webhook configuration with notification type controls
-  - **Secure API Key Management** - Password-type fields with show/hide functionality
-  - **Real-time Validation** - Rate limits (1-1000/min), cache TTL (1-1440min) validation
-  - **Persistent Storage** - Backend API storage with comprehensive error handling
-  - **Security Compliance** - No plaintext passwords in repository, JWT authentication
+  - **Secure API Key Management** - Password-type fields with show/hide functionality for sensitive credentials
+  - **Real-time Validation** - Rate limits (1-1000/min), cache TTL (1-1440min) validation with immediate feedback
+  - **Persistent Storage** - Backend API storage with comprehensive error handling and secure credential storage
+  - **Security Compliance** - No plaintext passwords in repository, JWT authentication, environment variable support
 - **Data Export** - Comprehensive data export system
   - **Multiple Formats** - CSV, JSON, PDF export with configurable field selection
   - **Background Processing** - Memory-efficient streaming for large datasets
@@ -75,6 +80,20 @@
 - **WebSocket Integration** - Real-time scan progress, system health, and threat intelligence status
 - **Windows Native** - Optimized for Windows Event Log collection and analysis
 - **Local Deployment** - No cloud dependencies, runs entirely on your local infrastructure
+
+## 🔌 **Comprehensive REST API**
+- **Complete API Coverage** - 18+ controllers covering all system functionality
+- **Authentication API** - Login, refresh, logout, and token validation endpoints
+- **Security Events API** - Full CRUD operations with advanced search and filtering
+- **Advanced Search APIs** - Dedicated endpoints for search history and saved searches management
+- **System Monitoring APIs** - Performance metrics, system status, and health check endpoints
+- **Configuration APIs** - Threat intelligence, notifications, and IP enrichment configuration
+- **Export APIs** - Multi-format data export with background processing status
+- **Timeline API** - Historical analysis with heatmaps, statistics, and anomaly detection
+- **YARA Management APIs** - Complete malware detection rule and match management
+- **MITRE ATT&CK API** - 800+ technique browsing and security event mapping
+- **Threat Intelligence APIs** - Health monitoring and configuration for multiple providers
+- **IP Enrichment API** - MaxMind database management and geolocation services
 
 ## 🔒 **Enterprise Security**
 - **BCrypt Password Hashing** - Industry-standard password security with configurable work factors

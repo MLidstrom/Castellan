@@ -60,6 +60,7 @@ const ConfigurationHeader = ({
     >
       <Tab label="Threat Intelligence" />
       <Tab label="Notifications" />
+      <Tab label="IP Enrichment" />
       <Tab label="Performance" disabled />
       <Tab label="Security" disabled />
     </Tabs>
@@ -115,6 +116,34 @@ type NotificationConfigType = {
   };
 };
 
+type IPEnrichmentConfigType = {
+  enabled: boolean;
+  provider: 'MaxMind' | 'IPInfo' | 'Disabled';
+  maxMind: {
+    licenseKey: string;
+    accountId: string;
+    autoUpdate: boolean;
+    updateFrequencyDays: number;
+    lastUpdate: string | null;
+    databasePaths: {
+      city: string;
+      asn: string;
+      country: string;
+    };
+  };
+  ipInfo: {
+    apiKey: string;
+  };
+  enrichment: {
+    cacheMinutes: number;
+    maxCacheEntries: number;
+    enrichPrivateIPs: boolean;
+    timeoutMs: number;
+  };
+  highRiskCountries: string[];
+  highRiskASNs: number[];
+};
+
 // Default configuration constant
 const DEFAULT_CONFIG: ConfigType = {
   virusTotal: {
@@ -163,6 +192,34 @@ const DEFAULT_NOTIFICATION_CONFIG: NotificationConfigType = {
     },
     rateLimitPerHour: 60
   }
+};
+
+const DEFAULT_IP_ENRICHMENT_CONFIG: IPEnrichmentConfigType = {
+  enabled: true,
+  provider: 'MaxMind',
+  maxMind: {
+    licenseKey: '',
+    accountId: '',
+    autoUpdate: false,
+    updateFrequencyDays: 30,
+    lastUpdate: null,
+    databasePaths: {
+      city: 'data/GeoLite2-City.mmdb',
+      asn: 'data/GeoLite2-ASN.mmdb',
+      country: 'data/GeoLite2-Country.mmdb'
+    }
+  },
+  ipInfo: {
+    apiKey: ''
+  },
+  enrichment: {
+    cacheMinutes: 60,
+    maxCacheEntries: 10000,
+    enrichPrivateIPs: false,
+    timeoutMs: 5000
+  },
+  highRiskCountries: ['CN', 'RU', 'KP', 'IR', 'SY', 'BY'],
+  highRiskASNs: []
 };
 
 // Threat Intelligence Configuration Component
@@ -826,10 +883,430 @@ const NotificationsConfig = ({ record }: { record?: any }) => {
   );
 };
 
+// IP Enrichment Configuration Component
+const IPEnrichmentConfig = ({ record }: { record?: any }) => {
+  const [config, setConfig] = useState<IPEnrichmentConfigType>(DEFAULT_IP_ENRICHMENT_CONFIG);
+  const [showLicenseKey, setShowLicenseKey] = useState(false);
+  const [showApiKey, setShowApiKey] = useState(false);
+  const notify = useNotify();
+  const dataProvider = useDataProvider();
+  const refresh = useRefresh();
+
+  // Load configuration on mount
+  useEffect(() => {
+    loadConfiguration();
+  }, []);
+
+  const loadConfiguration = async () => {
+    try {
+      const { data } = await dataProvider.getOne('settings', {
+        id: 'ip-enrichment'
+      });
+      if (data) {
+        setConfig(data);
+      }
+    } catch (error) {
+      console.log('No existing IP enrichment configuration found, using defaults');
+    }
+  };
+
+  const handleSave = async () => {
+    try {
+      await dataProvider.update('settings', {
+        id: 'ip-enrichment',
+        data: config,
+        previousData: config
+      });
+      notify('IP enrichment configuration saved successfully', { type: 'success' });
+      refresh();
+    } catch (error: any) {
+      notify(`Failed to save configuration: ${error.message}`, { type: 'error' });
+    }
+  };
+
+  const handleProviderChange = (provider: 'MaxMind' | 'IPInfo' | 'Disabled') => {
+    setConfig({ ...config, provider });
+  };
+
+  const handleDownloadDatabases = async () => {
+    if (!config.maxMind.licenseKey) {
+      notify('Please enter your MaxMind license key first', { type: 'warning' });
+      return;
+    }
+
+    try {
+      // Make direct API call to the correct MaxMind download endpoint
+      const token = localStorage.getItem('auth_token');
+      const response = await fetch('http://localhost:5000/api/settings/ip-enrichment/download-databases', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          licenseKey: config.maxMind.licenseKey,
+          accountId: config.maxMind.accountId
+        })
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || `HTTP ${response.status}`);
+      }
+
+      const result = await response.json();
+      notify(result.data.message || 'MaxMind databases download started', { type: 'info' });
+
+      // Update last update time
+      setConfig({
+        ...config,
+        maxMind: {
+          ...config.maxMind,
+          lastUpdate: new Date().toISOString()
+        }
+      });
+    } catch (error: any) {
+      notify(`Failed to download databases: ${error.message}`, { type: 'error' });
+    }
+  };
+
+  return (
+    <Box sx={{ p: 3 }}>
+      <Typography variant="h5" gutterBottom sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
+        <SecurityIcon sx={{ mr: 1 }} />
+        IP Enrichment Configuration
+      </Typography>
+
+      <Grid container spacing={3}>
+        {/* Provider Selection */}
+        <Grid item xs={12}>
+          <Paper sx={{ p: 2 }}>
+            <Typography variant="h6" gutterBottom>Provider Settings</Typography>
+
+            <FormControlLabel
+              control={
+                <Switch
+                  checked={config.enabled}
+                  onChange={(e) => setConfig({ ...config, enabled: e.target.checked })}
+                  color="primary"
+                />
+              }
+              label="Enable IP Enrichment"
+              sx={{ mb: 2 }}
+            />
+
+            <Box sx={{ mb: 2 }}>
+              <Typography variant="body2" color="textSecondary" gutterBottom>
+                Select IP enrichment provider:
+              </Typography>
+              <Box sx={{ display: 'flex', gap: 1, mt: 1 }}>
+                <Button
+                  variant={config.provider === 'MaxMind' ? 'contained' : 'outlined'}
+                  onClick={() => handleProviderChange('MaxMind')}
+                  size="small"
+                >
+                  MaxMind GeoLite2
+                </Button>
+                <Button
+                  variant={config.provider === 'IPInfo' ? 'contained' : 'outlined'}
+                  onClick={() => handleProviderChange('IPInfo')}
+                  size="small"
+                >
+                  IPInfo
+                </Button>
+                <Button
+                  variant={config.provider === 'Disabled' ? 'contained' : 'outlined'}
+                  onClick={() => handleProviderChange('Disabled')}
+                  size="small"
+                  color="error"
+                >
+                  Disabled
+                </Button>
+              </Box>
+            </Box>
+          </Paper>
+        </Grid>
+
+        {/* MaxMind Configuration */}
+        {config.provider === 'MaxMind' && (
+          <Grid item xs={12}>
+            <Paper sx={{ p: 2 }}>
+              <Typography variant="h6" gutterBottom>MaxMind Configuration</Typography>
+
+              <Alert severity="info" sx={{ mb: 2 }}>
+                To use MaxMind GeoLite2 databases, you need a free license key from{' '}
+                <a href="https://www.maxmind.com/en/geolite2/signup" target="_blank" rel="noopener noreferrer">
+                  maxmind.com
+                </a>
+              </Alert>
+
+              <Grid container spacing={2}>
+                <Grid item xs={12} md={6}>
+                  <MuiTextField
+                    fullWidth
+                    label="License Key"
+                    type={showLicenseKey ? 'text' : 'password'}
+                    value={config.maxMind.licenseKey}
+                    onChange={(e) => setConfig({
+                      ...config,
+                      maxMind: { ...config.maxMind, licenseKey: e.target.value }
+                    })}
+                    InputProps={{
+                      endAdornment: (
+                        <IconButton onClick={() => setShowLicenseKey(!showLicenseKey)} size="small">
+                          {showLicenseKey ? <VisibilityOffIcon /> : <VisibilityIcon />}
+                        </IconButton>
+                      )
+                    }}
+                  />
+                </Grid>
+                <Grid item xs={12} md={6}>
+                  <MuiTextField
+                    fullWidth
+                    label="Account ID (optional)"
+                    value={config.maxMind.accountId}
+                    onChange={(e) => setConfig({
+                      ...config,
+                      maxMind: { ...config.maxMind, accountId: e.target.value }
+                    })}
+                  />
+                </Grid>
+              </Grid>
+
+              <Box sx={{ mt: 2 }}>
+                <FormControlLabel
+                  control={
+                    <Switch
+                      checked={config.maxMind.autoUpdate}
+                      onChange={(e) => setConfig({
+                        ...config,
+                        maxMind: { ...config.maxMind, autoUpdate: e.target.checked }
+                      })}
+                      color="primary"
+                    />
+                  }
+                  label="Enable Automatic Updates"
+                />
+              </Box>
+
+              {config.maxMind.autoUpdate && (
+                <Box sx={{ mt: 2 }}>
+                  <MuiTextField
+                    label="Update Frequency (days)"
+                    type="number"
+                    value={config.maxMind.updateFrequencyDays}
+                    onChange={(e) => setConfig({
+                      ...config,
+                      maxMind: {
+                        ...config.maxMind,
+                        updateFrequencyDays: parseInt(e.target.value) || 30
+                      }
+                    })}
+                    InputProps={{ inputProps: { min: 1, max: 90 } }}
+                    helperText="Recommended: 30 days"
+                    sx={{ width: 200 }}
+                  />
+                </Box>
+              )}
+
+              <Box sx={{ mt: 2, display: 'flex', alignItems: 'center', gap: 2 }}>
+                <Button
+                  variant="outlined"
+                  onClick={handleDownloadDatabases}
+                  disabled={!config.maxMind.licenseKey}
+                >
+                  Download Databases Now
+                </Button>
+                {config.maxMind.lastUpdate && (
+                  <Typography variant="body2" color="textSecondary">
+                    Last updated: {new Date(config.maxMind.lastUpdate).toLocaleDateString()}
+                  </Typography>
+                )}
+              </Box>
+
+              <Box sx={{ mt: 3 }}>
+                <Typography variant="body2" color="textSecondary" gutterBottom>
+                  Database Locations:
+                </Typography>
+                <Typography variant="body2" sx={{ fontFamily: 'monospace', ml: 2 }}>
+                  City: {config.maxMind.databasePaths.city}<br />
+                  ASN: {config.maxMind.databasePaths.asn}<br />
+                  Country: {config.maxMind.databasePaths.country}
+                </Typography>
+              </Box>
+            </Paper>
+          </Grid>
+        )}
+
+        {/* IPInfo Configuration */}
+        {config.provider === 'IPInfo' && (
+          <Grid item xs={12}>
+            <Paper sx={{ p: 2 }}>
+              <Typography variant="h6" gutterBottom>IPInfo Configuration</Typography>
+
+              <Alert severity="info" sx={{ mb: 2 }}>
+                IPInfo provides IP geolocation via API. Get your API key from{' '}
+                <a href="https://ipinfo.io/signup" target="_blank" rel="noopener noreferrer">
+                  ipinfo.io
+                </a>
+              </Alert>
+
+              <MuiTextField
+                fullWidth
+                label="API Key"
+                type={showApiKey ? 'text' : 'password'}
+                value={config.ipInfo.apiKey}
+                onChange={(e) => setConfig({
+                  ...config,
+                  ipInfo: { ...config.ipInfo, apiKey: e.target.value }
+                })}
+                InputProps={{
+                  endAdornment: (
+                    <IconButton onClick={() => setShowApiKey(!showApiKey)} size="small">
+                      {showApiKey ? <VisibilityOffIcon /> : <VisibilityIcon />}
+                    </IconButton>
+                  )
+                }}
+                sx={{ maxWidth: 500 }}
+              />
+            </Paper>
+          </Grid>
+        )}
+
+        {/* Enrichment Settings */}
+        <Grid item xs={12}>
+          <Paper sx={{ p: 2 }}>
+            <Typography variant="h6" gutterBottom>Enrichment Settings</Typography>
+
+            <Grid container spacing={2}>
+              <Grid item xs={12} md={3}>
+                <MuiTextField
+                  fullWidth
+                  label="Cache Duration (minutes)"
+                  type="number"
+                  value={config.enrichment.cacheMinutes}
+                  onChange={(e) => setConfig({
+                    ...config,
+                    enrichment: {
+                      ...config.enrichment,
+                      cacheMinutes: parseInt(e.target.value) || 60
+                    }
+                  })}
+                  InputProps={{ inputProps: { min: 0, max: 1440 } }}
+                />
+              </Grid>
+              <Grid item xs={12} md={3}>
+                <MuiTextField
+                  fullWidth
+                  label="Max Cache Entries"
+                  type="number"
+                  value={config.enrichment.maxCacheEntries}
+                  onChange={(e) => setConfig({
+                    ...config,
+                    enrichment: {
+                      ...config.enrichment,
+                      maxCacheEntries: parseInt(e.target.value) || 10000
+                    }
+                  })}
+                  InputProps={{ inputProps: { min: 100, max: 100000 } }}
+                />
+              </Grid>
+              <Grid item xs={12} md={3}>
+                <MuiTextField
+                  fullWidth
+                  label="Timeout (ms)"
+                  type="number"
+                  value={config.enrichment.timeoutMs}
+                  onChange={(e) => setConfig({
+                    ...config,
+                    enrichment: {
+                      ...config.enrichment,
+                      timeoutMs: parseInt(e.target.value) || 5000
+                    }
+                  })}
+                  InputProps={{ inputProps: { min: 100, max: 30000 } }}
+                />
+              </Grid>
+              <Grid item xs={12} md={3}>
+                <FormControlLabel
+                  control={
+                    <Switch
+                      checked={config.enrichment.enrichPrivateIPs}
+                      onChange={(e) => setConfig({
+                        ...config,
+                        enrichment: {
+                          ...config.enrichment,
+                          enrichPrivateIPs: e.target.checked
+                        }
+                      })}
+                      color="primary"
+                    />
+                  }
+                  label="Enrich Private IPs"
+                />
+              </Grid>
+            </Grid>
+          </Paper>
+        </Grid>
+
+        {/* High Risk Configuration */}
+        <Grid item xs={12}>
+          <Paper sx={{ p: 2 }}>
+            <Typography variant="h6" gutterBottom>High Risk Indicators</Typography>
+
+            <Typography variant="body2" color="textSecondary" gutterBottom>
+              High Risk Countries (comma-separated country codes):
+            </Typography>
+            <MuiTextField
+              fullWidth
+              value={config.highRiskCountries.join(', ')}
+              onChange={(e) => setConfig({
+                ...config,
+                highRiskCountries: e.target.value.split(',').map(s => s.trim()).filter(Boolean)
+              })}
+              placeholder="CN, RU, KP, IR, SY"
+              helperText="Example: CN (China), RU (Russia), KP (North Korea)"
+              sx={{ mb: 2 }}
+            />
+
+            <Typography variant="body2" color="textSecondary" gutterBottom>
+              High Risk ASNs (comma-separated AS numbers):
+            </Typography>
+            <MuiTextField
+              fullWidth
+              value={config.highRiskASNs.join(', ')}
+              onChange={(e) => setConfig({
+                ...config,
+                highRiskASNs: e.target.value.split(',').map(s => parseInt(s.trim()) || 0).filter(Boolean)
+              })}
+              placeholder="12345, 67890"
+              helperText="Enter AS numbers known for malicious activity"
+            />
+          </Paper>
+        </Grid>
+      </Grid>
+
+      {/* Save Button */}
+      <Box sx={{ mt: 3, display: 'flex', justifyContent: 'flex-end' }}>
+        <Button
+          variant="contained"
+          color="primary"
+          size="large"
+          startIcon={<SaveIcon />}
+          onClick={handleSave}
+        >
+          Save IP Enrichment Configuration
+        </Button>
+      </Box>
+    </Box>
+  );
+};
+
 // Configuration List Component (for sidebar navigation)
 export const ConfigurationList = () => {
   const [config, setConfig] = useState<ConfigType>(DEFAULT_CONFIG);
   const [notificationConfig, setNotificationConfig] = useState<NotificationConfigType>(DEFAULT_NOTIFICATION_CONFIG);
+  const [ipEnrichmentConfig, setIpEnrichmentConfig] = useState<IPEnrichmentConfigType>(DEFAULT_IP_ENRICHMENT_CONFIG);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState(0);
   const dataProvider = useDataProvider();
@@ -851,6 +1328,14 @@ export const ConfigurationList = () => {
         setNotificationConfig({ ...DEFAULT_NOTIFICATION_CONFIG, ...notificationResult.data });
       } catch (error) {
         console.log('No existing notification configuration found, using defaults');
+      }
+
+      try {
+        // Load IP enrichment config
+        const ipEnrichmentResult = await dataProvider.getOne('configuration', { id: 'ip-enrichment' });
+        setIpEnrichmentConfig({ ...DEFAULT_IP_ENRICHMENT_CONFIG, ...ipEnrichmentResult.data });
+      } catch (error) {
+        console.log('No existing IP enrichment configuration found, using defaults');
       } finally {
         setLoading(false);
       }
@@ -880,6 +1365,8 @@ export const ConfigurationList = () => {
       case 1:
         return <NotificationsConfig record={{ id: 'notifications', ...notificationConfig }} />;
       case 2:
+        return <IPEnrichmentConfig record={{ id: 'ip-enrichment', ...ipEnrichmentConfig }} />;
+      case 3:
         return (
           <Box sx={{ p: 3, textAlign: 'center' }}>
             <Typography variant="h6" color="text.secondary">
@@ -887,7 +1374,7 @@ export const ConfigurationList = () => {
             </Typography>
           </Box>
         );
-      case 3:
+      case 4:
         return (
           <Box sx={{ p: 3, textAlign: 'center' }}>
             <Typography variant="h6" color="text.secondary">

@@ -1,6 +1,6 @@
 # Castellan Roadmap
 
-## 🎉 v0.4.0 - COMPLETE (September 11, 2025)
+## 🎉 v0.5.0 - COMPLETE (September 15, 2025)
 
 ### ✅ Completed Features
 - **Timeline Visualization** - Interactive security event timeline with granular analysis
@@ -9,18 +9,17 @@
 - **YARA Malware Detection** - Full signature-based malware detection system
 - **Performance Monitoring** - Enhanced system monitoring with real-time dashboards
 - **Advanced Caching** - Frontend optimization with localStorage persistence
-
-## 🚀 v0.5.0 - Advanced Search & Analytics (Planned Q1 2026)
-
-### 🔍 Advanced Search & Filtering
 - **Enhanced Search Interface** - Advanced search drawer with multiple criteria
 - **Multi-Criteria Filtering** - Date ranges, risk levels, event types, MITRE techniques
 - **Full-Text Search** - Search across security event messages with indexed performance
 - **Persistent URL State** - Shareable filtered URLs for collaboration
 - **Search History** - Recently used search queries with quick access
 - **Saved Searches** - Bookmark frequently used search configurations
+- **MaxMind IP Enrichment** - Real-time IP geolocation with automated database downloads
 
-### 📊 Analytics & Reporting
+## 🚀 v0.6.0 - Analytics & Reporting (Planned Q1 2026)
+
+### 📊 Advanced Analytics
 - **Trend Analysis** - Historical trend visualization with predictive analytics
 - **Correlation Engine** - Advanced event correlation with machine learning
 - **Custom Dashboards** - User-configurable dashboard widgets
@@ -28,12 +27,12 @@
 - **Compliance Templates** - Pre-built compliance reporting for SOX, HIPAA, PCI-DSS
 
 ### 🔧 Performance Optimizations
-- **Database Indexing** - Optimized indexes for complex search queries
-- **Query Optimization** - Performance-tuned search with <2s response times
+- **Database Indexing** - Additional optimized indexes for complex analytics queries
+- **Query Optimization** - Performance-tuned analytics with <2s response times
 - **Memory Management** - Improved caching strategies for large datasets
-- **Background Processing** - Asynchronous search for massive datasets
+- **Background Processing** - Asynchronous analytics processing for massive datasets
 
-## ⚡ v0.6.0 - Performance & Caching Overhaul (Planned Q2 2026)
+## ⚡ v0.7.0 - Performance & Caching Overhaul (Planned Q2 2026)
 
 ### 🚀 React Admin Performance Acceleration
 - **Optimized Data Provider** - Enhanced caching integration with React Admin
@@ -57,7 +56,7 @@
 - **Connection Optimization** - Improved connection pooling and timeout handling
 - **Background Processing** - Asynchronous data operations
 
-## 📡 v0.7.0 - External Data Collection (Planned Q3 2026)
+## 📡 v0.8.0 - External Data Collection (Planned Q3 2026)
 
 ### 🔄 Automated Data Collection Framework
 - **Collection Scheduling Engine** - Flexible scheduling with timezone support
@@ -79,14 +78,15 @@
 - **Custom Rule Integration** - Support for organization-specific rules
 - **Rule Performance Testing** - Automated testing of rule effectiveness
 
-## 🌐 v0.8.0 - Threat Intelligence & Enrichment (Planned Q4 2026)
+## 🌐 v0.9.0 - Threat Intelligence & Enrichment (Planned Q4 2026)
 
 ### 📍 IP Enrichment & Geolocation
-- **Hourly IP Intelligence** - Automated collection of threat IP data
-- **Geolocation Updates** - Weekly IP geolocation database updates
-- **ISP & Organization Data** - Enhanced IP attribution information
-- **Threat Classification** - Automated threat level assignment
-- **Historical Tracking** - Track IP reputation changes over time
+- **Real-time IP Intelligence** - MaxMind GeoLite2 database integration with automated downloads
+- **Geolocation Updates** - Automated database updates with HTTP Basic Authentication
+- **ISP & Organization Data** - ASN and organization data from MaxMind databases
+- **System Status Integration** - Health monitoring with file existence validation
+- **Threat Classification** - Automated threat level assignment (pending)
+- **Historical Tracking** - Track IP reputation changes over time (pending)
 
 ### 🔍 Enhanced Threat Intelligence
 - **Multi-Source Integration** - VirusTotal, MalwareBazaar, OTX, and more
@@ -101,7 +101,7 @@
 - **Source Reliability Tracking** - Monitor and score data source quality
 - **Coverage Analysis** - Identify gaps in threat intelligence coverage
 
-## 🎛️ v0.9.0 - Configuration & Monitoring Excellence (Planned Q1 2027)
+## 🎛️ v1.0.0 - Configuration & Monitoring Excellence (Planned Q1 2027)
 
 ### ⚙️ Advanced Configuration Management
 - **Configuration Templates** - Pre-built templates for common scenarios
@@ -124,7 +124,7 @@
 - **Maintenance Windows** - Scheduled maintenance with minimal downtime
 - **Disaster Recovery** - Complete backup and recovery procedures
 
-## 🌟 v1.0.0 - Enterprise Feature Complete (Planned Q2 2027)
+## 🌟 v1.1.0 - Enterprise Feature Complete (Planned Q2 2027)
 
 ### 🏢 Enterprise Features
 - **Multi-Tenancy** - Support for multiple organizations and teams
@@ -170,13 +170,13 @@
 
 | Version | Features | Target Date | Status |
 |---------|----------|-------------|---------|
-| v0.4.0 | Timeline, Export, Config UI, YARA | Sept 11, 2025 | ✅ **COMPLETE** |
-| v0.5.0 | Advanced Search & Analytics | Q1 2026 | 📋 **PLANNED** |
-| v0.6.0 | Performance & Caching Overhaul | Q2 2026 | 📋 **PLANNED** |
-| v0.7.0 | External Data Collection | Q3 2026 | 📋 **PLANNED** |
-| v0.8.0 | Threat Intelligence & Enrichment | Q4 2026 | 📋 **PLANNED** |
-| v0.9.0 | Configuration & Monitoring Excellence | Q1 2027 | 📋 **PLANNED** |
-| v1.0.0 | Enterprise Features | Q2 2027 | 📋 **PLANNED** |
+| v0.5.0 | Advanced Search, Saved Searches, MaxMind IP Enrichment | Sept 15, 2025 | ✅ **COMPLETE** |
+| v0.6.0 | Analytics & Reporting | Q1 2026 | 📋 **PLANNED** |
+| v0.7.0 | Performance & Caching Overhaul | Q2 2026 | 📋 **PLANNED** |
+| v0.8.0 | External Data Collection | Q3 2026 | 📋 **PLANNED** |
+| v0.9.0 | Threat Intelligence & Enrichment | Q4 2026 | 📋 **PLANNED** |
+| v1.0.0 | Configuration & Monitoring Excellence | Q1 2027 | 📋 **PLANNED** |
+| v1.1.0 | Enterprise Features | Q2 2027 | 📋 **PLANNED** |
 
 ## 🤝 Contributing
 

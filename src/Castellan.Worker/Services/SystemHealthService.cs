@@ -252,9 +252,17 @@ public class SystemHealthService
             };
         }
 
-        // Check if MaxMind databases exist
-        var cityDbExists = File.Exists(_ipEnrichmentOptions.Value.MaxMindCityDbPath);
-        var asnDbExists = File.Exists(_ipEnrichmentOptions.Value.MaxMindASNDbPath);
+        // Check if MaxMind databases exist (resolve relative paths)
+        var cityDbPath = Path.IsPathRooted(_ipEnrichmentOptions.Value.MaxMindCityDbPath ?? "")
+            ? _ipEnrichmentOptions.Value.MaxMindCityDbPath
+            : Path.Combine(AppDomain.CurrentDomain.BaseDirectory, _ipEnrichmentOptions.Value.MaxMindCityDbPath ?? "");
+
+        var asnDbPath = Path.IsPathRooted(_ipEnrichmentOptions.Value.MaxMindASNDbPath ?? "")
+            ? _ipEnrichmentOptions.Value.MaxMindASNDbPath
+            : Path.Combine(AppDomain.CurrentDomain.BaseDirectory, _ipEnrichmentOptions.Value.MaxMindASNDbPath ?? "");
+
+        var cityDbExists = !string.IsNullOrEmpty(cityDbPath) && File.Exists(cityDbPath);
+        var asnDbExists = !string.IsNullOrEmpty(asnDbPath) && File.Exists(asnDbPath);
         
         if (!cityDbExists || !asnDbExists)
         {
@@ -273,7 +281,7 @@ public class SystemHealthService
         }
 
         // Try to check database dates
-        if (string.IsNullOrEmpty(_ipEnrichmentOptions.Value.MaxMindCityDbPath))
+        if (string.IsNullOrEmpty(cityDbPath))
         {
             return new SystemStatusDto
             {
@@ -288,8 +296,8 @@ public class SystemHealthService
                 WarningCount = 1
             };
         }
-        
-        var cityDbInfo = new FileInfo(_ipEnrichmentOptions.Value.MaxMindCityDbPath);
+
+        var cityDbInfo = new FileInfo(cityDbPath);
         var daysSinceUpdate = (DateTime.Now - cityDbInfo.LastWriteTime).Days;
         
         var status = daysSinceUpdate > 30 ? "Warning" : "Healthy";

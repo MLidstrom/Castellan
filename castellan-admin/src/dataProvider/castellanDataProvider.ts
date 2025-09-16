@@ -261,6 +261,37 @@ export const castellanDataProvider: DataProvider = {
                         }
                     };
                 }
+            } else if (params.id === 'ip-enrichment') {
+                console.log('[DataProvider] Getting IP enrichment configuration');
+                const url = `${API_URL}/settings/ip-enrichment`;
+
+                try {
+                    const { json } = await httpClient(url);
+                    console.log('[DataProvider] IP enrichment configuration loaded:', json);
+                    return { data: { id: 'ip-enrichment', ...json.data || json } };
+                } catch (error) {
+                    console.error('[DataProvider] Error loading IP enrichment configuration:', error);
+                    // Return defaults on error
+                    return {
+                        data: {
+                            id: 'ip-enrichment',
+                            enabled: true,
+                            provider: 'MaxMind',
+                            maxMind: {
+                                licenseKey: '',
+                                accountId: '',
+                                autoUpdate: false,
+                                updateFrequencyDays: 7,
+                                lastUpdate: null,
+                                databasePaths: { city: '', asn: '', country: '' }
+                            },
+                            ipInfo: { apiKey: '' },
+                            enrichment: { cacheMinutes: 60, maxCacheEntries: 10000, enrichPrivateIPs: false, timeoutMs: 5000 },
+                            highRiskCountries: ['CN', 'RU', 'KP', 'IR', 'SY'],
+                            highRiskASNs: []
+                        }
+                    };
+                }
             }
         }
 
@@ -445,6 +476,22 @@ export const castellanDataProvider: DataProvider = {
                     return { data: { id: 'notifications', ...json.data || json } };
                 } catch (error) {
                     console.error('[DataProvider] Error saving notification configuration:', error);
+                    throw error;
+                }
+            } else if (params.id === 'ip-enrichment') {
+                console.log('[DataProvider] Saving IP enrichment configuration:', params.data);
+                const url = `${API_URL}/settings/ip-enrichment`;
+
+                try {
+                    const { json } = await httpClient(url, {
+                        method: 'PUT',
+                        body: JSON.stringify(params.data),
+                    });
+
+                    console.log('[DataProvider] IP enrichment configuration saved:', json);
+                    return { data: { id: 'ip-enrichment', ...json.data || json } };
+                } catch (error) {
+                    console.error('[DataProvider] Error saving IP enrichment configuration:', error);
                     throw error;
                 }
             }
