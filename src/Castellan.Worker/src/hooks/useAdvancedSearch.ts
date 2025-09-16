@@ -1,5 +1,6 @@
 import { useState, useCallback, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
+import { useNotify } from 'react-admin';
 import {
   AdvancedSearchRequest,
   AdvancedSearchResponse,
@@ -17,10 +18,6 @@ export interface UseAdvancedSearchOptions {
    * Initial filters to use
    */
   initialFilters?: AdvancedSearchRequest;
-  /**
-   * Debounce delay for search in milliseconds
-   */
-  debounceMs?: number;
 }
 
 export interface UseAdvancedSearchReturn {
@@ -59,10 +56,10 @@ export interface UseAdvancedSearchReturn {
 export function useAdvancedSearch(options: UseAdvancedSearchOptions = {}): UseAdvancedSearchReturn {
   const {
     syncWithURL = true,
-    initialFilters = {},
-    debounceMs = 300
+    initialFilters = {}
   } = options;
 
+  const notify = useNotify();
   const [searchParams, setSearchParams] = useSearchParams();
   
   // Initialize state
@@ -75,7 +72,6 @@ export function useAdvancedSearch(options: UseAdvancedSearchOptions = {}): UseAd
   });
 
   const [savedSearches, setSavedSearches] = useState<SavedSearch[]>([]);
-  const [debounceTimer, setDebounceTimer] = useState<number | null>(null);
 
   // Load initial filters from URL on mount
   useEffect(() => {
@@ -85,16 +81,9 @@ export function useAdvancedSearch(options: UseAdvancedSearchOptions = {}): UseAd
         setState(prev => ({ ...prev, currentFilters: filters }));
       }
     }
+
     // Load saved searches on mount
-    const loadSavedSearches = async () => {
-      try {
-        const response = await advancedSearchService.getSavedSearches();
-        setSavedSearches(response.savedSearches);
-      } catch (error) {
-        console.error('Failed to load saved searches:', error);
-      }
-    };
-    loadSavedSearches();
+    refreshSavedSearches();
   }, [syncWithURL, searchParams]);
 
   // Sync filters to URL when they change
@@ -118,6 +107,24 @@ export function useAdvancedSearch(options: UseAdvancedSearchOptions = {}): UseAd
     setState(prev => ({ ...prev, isDrawerOpen: !prev.isDrawerOpen }));
   }, []);
 
+  // Filter management
+  const updateFilters = useCallback((newFilters: Partial<AdvancedSearchRequest>) => {
+    setState(prev => ({
+      ...prev,
+      currentFilters: {
+        ...prev.currentFilters,
+        ...newFilters
+      }
+    }));
+  }, []);
+
+  const setFilters = useCallback((filters: AdvancedSearchRequest) => {
+    setState(prev => ({
+      ...prev,
+      currentFilters: filters
+    }));
+  }, []);
+
   // Search operations
   const performSearch = useCallback(async (filters: AdvancedSearchRequest) => {
     setState(prev => ({ 
@@ -132,29 +139,20 @@ export function useAdvancedSearch(options: UseAdvancedSearchOptions = {}): UseAd
       setState(prev => ({
         ...prev,
         isLoading: false,
-        lastSearchResults: results
+        lastSearchResults: results,
+        error: undefined
       }));
     } catch (error) {
+      console.error('Search error:', error);
       const errorMessage = error instanceof Error ? error.message : 'Search failed';
       setState(prev => ({
         ...prev,
         isLoading: false,
         error: errorMessage
       }));
+      notify(errorMessage, { type: 'error' });
     }
-  }, []);
-
-  const debouncedSearch = useCallback((filters: AdvancedSearchRequest) => {
-    if (debounceTimer) {
-      window.clearTimeout(debounceTimer);
-    }
-
-    const timer = window.setTimeout(() => {
-      performSearch(filters);
-    }, debounceMs);
-
-    setDebounceTimer(timer);
-  }, [debounceTimer, debounceMs, performSearch]);
+  }, [notify]);
 
   const clearSearch = useCallback(() => {
     setState(prev => ({
@@ -174,86 +172,69 @@ export function useAdvancedSearch(options: UseAdvancedSearchOptions = {}): UseAd
     }
   }, [initialFilters, syncWithURL, setSearchParams]);
 
-  // Filter management
-  const updateFilters = useCallback((newFilters: Partial<AdvancedSearchRequest>) => {
-    setState(prev => {
-      const updatedFilters = { ...prev.currentFilters, ...newFilters };
-      return { ...prev, currentFilters: updatedFilters };
-    });
-  }, []);
-
-  const setFilters = useCallback((filters: AdvancedSearchRequest) => {
-    setState(prev => ({ ...prev, currentFilters: filters }));
-  }, []);
-
-  // Saved searches
+  // Saved searches management
   const refreshSavedSearches = useCallback(async () => {
     try {
-      const response = await advancedSearchService.getSavedSearches();
-      setSavedSearches(response.savedSearches);
+      const { savedSearches: searches } = await advancedSearchService.getSavedSearches();
+      setSavedSearches(searches);
     } catch (error) {
-      console.error('Failed to load saved searches:', error);
+      console.error('Failed to refresh saved searches:', error);
+      notify('Failed to load saved searches', { type: 'error' });
     }
-  }, []);
+  }, [notify]);
 
   const loadSavedSearch = useCallback((savedSearch: SavedSearch) => {
     setFilters(savedSearch.filters);
-    performSearch(savedSearch.filters);
-  }, [setFilters, performSearch]);
+  }, [setFilters]);
 
-  const saveCurrentSearch = useCallback(async (name: string, description?: string) => {
+  const saveCurrentSearch = useCallback(async (name: string, description: string = '') => {
     try {
-      const savedSearch = await advancedSearchService.saveSearch(
-        name,
-        description || '',
-        state.currentFilters
-      );
-      setSavedSearches(prev => [...prev, savedSearch]);
+      await advancedSearchService.saveSearch(name, description, state.currentFilters);
+      await refreshSavedSearches();
+      notify('Search saved successfully', { type: 'success' });
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Failed to save search';
-      setState(prev => ({ ...prev, error: errorMessage }));
+      console.error('Failed to save search:', error);
+      notify('Failed to save search', { type: 'error' });
       throw error;
     }
-  }, [state.currentFilters]);
+  }, [state.currentFilters, refreshSavedSearches, notify]);
 
   const deleteSavedSearch = useCallback(async (searchId: string) => {
     try {
       await advancedSearchService.deleteSavedSearch(searchId);
-      setSavedSearches(prev => prev.filter(s => s.id !== searchId));
+      await refreshSavedSearches();
+      notify('Search deleted successfully', { type: 'success' });
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Failed to delete search';
-      setState(prev => ({ ...prev, error: errorMessage }));
+      console.error('Failed to delete saved search:', error);
+      notify('Failed to delete saved search', { type: 'error' });
       throw error;
     }
-  }, []);
+  }, [refreshSavedSearches, notify]);
 
-  // Export
+  // Export functionality
   const exportResults = useCallback(async (format: 'csv' | 'json' | 'xlsx' = 'csv') => {
     try {
       setState(prev => ({ ...prev, isLoading: true }));
-      
       const blob = await advancedSearchService.exportSearchResults(state.currentFilters, format);
       
       // Create download link
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
-      link.download = `security-events-export.${format}`;
+      link.download = `search-results.${format}`;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
       window.URL.revokeObjectURL(url);
-
+      
       setState(prev => ({ ...prev, isLoading: false }));
+      notify('Export completed successfully', { type: 'success' });
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Export failed';
-      setState(prev => ({
-        ...prev,
-        isLoading: false,
-        error: errorMessage
-      }));
+      console.error('Export error:', error);
+      setState(prev => ({ ...prev, isLoading: false }));
+      notify('Failed to export results', { type: 'error' });
     }
-  }, [state.currentFilters]);
+  }, [state.currentFilters, notify]);
 
   // URL sharing
   const getShareableURL = useCallback(() => {
@@ -264,20 +245,11 @@ export function useAdvancedSearch(options: UseAdvancedSearchOptions = {}): UseAd
   }, [state.currentFilters]);
 
   const loadFiltersFromURL = useCallback(() => {
-    const filters = advancedSearchService.queryParamsToFilters(searchParams);
-    if (Object.keys(filters).length > 0) {
-      setState(prev => ({ ...prev, currentFilters: filters }));
+    if (searchParams) {
+      const filters = advancedSearchService.queryParamsToFilters(searchParams);
+      setFilters(filters);
     }
-  }, [searchParams]);
-
-  // Cleanup debounce timer on unmount
-  useEffect(() => {
-    return () => {
-      if (debounceTimer) {
-        window.clearTimeout(debounceTimer);
-      }
-    };
-  }, [debounceTimer]);
+  }, [searchParams, setFilters]);
 
   return {
     state,

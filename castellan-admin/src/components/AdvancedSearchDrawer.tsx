@@ -70,7 +70,7 @@ export interface AdvancedSearchDrawerProps {
   };
 }
 
-export const AdvancedSearchDrawer: React.FC<AdvancedSearchDrawerProps> = ({
+export const AdvancedSearchDrawer = React.forwardRef<HTMLDivElement, AdvancedSearchDrawerProps>(({
   open,
   onClose,
   onSearch,
@@ -78,7 +78,7 @@ export const AdvancedSearchDrawer: React.FC<AdvancedSearchDrawerProps> = ({
   initialFilters = {},
   isLoading = false,
   searchResults
-}) => {
+}, ref) => {
   const [filters, setFilters] = useState<AdvancedSearchFilters>(initialFilters);
   const [expandedSections, setExpandedSections] = useState<Set<string>>(
     new Set(['text', 'date', 'categories'])
@@ -153,14 +153,35 @@ export const AdvancedSearchDrawer: React.FC<AdvancedSearchDrawerProps> = ({
       open={open}
       onClose={onClose}
       sx={{ zIndex: 1300 }}
+      ref={ref}
+      keepMounted={false}
+      disablePortal
+      ModalProps={{
+        keepMounted: false,
+        // Render at body level to avoid aria-hidden conflicts with #root
+        container: document.body,
+        // Important: this prevents the aria-hidden warning in some browsers
+        hideBackdrop: true
+      }}
       PaperProps={{
         sx: {
           width: { xs: '100%', sm: 480 },
           maxWidth: '100%'
-        }
+        },
+        // Ensure the drawer can receive focus
+        tabIndex: -1,
+        role: 'dialog',
+        'aria-modal': true,
+        ref: ref as any
       }}
     >
-      <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+    <Box 
+      sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}
+      // Important: ensure content is not hidden from screen readers
+      role="dialog"
+      aria-modal="true"
+      tabIndex={-1}
+    >
         {/* Header */}
         <Box sx={{ p: 2, borderBottom: 1, borderColor: 'divider' }}>
           <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
@@ -393,4 +414,4 @@ export const AdvancedSearchDrawer: React.FC<AdvancedSearchDrawerProps> = ({
       </Box>
     </Drawer>
   );
-};
+});

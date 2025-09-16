@@ -9,9 +9,9 @@ import {
   useRedirect,
   useShowContext,
 } from 'react-admin';
-import { 
-  Typography, 
-  Box, 
+import {
+  Typography,
+  Box,
   Switch,
   FormControlLabel,
   TextField as MuiTextField,
@@ -20,9 +20,11 @@ import {
   Chip,
   IconButton,
   Grid,
-  Paper
+  Paper,
+  Tabs,
+  Tab
 } from '@mui/material';
-import { 
+import {
   Settings as SettingsIcon,
   Security as SecurityIcon,
   Save as SaveIcon,
@@ -30,16 +32,37 @@ import {
   VisibilityOff as VisibilityOffIcon,
   CheckCircle as CheckIcon,
   Error as ErrorIcon,
-  Warning as WarningIcon
+  Warning as WarningIcon,
+  Notifications as NotificationIcon,
+  Groups as TeamsIcon,
+  Chat as SlackIcon
 } from '@mui/icons-material';
 
 // Configuration header component
-const ConfigurationHeader = () => (
-  <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
-    <SettingsIcon sx={{ mr: 1, color: 'primary.main' }} />
-    <Typography variant="h4" component="h1">
-      System Configuration
-    </Typography>
+const ConfigurationHeader = ({
+  activeTab = 0,
+  onTabChange
+}: {
+  activeTab?: number;
+  onTabChange?: (newValue: number) => void;
+}) => (
+  <Box sx={{ mb: 3 }}>
+    <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+      <SettingsIcon sx={{ mr: 1, color: 'primary.main' }} />
+      <Typography variant="h4" component="h1">
+        System Configuration
+      </Typography>
+    </Box>
+    <Tabs
+      value={activeTab}
+      onChange={(_, newValue) => onTabChange?.(newValue)}
+      sx={{ borderBottom: 1, borderColor: 'divider' }}
+    >
+      <Tab label="Threat Intelligence" />
+      <Tab label="Notifications" />
+      <Tab label="Performance" disabled />
+      <Tab label="Security" disabled />
+    </Tabs>
   </Box>
 );
 
@@ -66,6 +89,32 @@ type ConfigType = {
   };
 };
 
+type NotificationConfigType = {
+  teams: {
+    enabled: boolean;
+    webhookUrl: string;
+    notificationTypes: {
+      criticalEvents: boolean;
+      highRiskEvents: boolean;
+      yaraMatches: boolean;
+      systemAlerts: boolean;
+    };
+    rateLimitPerHour: number;
+  };
+  slack: {
+    enabled: boolean;
+    webhookUrl: string;
+    channel: string;
+    notificationTypes: {
+      criticalEvents: boolean;
+      highRiskEvents: boolean;
+      yaraMatches: boolean;
+      systemAlerts: boolean;
+    };
+    rateLimitPerHour: number;
+  };
+};
+
 // Default configuration constant
 const DEFAULT_CONFIG: ConfigType = {
   virusTotal: {
@@ -87,6 +136,32 @@ const DEFAULT_CONFIG: ConfigType = {
     rateLimitPerMinute: 10,
     cacheEnabled: true,
     cacheTtlMinutes: 60
+  }
+};
+
+const DEFAULT_NOTIFICATION_CONFIG: NotificationConfigType = {
+  teams: {
+    enabled: false,
+    webhookUrl: '',
+    notificationTypes: {
+      criticalEvents: true,
+      highRiskEvents: true,
+      yaraMatches: true,
+      systemAlerts: true
+    },
+    rateLimitPerHour: 60
+  },
+  slack: {
+    enabled: false,
+    webhookUrl: '',
+    channel: '#security',
+    notificationTypes: {
+      criticalEvents: true,
+      highRiskEvents: true,
+      yaraMatches: true,
+      systemAlerts: false
+    },
+    rateLimitPerHour: 60
   }
 };
 
@@ -421,21 +496,415 @@ const ThreatIntelligenceConfig = ({ record }: { record?: any }) => {
   );
 };
 
+// Notifications Configuration Component
+const NotificationsConfig = ({ record }: { record?: any }) => {
+  const [config, setConfig] = useState<NotificationConfigType>(() => {
+    if (record && record.id === 'notifications') {
+      return { ...DEFAULT_NOTIFICATION_CONFIG, ...record };
+    }
+    return DEFAULT_NOTIFICATION_CONFIG;
+  });
+  const [saving, setSaving] = useState(false);
+  const [showWebhookUrls, setShowWebhookUrls] = useState({
+    teams: false,
+    slack: false
+  });
+
+  const dataProvider = useDataProvider();
+  const notify = useNotify();
+  const refresh = useRefresh();
+
+  useEffect(() => {
+    console.log('[NotificationsConfig] Record changed:', record);
+    if (record && record.id === 'notifications') {
+      setConfig((prevConfig: NotificationConfigType) => ({ ...DEFAULT_NOTIFICATION_CONFIG, ...prevConfig, ...record }));
+    }
+  }, [record]);
+
+  const handleSave = async () => {
+    setSaving(true);
+    try {
+      await dataProvider.update('configuration', {
+        id: 'notifications',
+        data: config,
+        previousData: {}
+      });
+      notify('Notification configuration saved successfully', { type: 'success' });
+      refresh();
+    } catch (error) {
+      notify('Failed to save notification configuration', { type: 'error' });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleConfigChange = (service: 'teams' | 'slack', field: string, value: any) => {
+    setConfig((prev: NotificationConfigType) => ({
+      ...prev,
+      [service]: {
+        ...prev[service],
+        [field]: value
+      }
+    }));
+  };
+
+  const handleNotificationTypeChange = (service: 'teams' | 'slack', type: string, value: boolean) => {
+    setConfig((prev: NotificationConfigType) => ({
+      ...prev,
+      [service]: {
+        ...prev[service],
+        notificationTypes: {
+          ...prev[service].notificationTypes,
+          [type]: value
+        }
+      }
+    }));
+  };
+
+  const toggleWebhookVisibility = (service: 'teams' | 'slack') => {
+    setShowWebhookUrls(prev => ({
+      ...prev,
+      [service]: !prev[service]
+    }));
+  };
+
+  const getServiceStatus = (service: any) => {
+    if (!service.enabled) return { color: 'default', icon: <ErrorIcon />, text: 'Disabled' };
+    if (service.webhookUrl && service.webhookUrl.length > 0) return { color: 'success', icon: <CheckIcon />, text: 'Configured' };
+    if (service.enabled && !service.webhookUrl) return { color: 'warning', icon: <WarningIcon />, text: 'Webhook Required' };
+    return { color: 'info', icon: <CheckIcon />, text: 'Enabled' };
+  };
+
+  return (
+    <Box>
+      <Grid container spacing={3}>
+        {/* Microsoft Teams Configuration */}
+        <Grid item xs={12} md={6}>
+          <Paper elevation={2} sx={{ p: 3, height: '100%' }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+              <TeamsIcon sx={{ mr: 1, color: 'primary.main' }} />
+              <Typography variant="h6">Microsoft Teams</Typography>
+              <Box sx={{ ml: 'auto' }}>
+                <Chip
+                  icon={getServiceStatus(config.teams).icon}
+                  label={getServiceStatus(config.teams).text}
+                  color={getServiceStatus(config.teams).color as any}
+                  size="small"
+                />
+              </Box>
+            </Box>
+
+            <FormControlLabel
+              control={
+                <Switch
+                  checked={config.teams.enabled}
+                  onChange={(e) => handleConfigChange('teams', 'enabled', e.target.checked)}
+                />
+              }
+              label="Enable Teams Notifications"
+              sx={{ mb: 2 }}
+            />
+
+            {config.teams.enabled && (
+              <Box>
+                <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+                  <MuiTextField
+                    fullWidth
+                    label="Webhook URL"
+                    type={showWebhookUrls.teams ? 'text' : 'password'}
+                    value={config.teams.webhookUrl}
+                    onChange={(e) => handleConfigChange('teams', 'webhookUrl', e.target.value)}
+                    size="small"
+                    helperText="Paste your Teams incoming webhook URL here"
+                    placeholder="https://outlook.office.com/webhook/..."
+                  />
+                  <IconButton
+                    onClick={() => toggleWebhookVisibility('teams')}
+                    size="small"
+                    sx={{ ml: 1 }}
+                  >
+                    {showWebhookUrls.teams ? <VisibilityOffIcon /> : <VisibilityIcon />}
+                  </IconButton>
+                </Box>
+
+                <Typography variant="body2" sx={{ mb: 1, fontWeight: 500 }}>
+                  Notification Types:
+                </Typography>
+                <Box sx={{ pl: 2, mb: 2 }}>
+                  <FormControlLabel
+                    control={
+                      <Switch
+                        size="small"
+                        checked={config.teams.notificationTypes.criticalEvents}
+                        onChange={(e) => handleNotificationTypeChange('teams', 'criticalEvents', e.target.checked)}
+                      />
+                    }
+                    label="Critical Events"
+                  />
+                  <FormControlLabel
+                    control={
+                      <Switch
+                        size="small"
+                        checked={config.teams.notificationTypes.highRiskEvents}
+                        onChange={(e) => handleNotificationTypeChange('teams', 'highRiskEvents', e.target.checked)}
+                      />
+                    }
+                    label="High Risk Events"
+                  />
+                  <FormControlLabel
+                    control={
+                      <Switch
+                        size="small"
+                        checked={config.teams.notificationTypes.yaraMatches}
+                        onChange={(e) => handleNotificationTypeChange('teams', 'yaraMatches', e.target.checked)}
+                      />
+                    }
+                    label="YARA Matches"
+                  />
+                  <FormControlLabel
+                    control={
+                      <Switch
+                        size="small"
+                        checked={config.teams.notificationTypes.systemAlerts}
+                        onChange={(e) => handleNotificationTypeChange('teams', 'systemAlerts', e.target.checked)}
+                      />
+                    }
+                    label="System Alerts"
+                  />
+                </Box>
+
+                <MuiTextField
+                  fullWidth
+                  label="Rate Limit (notifications/hour)"
+                  type="number"
+                  value={config.teams.rateLimitPerHour}
+                  onChange={(e) => handleConfigChange('teams', 'rateLimitPerHour', parseInt(e.target.value))}
+                  size="small"
+                  inputProps={{ min: 1, max: 100 }}
+                  helperText="Maximum notifications per hour"
+                />
+              </Box>
+            )}
+          </Paper>
+        </Grid>
+
+        {/* Slack Configuration */}
+        <Grid item xs={12} md={6}>
+          <Paper elevation={2} sx={{ p: 3, height: '100%' }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+              <SlackIcon sx={{ mr: 1, color: 'secondary.main' }} />
+              <Typography variant="h6">Slack</Typography>
+              <Box sx={{ ml: 'auto' }}>
+                <Chip
+                  icon={getServiceStatus(config.slack).icon}
+                  label={getServiceStatus(config.slack).text}
+                  color={getServiceStatus(config.slack).color as any}
+                  size="small"
+                />
+              </Box>
+            </Box>
+
+            <FormControlLabel
+              control={
+                <Switch
+                  checked={config.slack.enabled}
+                  onChange={(e) => handleConfigChange('slack', 'enabled', e.target.checked)}
+                />
+              }
+              label="Enable Slack Notifications"
+              sx={{ mb: 2 }}
+            />
+
+            {config.slack.enabled && (
+              <Box>
+                <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+                  <MuiTextField
+                    fullWidth
+                    label="Webhook URL"
+                    type={showWebhookUrls.slack ? 'text' : 'password'}
+                    value={config.slack.webhookUrl}
+                    onChange={(e) => handleConfigChange('slack', 'webhookUrl', e.target.value)}
+                    size="small"
+                    helperText="Paste your Slack incoming webhook URL here"
+                    placeholder="https://hooks.slack.com/services/..."
+                  />
+                  <IconButton
+                    onClick={() => toggleWebhookVisibility('slack')}
+                    size="small"
+                    sx={{ ml: 1 }}
+                  >
+                    {showWebhookUrls.slack ? <VisibilityOffIcon /> : <VisibilityIcon />}
+                  </IconButton>
+                </Box>
+
+                <MuiTextField
+                  fullWidth
+                  label="Channel"
+                  value={config.slack.channel}
+                  onChange={(e) => handleConfigChange('slack', 'channel', e.target.value)}
+                  size="small"
+                  sx={{ mb: 2 }}
+                  helperText="Slack channel name (e.g., #security)"
+                  placeholder="#security"
+                />
+
+                <Typography variant="body2" sx={{ mb: 1, fontWeight: 500 }}>
+                  Notification Types:
+                </Typography>
+                <Box sx={{ pl: 2, mb: 2 }}>
+                  <FormControlLabel
+                    control={
+                      <Switch
+                        size="small"
+                        checked={config.slack.notificationTypes.criticalEvents}
+                        onChange={(e) => handleNotificationTypeChange('slack', 'criticalEvents', e.target.checked)}
+                      />
+                    }
+                    label="Critical Events"
+                  />
+                  <FormControlLabel
+                    control={
+                      <Switch
+                        size="small"
+                        checked={config.slack.notificationTypes.highRiskEvents}
+                        onChange={(e) => handleNotificationTypeChange('slack', 'highRiskEvents', e.target.checked)}
+                      />
+                    }
+                    label="High Risk Events"
+                  />
+                  <FormControlLabel
+                    control={
+                      <Switch
+                        size="small"
+                        checked={config.slack.notificationTypes.yaraMatches}
+                        onChange={(e) => handleNotificationTypeChange('slack', 'yaraMatches', e.target.checked)}
+                      />
+                    }
+                    label="YARA Matches"
+                  />
+                  <FormControlLabel
+                    control={
+                      <Switch
+                        size="small"
+                        checked={config.slack.notificationTypes.systemAlerts}
+                        onChange={(e) => handleNotificationTypeChange('slack', 'systemAlerts', e.target.checked)}
+                      />
+                    }
+                    label="System Alerts"
+                  />
+                </Box>
+
+                <MuiTextField
+                  fullWidth
+                  label="Rate Limit (notifications/hour)"
+                  type="number"
+                  value={config.slack.rateLimitPerHour}
+                  onChange={(e) => handleConfigChange('slack', 'rateLimitPerHour', parseInt(e.target.value))}
+                  size="small"
+                  inputProps={{ min: 1, max: 100 }}
+                  helperText="Maximum notifications per hour"
+                />
+              </Box>
+            )}
+          </Paper>
+        </Grid>
+      </Grid>
+
+      {/* Save Button */}
+      <Box sx={{ mt: 3, textAlign: 'right' }}>
+        <Button
+          variant="contained"
+          startIcon={<SaveIcon />}
+          onClick={handleSave}
+          disabled={saving}
+          size="large"
+        >
+          {saving ? 'Saving...' : 'Save Notification Settings'}
+        </Button>
+      </Box>
+    </Box>
+  );
+};
+
 // Configuration List Component (for sidebar navigation)
 export const ConfigurationList = () => {
-  const redirect = useRedirect();
+  const [config, setConfig] = useState<ConfigType>(DEFAULT_CONFIG);
+  const [notificationConfig, setNotificationConfig] = useState<NotificationConfigType>(DEFAULT_NOTIFICATION_CONFIG);
+  const [loading, setLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState(0);
+  const dataProvider = useDataProvider();
 
-  // For configuration, we only have one item, so redirect to show view
-  React.useEffect(() => {
-    redirect('/configuration/threat-intelligence/show');
-  }, [redirect]);
+  // Load configuration data
+  useEffect(() => {
+    const loadConfig = async () => {
+      try {
+        // Load threat intelligence config
+        const threatIntelResult = await dataProvider.getOne('configuration', { id: 'threat-intelligence' });
+        setConfig({ ...DEFAULT_CONFIG, ...threatIntelResult.data });
+      } catch (error) {
+        console.log('No existing threat intelligence configuration found, using defaults');
+      }
 
-  // Fallback - show the configuration directly if redirect doesn't work
+      try {
+        // Load notification config
+        const notificationResult = await dataProvider.getOne('configuration', { id: 'notifications' });
+        setNotificationConfig({ ...DEFAULT_NOTIFICATION_CONFIG, ...notificationResult.data });
+      } catch (error) {
+        console.log('No existing notification configuration found, using defaults');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadConfig();
+  }, [dataProvider]);
+
+  const handleTabChange = (newValue: number) => {
+    setActiveTab(newValue);
+  };
+
+  if (loading) {
+    return (
+      <List title="System Configuration">
+        <Box sx={{ p: 2, textAlign: 'center' }}>
+          <Typography>Loading configuration...</Typography>
+        </Box>
+      </List>
+    );
+  }
+
+  const renderTabContent = () => {
+    switch (activeTab) {
+      case 0:
+        return <ThreatIntelligenceConfig record={{ id: 'threat-intelligence', ...config }} />;
+      case 1:
+        return <NotificationsConfig record={{ id: 'notifications', ...notificationConfig }} />;
+      case 2:
+        return (
+          <Box sx={{ p: 3, textAlign: 'center' }}>
+            <Typography variant="h6" color="text.secondary">
+              Performance settings coming soon...
+            </Typography>
+          </Box>
+        );
+      case 3:
+        return (
+          <Box sx={{ p: 3, textAlign: 'center' }}>
+            <Typography variant="h6" color="text.secondary">
+              Security settings coming soon...
+            </Typography>
+          </Box>
+        );
+      default:
+        return <ThreatIntelligenceConfig record={{ id: 'threat-intelligence', ...config }} />;
+    }
+  };
+
   return (
     <List title="System Configuration">
       <Box sx={{ p: 2 }}>
-        <ConfigurationHeader />
-        <ThreatIntelligenceConfig record={null} />
+        <ConfigurationHeader activeTab={activeTab} onTabChange={handleTabChange} />
+        {renderTabContent()}
       </Box>
     </List>
   );

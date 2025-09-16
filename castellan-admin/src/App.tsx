@@ -6,7 +6,6 @@ import {
   Assessment as ComplianceIcon,
   Computer as SystemIcon,
   BugReport as ThreatScannerIcon,
-  Notifications as NotificationsIcon,
   Gavel as MitreIcon,
   Settings as ConfigurationIcon,
   Shield as YaraRulesIcon,
@@ -55,10 +54,6 @@ const YaraMatchesShow = React.lazy(() => import('./resources/YaraMatches').then(
 
 const TimelineList = React.lazy(() => import('./resources/Timeline').then(module => ({ default: module.TimelineList })));
 
-const NotificationSettingsList = React.lazy(() => import('./resources/NotificationSettings').then(module => ({ default: module.NotificationSettingsList })));
-const NotificationSettingsShow = React.lazy(() => import('./resources/NotificationSettings').then(module => ({ default: module.NotificationSettingsShow })));
-const NotificationSettingsCreate = React.lazy(() => import('./resources/NotificationSettings').then(module => ({ default: module.NotificationSettingsCreate })));
-const NotificationSettingsEdit = React.lazy(() => import('./resources/NotificationSettings').then(module => ({ default: module.NotificationSettingsEdit })));
 
 const ConfigurationList = React.lazy(() => import('./resources/Configuration').then(module => ({ default: module.ConfigurationList })));
 const ConfigurationShow = React.lazy(() => import('./resources/Configuration').then(module => ({ default: module.ConfigurationShow })));
@@ -97,7 +92,7 @@ const App = () => {
             loginPage={Login}
           >
             {/* Security Events Resource - Available in CastellanProFree */}
-                    <Resource
+            <Resource
               name="security-events"
               list={SecurityEventList}
               show={SecurityEventShow}
@@ -172,16 +167,6 @@ const App = () => {
               recordRepresentation={(record) => `${record.scanType} - ${record.id}`}
             />
     
-            {/* Notification Settings Resource - Available in CastellanProFree */}
-            <Resource
-              name="notification-settings"
-              list={NotificationSettingsList}
-              show={NotificationSettingsShow}
-              create={NotificationSettingsCreate}
-              edit={NotificationSettingsEdit}
-              icon={NotificationsIcon}
-              recordRepresentation={(record) => `${record.name || 'Notification Config'}`}
-            />
     
             {/* Configuration Resource - Available in CastellanProFree */}
             <Resource

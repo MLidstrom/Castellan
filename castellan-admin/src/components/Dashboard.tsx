@@ -783,31 +783,6 @@ export const Dashboard = React.memo(() => {
           </CardContent>
         </Card>
 
-        <Card sx={{ minWidth: 200, flex: 1 }}>
-          <CardHeader
-            avatar={<ComplianceIcon color="secondary" />}
-            title="Compliance"
-            titleTypographyProps={{ variant: 'h6' }}
-          />
-          <CardContent>
-            {complianceReportsLoading ? (
-              <CircularProgress size={24} />
-            ) : complianceReportsError ? (
-              <Typography color="error" variant="body2">
-                Error: {complianceReportsError}
-              </Typography>
-            ) : (
-              <Box>
-                <Typography variant="h4" color="secondary">
-                  {complianceReports.length}
-                </Typography>
-                <Typography variant="body2" color="text.secondary">
-                  Reports
-                </Typography>
-              </Box>
-            )}
-          </CardContent>
-        </Card>
 
         <Card sx={{ minWidth: 200, flex: 1 }}>
           <CardHeader
@@ -897,28 +872,6 @@ export const Dashboard = React.memo(() => {
           </CardContent>
         </Card>
 
-        <Card sx={{ flex: 1 }}>
-          <CardHeader title="Compliance Scores" />
-          <CardContent>
-            <Box height={300}>
-              {complianceChartData.length > 0 ? (
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={complianceChartData}>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="name" />
-                    <YAxis />
-                    <Tooltip />
-                    <Bar dataKey="score" fill="#82ca9d" />
-                  </BarChart>
-                </ResponsiveContainer>
-              ) : (
-                <Box display="flex" alignItems="center" justifyContent="center" height="100%">
-                  <Typography color="text.secondary">No data available</Typography>
-                </Box>
-              )}
-            </Box>
-          </CardContent>
-        </Card>
       </Box>
 
       {/* Additional Components */}

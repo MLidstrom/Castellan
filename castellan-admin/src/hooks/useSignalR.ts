@@ -277,6 +277,10 @@ export const useSignalR = (options: UseSignalROptions = {}) => {
       console.log('🔍 SignalR connection object created, attempting to start...');
 
       // Set up event handlers
+      connection.on('joinedSystemMetrics', (data) => {
+        console.log('✅ Joined SystemMetrics group:', data);
+      });
+
       connection.on('Connected', (data) => {
         console.log('✅ SignalR "Connected" event received:', data);
         setConnectionState('Connected');

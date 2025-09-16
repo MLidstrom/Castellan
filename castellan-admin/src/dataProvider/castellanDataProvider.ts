@@ -73,7 +73,10 @@ const RESOURCE_MAP: Record<string, string> = {
     'timeline/events': 'timeline/events',
     'timeline/heatmap': 'timeline/heatmap',
     'timeline/stats': 'timeline/stats',
-    'timeline/anomalies': 'timeline/anomalies'
+    'timeline/anomalies': 'timeline/anomalies',
+    // Search Management resource mappings - v0.5.0
+    'saved-searches': 'saved-searches',
+    'search-history': 'search-history'
 };
 
 // Transform react-admin filter format to backend API format
@@ -92,7 +95,10 @@ const transformFilters = (filters: any) => {
             }
         } else if (Array.isArray(value)) {
             // Array filters (e.g., risk levels)
-            apiFilters[`${key}_in`] = value.join(',');
+            apiFilters[key] = value.join(',');
+        } else if (value instanceof Date) {
+            // Format dates as ISO strings
+            apiFilters[key] = value.toISOString();
         } else if (value !== null && value !== undefined && value !== '') {
             // Simple filters
             apiFilters[key] = value;
@@ -214,18 +220,47 @@ export const castellanDataProvider: DataProvider = {
         }
 
         // Special handling for configuration resource
-        if (resource === 'configuration' && params.id === 'threat-intelligence') {
-            console.log('[DataProvider] Getting configuration from backend API');
-            const backendResource = RESOURCE_MAP[resource] || resource;
-            const url = `${API_URL}/${backendResource}`;
-            
-            try {
-                const { json } = await httpClient(url);
-                console.log('[DataProvider] Configuration loaded from backend:', json);
-                return { data: json.data || json };
-            } catch (error) {
-                console.error('[DataProvider] Error loading configuration from backend:', error);
-                throw error;
+        if (resource === 'configuration') {
+            if (params.id === 'threat-intelligence') {
+                console.log('[DataProvider] Getting threat intelligence configuration from backend API');
+                const backendResource = RESOURCE_MAP[resource] || resource;
+                const url = `${API_URL}/${backendResource}`;
+
+                try {
+                    const { json } = await httpClient(url);
+                    console.log('[DataProvider] Configuration loaded from backend:', json);
+                    return { data: json.data || json };
+                } catch (error) {
+                    console.error('[DataProvider] Error loading configuration from backend:', error);
+                    // Return defaults on error
+                    return {
+                        data: {
+                            id: 'threat-intelligence',
+                            virusTotal: { enabled: false },
+                            malwareBazaar: { enabled: false },
+                            alienVaultOtx: { enabled: false }
+                        }
+                    };
+                }
+            } else if (params.id === 'notifications') {
+                console.log('[DataProvider] Getting notification configuration');
+                const url = `${API_URL}/notifications/config`;
+
+                try {
+                    const { json } = await httpClient(url);
+                    console.log('[DataProvider] Notification configuration loaded:', json);
+                    return { data: { id: 'notifications', ...json.data || json } };
+                } catch (error) {
+                    console.error('[DataProvider] Error loading notification configuration:', error);
+                    // Return defaults on error
+                    return {
+                        data: {
+                            id: 'notifications',
+                            teams: { enabled: false, webhookUrl: '', notificationTypes: {} },
+                            slack: { enabled: false, webhookUrl: '', channel: '', notificationTypes: {} }
+                        }
+                    };
+                }
             }
         }
 
@@ -290,19 +325,46 @@ export const castellanDataProvider: DataProvider = {
         }
 
         const backendResource = RESOURCE_MAP[resource] || resource;
-        const { page, perPage } = params.pagination || { page: 1, perPage: 10 };
-        const { field, order } = params.sort || { field: 'id', order: 'ASC' };
-        
-        const query = new URLSearchParams({
-            page: page.toString(),
-            limit: perPage.toString(),
+    const { page, perPage } = params.pagination || { page: 1, perPage: 10 };
+    const { field, order } = params.sort || { field: 'id', order: 'ASC' };
+    
+    // Security events use POST instead of GET
+    if (resource === 'security-events') {
+      const url = `${API_URL}/${backendResource}/search`;
+      const transformedFilters = transformFilters(params.filter);
+      
+      try {
+        const { json } = await httpClient(url, {
+          method: 'POST',
+          body: JSON.stringify({
+            ...transformedFilters,
+            page,
+            limit: perPage,
             sort: field,
-            order: order.toLowerCase(),
-            [params.target]: params.id.toString(),
-            ...transformFilters(params.filter)
+            order: order.toLowerCase()
+          })
         });
+        
+        return {
+          data: json.data || [],
+          total: json.total || 0
+        };
+      } catch (error) {
+        console.error(`Error fetching ${resource}:`, error);
+        throw error;
+      }
+    }
+    
+    // Other resources use GET
+    const query = new URLSearchParams({
+        page: page.toString(),
+        limit: perPage.toString(),
+        sort: field,
+        order: order.toLowerCase(),
+        ...transformFilters(params.filter)
+    });
 
-        const url = `${API_URL}/${backendResource}?${query}`;
+    const url = `${API_URL}/${backendResource}?${query}`;
         
         try {
             const { json } = await httpClient(url);
@@ -351,25 +413,59 @@ export const castellanDataProvider: DataProvider = {
         }
 
         // Special handling for configuration resource
-        if (resource === 'configuration' && params.id === 'threat-intelligence') {
-            console.log('[DataProvider] Saving configuration to backend API:', params.data);
-            const backendResource = RESOURCE_MAP[resource] || resource;
-            const url = `${API_URL}/${backendResource}`;
-            
-            try {
-                const { json } = await httpClient(url, {
-                    method: 'PUT',
-                    body: JSON.stringify(params.data),
-                });
-                
-                console.log('[DataProvider] Configuration saved to backend:', json);
-                return { data: json.data || json };
-            } catch (error) {
-                console.error('[DataProvider] Error saving configuration to backend:', error);
-                throw error;
+        if (resource === 'configuration') {
+            if (params.id === 'threat-intelligence') {
+                console.log('[DataProvider] Saving threat intelligence configuration to backend API:', params.data);
+                const backendResource = RESOURCE_MAP[resource] || resource;
+                const url = `${API_URL}/${backendResource}`;
+
+                try {
+                    const { json } = await httpClient(url, {
+                        method: 'PUT',
+                        body: JSON.stringify(params.data),
+                    });
+
+                    console.log('[DataProvider] Configuration saved to backend:', json);
+                    return { data: json.data || json };
+                } catch (error) {
+                    console.error('[DataProvider] Error saving configuration to backend:', error);
+                    throw error;
+                }
+            } else if (params.id === 'notifications') {
+                console.log('[DataProvider] Saving notification configuration:', params.data);
+                const url = `${API_URL}/notifications/config`;
+
+                try {
+                    const { json } = await httpClient(url, {
+                        method: 'PUT',
+                        body: JSON.stringify(params.data),
+                    });
+
+                    console.log('[DataProvider] Notification configuration saved:', json);
+                    return { data: { id: 'notifications', ...json.data || json } };
+                } catch (error) {
+                    console.error('[DataProvider] Error saving notification configuration:', error);
+                    throw error;
+                }
             }
         }
 
+        // Special handling for saved-searches usage tracking
+        if (resource === 'saved-searches' && params.meta?.action === 'use') {
+            const url = `${API_URL}/saved-searches/${params.id}/use`;
+            
+            try {
+                const { json } = await httpClient(url, {
+                    method: 'POST',
+                });
+                
+                return { data: json };
+            } catch (error) {
+                console.error(`Error recording usage for saved search ${params.id}:`, error);
+                throw error;
+            }
+        }
+        
         const backendResource = RESOURCE_MAP[resource] || resource;
         const url = `${API_URL}/${backendResource}/${params.id}`;
         

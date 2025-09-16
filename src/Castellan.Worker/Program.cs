@@ -123,6 +123,7 @@ builder.Services.AddScoped<MitreService>();
 builder.Services.AddScoped<SecurityEventService>();
 builder.Services.AddScoped<SystemConfigurationService>();
 builder.Services.AddScoped<MitreAttackImportService>();
+builder.Services.AddScoped<DatabaseSchemaUpdateService>();
 
 // Register performance monitoring service
 builder.Services.Configure<PerformanceMonitorOptions>(builder.Configuration.GetSection("PerformanceMonitoring"));
@@ -201,6 +202,10 @@ builder.Services.AddScoped<ITimelineService, TimelineService>();
 
 // Register Advanced Search Service - v0.5.0
 builder.Services.AddScoped<IAdvancedSearchService, AdvancedSearchService>();
+
+// Register Search Management Services - v0.5.0
+builder.Services.AddScoped<ISavedSearchService, SavedSearchService>();
+builder.Services.AddScoped<ISearchHistoryService, SearchHistoryService>();
 
 // Register YARA services
 builder.Services.Configure<YaraScanningOptions>(builder.Configuration.GetSection(YaraScanningOptions.SectionName));
@@ -360,6 +365,11 @@ using (var scope = app.Services.CreateScope())
         var context = scope.ServiceProvider.GetRequiredService<CastellanDbContext>();
         await context.Database.EnsureCreatedAsync();
         Console.WriteLine("Database initialized successfully");
+        
+        // Ensure new search tables exist (for v0.5.0)
+        var schemaUpdateService = scope.ServiceProvider.GetRequiredService<DatabaseSchemaUpdateService>();
+        await schemaUpdateService.EnsureSearchTablesExistAsync();
+        Console.WriteLine("Search tables schema validated");
     }
     catch (Exception ex)
     {

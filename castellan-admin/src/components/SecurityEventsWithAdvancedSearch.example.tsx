@@ -23,8 +23,9 @@ import {
   Download as DownloadIcon
 } from '@mui/icons-material';
 import { AdvancedSearchDrawer } from './AdvancedSearchDrawer';
-import { useAdvancedSearch } from '../hooks/useAdvancedSearch';
+import { useAdvancedSearch } from '../services/advancedSearch';
 import type { AdvancedSearchFilters } from './AdvancedSearchDrawer';
+import type { SavedSearch } from '../types/advancedSearch';
 
 /**
  * Example integration of AdvancedSearchDrawer with SecurityEvents list
@@ -112,7 +113,7 @@ export const SecurityEventsWithAdvancedSearch = () => {
   const CustomAside = () => (
     <Box sx={{ width: 250, p: 2 }}>
       <h3>Saved Searches</h3>
-      {savedSearches.map(savedSearch => (
+{savedSearches.map((savedSearch: SavedSearch) => (
         <Button
           key={savedSearch.id}
           onClick={() => {

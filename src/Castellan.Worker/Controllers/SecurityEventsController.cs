@@ -1,5 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using System.Security.Claims;
+using System.Diagnostics;
 using Castellan.Worker.Models;
 using Castellan.Worker.Abstractions;
 
@@ -14,17 +16,20 @@ public class SecurityEventsController : ControllerBase
     private readonly IVectorStore _vectorStore;
     private readonly ISecurityEventStore _securityEventStore;
     private readonly IAdvancedSearchService _advancedSearchService;
+    private readonly ISearchHistoryService _searchHistoryService;
 
     public SecurityEventsController(
         ILogger<SecurityEventsController> logger, 
         IVectorStore vectorStore, 
         ISecurityEventStore securityEventStore,
-        IAdvancedSearchService advancedSearchService)
+        IAdvancedSearchService advancedSearchService,
+        ISearchHistoryService searchHistoryService)
     {
         _logger = logger;
         _vectorStore = vectorStore;
         _securityEventStore = securityEventStore;
         _advancedSearchService = advancedSearchService;
+        _searchHistoryService = searchHistoryService;
     }
 
     [HttpGet]
@@ -157,16 +162,35 @@ public class SecurityEventsController : ControllerBase
 
     /// <summary>
     /// Advanced search endpoint with enhanced filtering and full-text search capabilities
-    /// v0.5.0 Feature
+    /// v0.5.0 Feature with Search History Recording
     /// </summary>
     [HttpPost("search")]
     public async Task<IActionResult> AdvancedSearch([FromBody] AdvancedSearchRequest request)
     {
+        var stopwatch = Stopwatch.StartNew();
         try
         {
             _logger.LogInformation("Advanced search request: {@Request}", request);
 
             var searchResult = await _advancedSearchService.SearchAsync(request);
+            
+            stopwatch.Stop();
+            
+            // Record search in history (v0.5.0 feature)
+            var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (!string.IsNullOrEmpty(userId))
+            {
+                try
+                {
+                    await _searchHistoryService.AddSearchToHistoryAsync(
+                        userId, request, searchResult.TotalCount, (int)stopwatch.ElapsedMilliseconds);
+                }
+                catch (Exception historyEx)
+                {
+                    // Log but don't fail the search if history recording fails
+                    _logger.LogWarning(historyEx, "Failed to record search in history for user: {UserId}", userId);
+                }
+            }
             
             var response = new
             {
@@ -186,6 +210,7 @@ public class SecurityEventsController : ControllerBase
         }
         catch (Exception ex)
         {
+            stopwatch.Stop();
             _logger.LogError(ex, "Error performing advanced search");
             return StatusCode(500, new { message = "Internal server error" });
         }

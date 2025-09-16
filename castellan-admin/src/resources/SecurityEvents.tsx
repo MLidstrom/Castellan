@@ -36,7 +36,7 @@ import {
 
 // Import our advanced search components
 import { AdvancedSearchDrawer } from '../components/AdvancedSearchDrawer';
-import { useAdvancedSearch } from '../hooks/useAdvancedSearch';
+import { useAdvancedSearch } from '../services/advancedSearch';
 import type { AdvancedSearchFilters } from '../components/AdvancedSearchDrawer';
 
 // Import SignalR context for real-time updates
@@ -56,20 +56,52 @@ interface MitreTechnique {
 // Helper function to provide friendly names for common MITRE techniques
 function getTechniqueDisplayName(techniqueId: string): string {
   const commonTechniques: { [key: string]: string } = {
-    'T1552.6': 'Unsecured Credentials: Group Policy Preferences',
+    // Credential Access techniques
     'T1552': 'Unsecured Credentials',
+    'T1552.6': 'Unsecured Credentials: Group Policy Preferences',
+    'T1552.8': 'Unsecured Credentials: Cloud Instance Metadata API',
+    'T1552.9': 'Unsecured Credentials: Container API',
+    'T1003': 'OS Credential Dumping',
+    
+    // Execution techniques
     'T1059': 'Command and Scripting Interpreter',
     'T1059.001': 'PowerShell',
     'T1059.003': 'Windows Command Shell',
+    'T1059.004': 'Unix Shell',
+    'T1059.005': 'Visual Basic',
+    'T1059.006': 'Python',
+    'T1059.007': 'JavaScript',
+    'T1059.008': 'Network Device CLI',
+    
+    // Initial Access & Persistence
     'T1078': 'Valid Accounts',
+    'T1078.001': 'Default Accounts',
+    'T1078.002': 'Domain Accounts',
+    'T1078.003': 'Local Accounts',
+    'T1078.004': 'Cloud Accounts',
+    'T1547': 'Boot or Logon Autostart Execution',
+    
+    // Process & Service techniques
     'T1055': 'Process Injection',
-    'T1003': 'OS Credential Dumping',
+    'T1055.001': 'Dynamic-link Library Injection',
+    'T1055.002': 'Portable Executable Injection',
+    'T1055.003': 'Thread Execution Hijacking',
+    'T1055.004': 'Asynchronous Procedure Call',
+    'T1055.005': 'Thread Local Storage',
     'T1021': 'Remote Services',
-    'T1547': 'Boot or Logon Autostart Execution'
+    'T1021.001': 'Remote Desktop Protocol',
+    'T1021.002': 'SMB/Windows Admin Shares',
+    'T1021.003': 'Distributed Component Object Model',
+    'T1021.004': 'SSH',
+    'T1021.005': 'VNC',
+    'T1021.006': 'Windows Remote Management'
   };
   
   return commonTechniques[techniqueId] || techniqueId;
 }
+
+// Cache for MITRE technique lookups to avoid repeated API calls
+const mitreTechniqueCache: { [key: string]: MitreTechnique } = {};
 
 // Hook to fetch MITRE technique data from the database
 const useMitreTechniques = () => {
@@ -77,52 +109,96 @@ const useMitreTechniques = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const dataProvider = useDataProvider();
+  
+  // Function to create a fallback technique entry
+  const createFallbackTechnique = (techniqueId: string): MitreTechnique => {
+    const displayName = getTechniqueDisplayName(techniqueId);
+    const tacticMap: { [key: string]: string } = {
+      'T1552': 'Credential Access',
+      'T1059': 'Execution',
+      'T1078': 'Initial Access, Persistence, Privilege Escalation',
+      'T1055': 'Defense Evasion, Privilege Escalation',
+      'T1003': 'Credential Access',
+      'T1021': 'Lateral Movement',
+      'T1547': 'Persistence, Privilege Escalation'
+    };
+    
+    // Get base technique ID (before the dot)
+    const baseTechniqueId = techniqueId.split('.')[0];
+    
+    return {
+      id: 0,
+      techniqueId,
+      name: displayName || `MITRE ATT&CK Technique: ${techniqueId}`,
+      description: `MITRE ATT&CK Technique ${techniqueId}: ${displayName || 'No description available'}`,
+      tactic: tacticMap[baseTechniqueId] || 'Unknown',
+      platform: 'Windows, Linux, macOS, Cloud',
+      createdAt: new Date().toISOString()
+    };
+  };
 
   const fetchTechniques = async (techniqueIds: string[]) => {
     if (techniqueIds.length === 0) return;
     
-    // Filter out techniques we already have
-    const missingTechniques = techniqueIds.filter(id => !techniques[id]);
+    // Filter out techniques we already have and invalid IDs
+    const missingTechniques = techniqueIds
+      .filter(id => !techniques[id] && id && id !== 'undefined')
+      .filter(id => id.startsWith('T') && !id.startsWith('TA')); // Only get techniques, not tactics
+      
     if (missingTechniques.length === 0) return;
 
     setLoading(true);
     setError(null);
 
     try {
-      // Fetch techniques from the MITRE API
-      const promises = missingTechniques.map(async (techniqueId) => {
-        try {
-          // Skip API call if backend is not available or technique ID is invalid
-          if (!techniqueId || techniqueId === 'undefined') {
-            return null;
-          }
-          
-          const response = await dataProvider.getOne('mitre/techniques', { id: techniqueId });
-          return { [techniqueId]: response.data };
-        } catch (err: any) {
-          // If technique not found in database, return a fallback
-          // Don't log network errors as warnings, they're expected when backend is down
-          if (err.status !== 0 && err.status !== 500) {
-            console.warn(`MITRE technique ${techniqueId} not found - using fallback data`);
-          }
-          return { 
-            [techniqueId]: {
-              id: 0,
-              techniqueId,
-              name: getTechniqueDisplayName(techniqueId),
-              description: `MITRE ATT&CK Technique: ${techniqueId}`,
-              tactic: 'Unknown',
-              platform: 'Multiple',
-              createdAt: new Date().toISOString()
-            }
-          };
-        }
-      });
+      // Process techniques in parallel but with batching
+      const batchSize = 5;
+      const batches = [];
+      for (let i = 0; i < missingTechniques.length; i += batchSize) {
+        batches.push(missingTechniques.slice(i, i + batchSize));
+      }
 
-      const results = await Promise.all(promises);
-      // Filter out null results before merging
-      const validResults = results.filter(r => r !== null);
-      const newTechniques = validResults.reduce((acc, curr) => ({ ...acc, ...curr }), {});
+      const newTechniques = {};
+      
+      for (const batch of batches) {
+        const batchResults = await Promise.all(
+          batch.map(async (techniqueId) => {
+            try {
+              const response = await dataProvider.getOne('mitre/techniques', { id: techniqueId });
+              return { [techniqueId]: response.data };
+            } catch (err: any) {
+              // Create fallback with proper tactic mapping
+              const baseTechniqueId = techniqueId.split('.')[0];
+              const tacticMap: { [key: string]: string } = {
+                'T1552': 'Credential Access',
+                'T1059': 'Execution',
+                'T1078': 'Initial Access, Persistence, Privilege Escalation',
+                'T1055': 'Defense Evasion, Privilege Escalation',
+                'T1003': 'Credential Access',
+                'T1021': 'Lateral Movement',
+                'T1547': 'Persistence, Privilege Escalation'
+              };
+
+              const displayName = getTechniqueDisplayName(techniqueId);
+              const fallback = {
+                id: 0,
+                techniqueId,
+                name: displayName || `MITRE ATT&CK Technique: ${techniqueId}`,
+                description: `${displayName || techniqueId}: ${tacticMap[baseTechniqueId] || 'Unknown Tactic'}`,
+                tactic: tacticMap[baseTechniqueId] || 'Unknown',
+                platform: 'Windows, Linux, macOS, Cloud',
+                createdAt: new Date().toISOString()
+              };
+
+              console.warn(`MITRE technique ${techniqueId} not found in database - may need to import MITRE data`);
+              return { [techniqueId]: fallback };
+            }
+          })
+        );
+
+        // Merge batch results
+        Object.assign(newTechniques, ...batchResults);
+      }
       
       setTechniques(prev => ({ ...prev, ...newTechniques }));
     } catch (err) {
@@ -367,7 +443,7 @@ const securityEventFilters = [
   <TextInput key="eventType" source="eventType" label="Event Type" alwaysOn />,
   <SelectInput 
     key="riskLevel"
-    source="riskLevel" 
+    source="riskLevels" 
     label="Risk Level"
     choices={[
       { id: 'low', name: 'Low' },
@@ -377,9 +453,9 @@ const securityEventFilters = [
     ]}
     alwaysOn
   />,
-  <TextInput key="machine" source="machine" label="Machine" />,
-  <TextInput key="user" source="user" label="User" />,
-  <TextInput key="source" source="source" label="Source" />
+  <TextInput key="machine" source="machines" label="Machine" />,
+  <TextInput key="user" source="users" label="User" />,
+  <TextInput key="source" source="sources" label="Source" />
 ];
 
 export const SecurityEventList = () => {
