@@ -24,9 +24,9 @@
 
 **Castellan** is a **100% open source**, enterprise-grade security monitoring platform that transforms Windows event logs into actionable security intelligence using AI-powered analysis, vector search, and real-time threat correlation.
 
-🚀 **Enterprise Features**: 12K+ events/sec processing • Vector similarity search • Real-time Teams/Slack alerts • 800+ MITRE ATT&CK techniques • VirusTotal/MalwareBazaar integration • Complete YARA malware detection • Timeline visualization • Export capabilities • Threat intelligence configuration
+🚀 **Enterprise Features**: 12K+ events/sec processing • Vector similarity search • Real-time Teams/Slack alerts • 800+ MITRE ATT&CK techniques • VirusTotal/MalwareBazaar integration • Complete YARA malware detection • Timeline visualization • Export capabilities • Centralized configuration management
 
-⚡ **5-Minute Setup**: `.\scripts\start.ps1` → Open `http://localhost:8080` → Start monitoring (All 11 admin interface pages verified working)
+⚡ **5-Minute Setup**: `.\scripts\start.ps1` → Open `http://localhost:8080` → Start monitoring (All 10 admin interface pages verified working)
 
 ## 🔥 Key Features
 
@@ -119,8 +119,8 @@
 | **[🚀 Quick Start Guide](docs/GETTING_STARTED.md)** | Complete installation and setup instructions |
 | **[🔥 Features](docs/FEATURES.md)** | Comprehensive feature overview and capabilities |
 | **[🆕 YARA Detection](docs/YARA_DETECTION.md)** | Signature-based malware detection and rule management |
-| **[🔧 Configuration](docs/CONFIGURATION_SETUP.md)** | Authentication, AI providers, threat intelligence setup |
-| **[🔔 Notifications](docs/NOTIFICATIONS.md)** | Teams/Slack integration and alert configuration |
+| **[🔧 Configuration](docs/CONFIGURATION_SETUP.md)** | Authentication, AI providers, centralized settings management |
+| **[🔔 Notifications](docs/NOTIFICATIONS.md)** | Teams/Slack integration via Configuration tab |
 | **[🏢 Architecture](docs/ARCHITECTURE.md)** | System architecture, security, and observability |
 | **[📈 Performance](docs/PERFORMANCE.md)** | Performance metrics, benchmarks, and optimization |
 | **[🚑 Troubleshooting](docs/TROUBLESHOOTING.md)** | Common issues and solutions |

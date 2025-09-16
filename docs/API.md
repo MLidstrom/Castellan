@@ -442,38 +442,69 @@ GET /api/mitre/techniques/{techniqueId}/events
 
 ## 🔔 Notifications API
 
-### List Notification Settings
+### Get Notification Configuration
 ```http
-GET /api/notifications/settings
+GET /api/notifications/config
 ```
 
-### Create Notification Webhook
-```http
-POST /api/notifications/webhooks
-Content-Type: application/json
-
+**Response:**
+```json
 {
-  "name": "Teams Security Channel",
-  "url": "https://outlook.office.com/webhook/...",
-  "platform": "teams",
-  "severityFilter": ["critical", "high"],
-  "enabled": true
+  "teams": {
+    "enabled": false,
+    "webhookUrl": "",
+    "notificationTypes": {
+      "criticalEvents": true,
+      "highRiskEvents": true,
+      "yaraMatches": true,
+      "systemAlerts": true
+    },
+    "rateLimitPerHour": 60
+  },
+  "slack": {
+    "enabled": false,
+    "webhookUrl": "",
+    "channel": "#security",
+    "notificationTypes": {
+      "criticalEvents": true,
+      "highRiskEvents": true,
+      "yaraMatches": true,
+      "systemAlerts": false
+    },
+    "rateLimitPerHour": 60
+  }
 }
 ```
 
-### Test Webhook
+### Update Notification Configuration
 ```http
-POST /api/notifications/webhooks/{webhookId}/test
-```
-
-### Update Webhook
-```http
-PATCH /api/notifications/webhooks/{webhookId}
+PUT /api/notifications/config
 Content-Type: application/json
 
 {
-  "enabled": false,
-  "severityFilter": ["critical"]
+  "teams": {
+    "enabled": true,
+    "webhookUrl": "https://outlook.office.com/webhook/...",
+    "notificationTypes": {
+      "criticalEvents": true,
+      "highRiskEvents": true,
+      "yaraMatches": false,
+      "systemAlerts": false
+    },
+    "rateLimitPerHour": 30
+  },
+  "slack": {
+    "enabled": false,
+    "webhookUrl": "",
+    "channel": "#security",
+    "notificationTypes": {
+      "criticalEvents": true,
+      "highRiskEvents": true,
+      "yaraMatches": true,
+      "systemAlerts": false
+    },
+    "rateLimitPerHour": 60
+  }
 }
 ```
 

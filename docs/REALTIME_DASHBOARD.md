@@ -160,7 +160,7 @@ Located in dashboard header:
 ### ✅ **Comprehensive Navigation Testing (September 2025)**
 
 **Test Date**: September 15, 2025
-**Test Coverage**: All 11 admin interface menu items
+**Test Coverage**: All 10 admin interface menu items
 **Result**: 100% Pass Rate - No failures detected
 
 #### Tested Menu Items ✅
@@ -170,11 +170,9 @@ Located in dashboard header:
 - ✅ **YARA Rules** - Large dataset (1950 entries) loading correctly
 - ✅ **YARA Matches** - Live alerts functionality operational
 - ✅ **Timeline** - Date filters and granularity controls working
-- ✅ **Compliance Reports** - Framework filtering available and functional
 - ✅ **System Status** - Real-time updates via SignalR confirmed
 - ✅ **Threat Scanner** - Full interface loaded with all controls
-- ✅ **Notification Settings** - Empty state handling correct
-- ✅ **Configuration** - Complex threat intelligence config loading
+- ✅ **Configuration** - Threat intelligence and notification settings integrated
 
 #### Test Results Summary
 - **Navigation**: All menu items accessible without errors

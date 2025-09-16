@@ -58,9 +58,9 @@ Navigate to `http://localhost:8080` for comprehensive notification settings mana
 ### Notification Settings Configuration
 
 1. **Add Webhook URLs**:
-   - Navigate to "Notification Settings" in the admin interface
+   - Navigate to "Configuration" → "Notifications" tab in the admin interface
    - Add your Teams or Slack webhook URLs
-   - Configure multiple channels for different alert types
+   - Configure notification types and rate limits for each service
 
 2. **Rate Limiting Configuration**:
    - Set throttling windows per severity level
