@@ -800,7 +800,15 @@ export const Dashboard = React.memo(() => {
             ) : (
               <Box>
                 <Typography variant="h4" color="success.main">
-                  {systemStatus.filter(s => s.status === 'healthy').length}/{systemStatus.length}
+                  {(() => {
+                    const healthyCount = systemStatus.filter(s => s.status && s.status.toLowerCase() === 'healthy').length;
+                    console.log('🔍 System Health Debug:', {
+                      totalServices: systemStatus.length,
+                      healthyCount,
+                      statuses: systemStatus.map(s => s.status)
+                    });
+                    return `${healthyCount}/${systemStatus.length}`;
+                  })()}
                 </Typography>
                 <Typography variant="body2" color="text.secondary">
                   Healthy Services
