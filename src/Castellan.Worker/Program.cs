@@ -132,6 +132,7 @@ builder.Services.AddSingleton<IPerformanceMonitor, PerformanceMonitorService>();
 // Register enhanced performance services for dashboard
 builder.Services.AddScoped<PerformanceMetricsService>();
 builder.Services.AddScoped<PerformanceAlertService>();
+builder.Services.AddSingleton<AnalyticsService>();
 
 // Register IP enrichment service based on configuration
 var ipEnrichmentProvider = builder.Configuration["IPEnrichment:Provider"] ?? "MaxMind";

@@ -11,6 +11,7 @@ import {
   Shield as YaraRulesIcon,
   FindInPage as YaraMatchesIcon,
   Timeline as TimelineIcon,
+  TrendingUp as TrendAnalysisIcon,
 } from '@mui/icons-material';
 // Using production providers with real backend API
 import { enhancedCastellanDataProvider } from './dataProvider/castellanDataProvider';
@@ -53,6 +54,8 @@ const YaraMatchesList = React.lazy(() => import('./resources/YaraMatches').then(
 const YaraMatchesShow = React.lazy(() => import('./resources/YaraMatches').then(module => ({ default: module.YaraMatchesShow })));
 
 const TimelineList = React.lazy(() => import('./resources/Timeline').then(module => ({ default: module.TimelineList })));
+
+const TrendAnalysisPage = React.lazy(() => import('./components/TrendAnalysisPage'));
 
 
 const ConfigurationList = React.lazy(() => import('./resources/Configuration').then(module => ({ default: module.ConfigurationList })));
@@ -133,12 +136,20 @@ const App = () => {
     
             {/* Timeline Resource - Available in CastellanProFree */}
             <Resource
-              name="timeline"
+              name="timelines"
               list={TimelineList}
               icon={TimelineIcon}
               recordRepresentation={() => 'Security Event Timeline'}
             />
-    
+
+            {/* Trend Analysis Page - New in v0.6.0 */}
+            <Resource
+              name="trend-analysis"
+              list={TrendAnalysisPage}
+              icon={TrendAnalysisIcon}
+              recordRepresentation={() => 'Trend Analysis'}
+            />
+
             {/* Compliance Reports Resource - Now Available */}
             <Resource
               name="compliance-reports"

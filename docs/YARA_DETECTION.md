@@ -6,6 +6,9 @@ Castellan's YARA integration provides **production-ready** signature-based malwa
 
 ### ✅ Complete Rule Management
 - **Full CRUD Operations** - Create, read, update, delete YARA rules via REST API and React UI
+- **Advanced Rule Configuration** - Editable rule source URLs with dynamic add/remove functionality
+- **Auto-Update Management** - Configurable frequency and automatic rule import scheduling
+- **Real Import Processing** - Actual rule import execution with accurate result reporting
 - **React Admin Interface** - Complete web UI for rule management with advanced filtering
 - **Real-time Validation** - Native dnYara compilation and syntax validation
 - **Categorization** - Organize rules by type (Malware, Ransomware, Trojan, Backdoor, etc.)

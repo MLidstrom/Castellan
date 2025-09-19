@@ -35,7 +35,12 @@ import {
   Warning as WarningIcon,
   Notifications as NotificationIcon,
   Groups as TeamsIcon,
-  Chat as SlackIcon
+  Chat as SlackIcon,
+  Shield as YaraIcon,
+  Download as DownloadIcon,
+  Update as UpdateIcon,
+  Delete as DeleteIcon,
+  Add as AddIcon
 } from '@mui/icons-material';
 
 // Configuration header component
@@ -61,6 +66,7 @@ const ConfigurationHeader = ({
       <Tab label="Threat Intelligence" />
       <Tab label="Notifications" />
       <Tab label="IP Enrichment" />
+      <Tab label="YARA Rules" />
       <Tab label="Performance" disabled />
       <Tab label="Security" disabled />
     </Tabs>
@@ -144,6 +150,31 @@ type IPEnrichmentConfigType = {
   highRiskASNs: number[];
 };
 
+type YaraConfigType = {
+  autoUpdate: {
+    enabled: boolean;
+    updateFrequencyDays: number;
+    lastUpdate: string | null;
+    nextUpdate: string | null;
+  };
+  sources: {
+    enabled: boolean;
+    urls: string[];
+    maxRulesPerSource: number;
+  };
+  rules: {
+    enabledByDefault: boolean;
+    autoValidation: boolean;
+    performanceThresholdMs: number;
+  };
+  import: {
+    lastImportDate: string | null;
+    totalRules: number;
+    enabledRules: number;
+    failedRules: number;
+  };
+};
+
 // Default configuration constant
 const DEFAULT_CONFIG: ConfigType = {
   virusTotal: {
@@ -220,6 +251,38 @@ const DEFAULT_IP_ENRICHMENT_CONFIG: IPEnrichmentConfigType = {
   },
   highRiskCountries: ['CN', 'RU', 'KP', 'IR', 'SY', 'BY'],
   highRiskASNs: []
+};
+
+const DEFAULT_YARA_CONFIG: YaraConfigType = {
+  autoUpdate: {
+    enabled: false,
+    updateFrequencyDays: 7,
+    lastUpdate: null,
+    nextUpdate: null
+  },
+  sources: {
+    enabled: true,
+    urls: [
+      'https://raw.githubusercontent.com/Yara-Rules/rules/master/malware/APT_APT1.yar',
+      'https://raw.githubusercontent.com/Neo23x0/signature-base/master/yara/apt_cobalt_strike.yar',
+      'https://raw.githubusercontent.com/Yara-Rules/rules/master/malware/MALW_Zeus.yar',
+      'https://raw.githubusercontent.com/Neo23x0/signature-base/master/yara/general_clamav_signature_set.yar',
+      'https://raw.githubusercontent.com/Yara-Rules/rules/master/malware/MALW_Ransomware.yar',
+      'https://raw.githubusercontent.com/YARAHQ/yara-rules/main/malware/TrickBot.yar'
+    ],
+    maxRulesPerSource: 50
+  },
+  rules: {
+    enabledByDefault: true,
+    autoValidation: true,
+    performanceThresholdMs: 1000
+  },
+  import: {
+    lastImportDate: null,
+    totalRules: 0,
+    enabledRules: 0,
+    failedRules: 0
+  }
 };
 
 // Threat Intelligence Configuration Component
@@ -1302,11 +1365,389 @@ const IPEnrichmentConfig = ({ record }: { record?: any }) => {
   );
 };
 
+// YARA Configuration Component
+const YaraConfig = ({ record }: { record?: any }) => {
+  const [config, setConfig] = useState<YaraConfigType>(() => {
+    // Initialize with record data if available, otherwise use defaults
+    if (record && record.id === 'yara-rules') {
+      return { ...DEFAULT_YARA_CONFIG, ...record };
+    }
+    return DEFAULT_YARA_CONFIG;
+  });
+  const [loading, setLoading] = useState(false);
+  const notify = useNotify();
+  const dataProvider = useDataProvider();
+  const refresh = useRefresh();
+
+  // Load configuration on mount
+  useEffect(() => {
+    loadConfiguration();
+  }, []);
+
+  const loadConfiguration = async () => {
+    try {
+      setLoading(true);
+      const response = await fetch('http://localhost:5000/api/yara-configuration', {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('auth_token')}`
+        }
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        setConfig({ ...DEFAULT_YARA_CONFIG, ...result });
+      } else {
+        console.log('No existing YARA configuration found, using defaults');
+        setConfig(DEFAULT_YARA_CONFIG);
+      }
+    } catch (error) {
+      console.log('No existing YARA configuration found, using defaults');
+      setConfig(DEFAULT_YARA_CONFIG);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSave = async () => {
+    try {
+      setLoading(true);
+      const response = await fetch('http://localhost:5000/api/yara-configuration', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('auth_token')}`
+        },
+        body: JSON.stringify(config)
+      });
+
+      if (response.ok) {
+        notify('YARA configuration saved successfully', { type: 'success' });
+        refresh();
+      } else {
+        const errorData = await response.json();
+        notify(`Error saving YARA configuration: ${errorData.message}`, { type: 'error' });
+      }
+    } catch (error) {
+      notify('Error saving YARA configuration', { type: 'error' });
+      console.error('Error saving YARA configuration:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleImportNow = async () => {
+    try {
+      setLoading(true);
+      notify('Starting YARA rules import...', { type: 'info' });
+
+      // Get the auth token from localStorage
+      const authToken = localStorage.getItem('auth_token');
+
+      // Call the import API endpoint
+      const response = await fetch('http://localhost:5000/api/yara-configuration/import', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${authToken}`
+        }
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        notify(result.message, { type: 'success' });
+
+        // Update config with new import stats
+        setConfig(prev => ({
+          ...prev,
+          import: {
+            lastImportDate: new Date().toISOString(),
+            totalRules: result.totalRules || prev.import.totalRules,
+            enabledRules: result.enabledRules || prev.import.enabledRules,
+            failedRules: result.failedRules || 0
+          },
+          autoUpdate: {
+            ...prev.autoUpdate,
+            lastUpdate: new Date().toISOString()
+          }
+        }));
+      } else {
+        throw new Error('Import failed');
+      }
+    } catch (error) {
+      notify('Error importing YARA rules', { type: 'error' });
+      console.error('Error importing YARA rules:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <Box sx={{ p: 3 }}>
+      <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
+        <YaraIcon sx={{ mr: 2, color: 'primary.main' }} />
+        <Typography variant="h5" component="h2">
+          YARA Rules Configuration
+        </Typography>
+      </Box>
+
+      <Typography variant="body2" color="text.secondary" sx={{ mb: 4 }}>
+        Configure automatic updates and import settings for YARA malware detection rules.
+      </Typography>
+
+      <Grid container spacing={4}>
+        {/* Auto Update Settings */}
+        <Grid item xs={12} md={6}>
+          <Paper sx={{ p: 3, border: '1px solid #e0e0e0' }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+              <UpdateIcon sx={{ mr: 1, color: 'primary.main' }} />
+              <Typography variant="h6">Auto Update Settings</Typography>
+            </Box>
+
+            <FormControlLabel
+              control={
+                <Switch
+                  checked={config.autoUpdate.enabled}
+                  onChange={(e) => setConfig({
+                    ...config,
+                    autoUpdate: { ...config.autoUpdate, enabled: e.target.checked }
+                  })}
+                />
+              }
+              label="Enable automatic rule updates"
+              sx={{ mb: 2 }}
+            />
+
+            <MuiTextField
+              fullWidth
+              type="number"
+              label="Update Frequency (days)"
+              value={config.autoUpdate.updateFrequencyDays}
+              onChange={(e) => setConfig({
+                ...config,
+                autoUpdate: { ...config.autoUpdate, updateFrequencyDays: parseInt(e.target.value) || 7 }
+              })}
+              inputProps={{ min: 1, max: 365 }}
+              helperText="How often to check for new YARA rules (1-365 days)"
+              sx={{ mb: 2 }}
+            />
+
+            {config.autoUpdate.lastUpdate && (
+              <Alert severity="info" sx={{ mb: 2 }}>
+                <Typography variant="body2">
+                  <strong>Last Update:</strong> {new Date(config.autoUpdate.lastUpdate).toLocaleString()}
+                </Typography>
+              </Alert>
+            )}
+          </Paper>
+        </Grid>
+
+        {/* Rule Sources */}
+        <Grid item xs={12} md={6}>
+          <Paper sx={{ p: 3, border: '1px solid #e0e0e0' }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+              <DownloadIcon sx={{ mr: 1, color: 'primary.main' }} />
+              <Typography variant="h6">Rule Sources</Typography>
+            </Box>
+
+            <FormControlLabel
+              control={
+                <Switch
+                  checked={config.sources.enabled}
+                  onChange={(e) => setConfig({
+                    ...config,
+                    sources: { ...config.sources, enabled: e.target.checked }
+                  })}
+                />
+              }
+              label="Enable rule source downloads"
+              sx={{ mb: 2 }}
+            />
+
+            <MuiTextField
+              fullWidth
+              type="number"
+              label="Max Rules Per Source"
+              value={config.sources.maxRulesPerSource}
+              onChange={(e) => setConfig({
+                ...config,
+                sources: { ...config.sources, maxRulesPerSource: parseInt(e.target.value) || 50 }
+              })}
+              inputProps={{ min: 1, max: 1000 }}
+              helperText="Maximum rules to import from each source"
+              sx={{ mb: 2 }}
+            />
+
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+              <strong>Active Sources:</strong> {config.sources.urls.length} configured
+            </Typography>
+
+            {/* Source URLs List */}
+            <Box sx={{ mb: 2 }}>
+              {config.sources.urls.map((url, index) => (
+                <Box key={index} sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+                  <MuiTextField
+                    fullWidth
+                    size="small"
+                    label={`Source ${index + 1}`}
+                    value={url}
+                    onChange={(e) => {
+                      const newUrls = [...config.sources.urls];
+                      newUrls[index] = e.target.value;
+                      setConfig({
+                        ...config,
+                        sources: { ...config.sources, urls: newUrls }
+                      });
+                    }}
+                    sx={{ mr: 1 }}
+                  />
+                  <IconButton
+                    color="error"
+                    onClick={() => {
+                      const newUrls = config.sources.urls.filter((_, i) => i !== index);
+                      setConfig({
+                        ...config,
+                        sources: { ...config.sources, urls: newUrls }
+                      });
+                    }}
+                    disabled={config.sources.urls.length <= 1}
+                  >
+                    <DeleteIcon />
+                  </IconButton>
+                </Box>
+              ))}
+            </Box>
+
+            {/* Add New Source Button */}
+            <Button
+              variant="outlined"
+              size="small"
+              startIcon={<AddIcon />}
+              onClick={() => {
+                setConfig({
+                  ...config,
+                  sources: { ...config.sources, urls: [...config.sources.urls, ''] }
+                });
+              }}
+              sx={{ mb: 1 }}
+            >
+              Add Source
+            </Button>
+          </Paper>
+        </Grid>
+
+        {/* Import Statistics */}
+        <Grid item xs={12} md={6}>
+          <Paper sx={{ p: 3, border: '1px solid #e8f5e8', bgcolor: '#f9f9f9' }}>
+            <Typography variant="h6" sx={{ mb: 2 }}>Import Statistics</Typography>
+
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
+              <Typography variant="body2">Total Rules:</Typography>
+              <Chip label={config.import.totalRules} color="primary" size="small" />
+            </Box>
+
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
+              <Typography variant="body2">Enabled Rules:</Typography>
+              <Chip label={config.import.enabledRules} color="success" size="small" />
+            </Box>
+
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
+              <Typography variant="body2">Failed Rules:</Typography>
+              <Chip
+                label={config.import.failedRules}
+                color={config.import.failedRules > 0 ? "error" : "default"}
+                size="small"
+              />
+            </Box>
+
+            {config.import.lastImportDate && (
+              <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                <strong>Last Import:</strong> {new Date(config.import.lastImportDate).toLocaleString()}
+              </Typography>
+            )}
+
+            <Button
+              variant="outlined"
+              fullWidth
+              startIcon={<DownloadIcon />}
+              onClick={handleImportNow}
+              disabled={loading}
+              sx={{ mb: 2 }}
+            >
+              Import Rules Now
+            </Button>
+          </Paper>
+        </Grid>
+
+        {/* Rule Settings */}
+        <Grid item xs={12} md={6}>
+          <Paper sx={{ p: 3, border: '1px solid #e0e0e0' }}>
+            <Typography variant="h6" sx={{ mb: 2 }}>Rule Settings</Typography>
+
+            <FormControlLabel
+              control={
+                <Switch
+                  checked={config.rules.enabledByDefault}
+                  onChange={(e) => setConfig({
+                    ...config,
+                    rules: { ...config.rules, enabledByDefault: e.target.checked }
+                  })}
+                />
+              }
+              label="Enable imported rules by default"
+              sx={{ mb: 2 }}
+            />
+
+            <FormControlLabel
+              control={
+                <Switch
+                  checked={config.rules.autoValidation}
+                  onChange={(e) => setConfig({
+                    ...config,
+                    rules: { ...config.rules, autoValidation: e.target.checked }
+                  })}
+                />
+              }
+              label="Auto-validate rules on import"
+              sx={{ mb: 2 }}
+            />
+
+            <MuiTextField
+              fullWidth
+              type="number"
+              label="Performance Threshold (ms)"
+              value={config.rules.performanceThresholdMs}
+              onChange={(e) => setConfig({
+                ...config,
+                rules: { ...config.rules, performanceThresholdMs: parseInt(e.target.value) || 1000 }
+              })}
+              inputProps={{ min: 100, max: 10000 }}
+              helperText="Disable rules that take longer than this to execute"
+              sx={{ mb: 2 }}
+            />
+          </Paper>
+        </Grid>
+      </Grid>
+
+      <Box sx={{ mt: 4, display: 'flex', justifyContent: 'flex-end' }}>
+        <Button
+          variant="contained"
+          disabled={loading}
+          startIcon={<SaveIcon />}
+          onClick={handleSave}
+        >
+          Save YARA Configuration
+        </Button>
+      </Box>
+    </Box>
+  );
+};
+
 // Configuration List Component (for sidebar navigation)
 export const ConfigurationList = () => {
   const [config, setConfig] = useState<ConfigType>(DEFAULT_CONFIG);
   const [notificationConfig, setNotificationConfig] = useState<NotificationConfigType>(DEFAULT_NOTIFICATION_CONFIG);
   const [ipEnrichmentConfig, setIpEnrichmentConfig] = useState<IPEnrichmentConfigType>(DEFAULT_IP_ENRICHMENT_CONFIG);
+  const [yaraConfig, setYaraConfig] = useState<YaraConfigType>(DEFAULT_YARA_CONFIG);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState(0);
   const dataProvider = useDataProvider();
@@ -1336,6 +1777,26 @@ export const ConfigurationList = () => {
         setIpEnrichmentConfig({ ...DEFAULT_IP_ENRICHMENT_CONFIG, ...ipEnrichmentResult.data });
       } catch (error) {
         console.log('No existing IP enrichment configuration found, using defaults');
+      }
+
+      try {
+        // Load YARA config
+        const yaraResponse = await fetch('http://localhost:5000/api/yara-configuration', {
+          headers: {
+            'Authorization': `Bearer ${localStorage.getItem('auth_token')}`
+          }
+        });
+
+        if (yaraResponse.ok) {
+          const yaraResult = await yaraResponse.json();
+          setYaraConfig({ ...DEFAULT_YARA_CONFIG, ...yaraResult });
+        } else {
+          console.log('No existing YARA configuration found, using defaults');
+          setYaraConfig(DEFAULT_YARA_CONFIG);
+        }
+      } catch (error) {
+        console.log('No existing YARA configuration found, using defaults');
+        setYaraConfig(DEFAULT_YARA_CONFIG);
       } finally {
         setLoading(false);
       }
@@ -1367,6 +1828,8 @@ export const ConfigurationList = () => {
       case 2:
         return <IPEnrichmentConfig record={{ id: 'ip-enrichment', ...ipEnrichmentConfig }} />;
       case 3:
+        return <YaraConfig record={{ id: 'yara-rules', ...yaraConfig }} />;
+      case 4:
         return (
           <Box sx={{ p: 3, textAlign: 'center' }}>
             <Typography variant="h6" color="text.secondary">
@@ -1374,7 +1837,7 @@ export const ConfigurationList = () => {
             </Typography>
           </Box>
         );
-      case 4:
+      case 5:
         return (
           <Box sx={{ p: 3, textAlign: 'center' }}>
             <Typography variant="h6" color="text.secondary">

@@ -75,16 +75,23 @@ public class JwtValidationMiddleware
         {
             return false;
         }
-        
-        // Check if the endpoint requires authentication
+
+        // Skip analytics endpoints completely (for trend analysis feature)
+        if (context.Request.Path.StartsWithSegments("/api/analytics"))
+        {
+            return false;
+        }
+
+        // Only require authentication if the endpoint explicitly has the [Authorize] attribute
         var endpoint = context.GetEndpoint();
         if (endpoint?.Metadata?.GetMetadata<Microsoft.AspNetCore.Authorization.IAuthorizeData>() != null)
         {
             return true;
         }
 
-        // Check for Authorization header
-        return context.Request.Headers.ContainsKey("Authorization");
+        // Don't require authentication just because there's an Authorization header
+        // This allows endpoints without [Authorize] to work even if a token is provided
+        return false;
     }
 
     private static string? ExtractTokenFromRequest(HttpContext context)

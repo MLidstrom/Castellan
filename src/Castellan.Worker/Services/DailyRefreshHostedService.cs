@@ -45,7 +45,8 @@ public class DailyRefreshHostedService : BackgroundService
                     _logger.LogInformation("Daily MITRE check: up to date.");
                 }
 
-                // 2) YARA: refresh compiled rules so long-running workers stay in sync
+                // 2) YARA: check if auto-update is needed, then refresh compiled rules
+                await CheckAndUpdateYaraRulesAsync(scope.ServiceProvider, stoppingToken);
                 var yara = scope.ServiceProvider.GetRequiredService<IYaraScanService>();
                 await yara.RefreshRulesAsync(stoppingToken);
                 _logger.LogInformation("Daily YARA refresh: compiled rules reloaded. Compiled count: {Count}", yara.GetCompiledRuleCount());
@@ -59,4 +60,162 @@ public class DailyRefreshHostedService : BackgroundService
             try { await Task.Delay(TimeSpan.FromHours(24), stoppingToken); } catch { }
         }
     }
+
+    private async Task CheckAndUpdateYaraRulesAsync(IServiceProvider serviceProvider, CancellationToken stoppingToken)
+    {
+        try
+        {
+            // Load YARA configuration
+            var configPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "data", "yara-config.json");
+
+            if (!File.Exists(configPath))
+            {
+                _logger.LogInformation("No YARA configuration found, skipping auto-update check");
+                return;
+            }
+
+            var configJson = await File.ReadAllTextAsync(configPath, stoppingToken);
+            var config = System.Text.Json.JsonSerializer.Deserialize<YaraConfigurationModel>(configJson,
+                new System.Text.Json.JsonSerializerOptions { PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase });
+
+            if (config?.AutoUpdate?.Enabled != true)
+            {
+                _logger.LogInformation("YARA auto-update is disabled, skipping check");
+                return;
+            }
+
+            // Check if update is needed
+            var updateNeeded = false;
+            if (config.AutoUpdate.LastUpdate.HasValue)
+            {
+                var daysSinceLastUpdate = (DateTime.UtcNow - config.AutoUpdate.LastUpdate.Value).TotalDays;
+                updateNeeded = daysSinceLastUpdate >= config.AutoUpdate.UpdateFrequencyDays;
+
+                if (updateNeeded)
+                {
+                    _logger.LogInformation("YARA rules update needed: Last update was {Days:F1} days ago (threshold: {Threshold} days)",
+                        daysSinceLastUpdate, config.AutoUpdate.UpdateFrequencyDays);
+                }
+                else
+                {
+                    _logger.LogInformation("YARA rules update not needed: Last update was {Days:F1} days ago (threshold: {Threshold} days)",
+                        daysSinceLastUpdate, config.AutoUpdate.UpdateFrequencyDays);
+                }
+            }
+            else
+            {
+                updateNeeded = true;
+                _logger.LogInformation("YARA rules update needed: No previous update found");
+            }
+
+            if (updateNeeded)
+            {
+                _logger.LogInformation("Starting automatic YARA rules import...");
+
+                // Call the import tool
+                var importToolPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "..", "..", "..", "..", "Tools", "YaraImportTool");
+                var processStartInfo = new System.Diagnostics.ProcessStartInfo
+                {
+                    FileName = "dotnet",
+                    Arguments = $"run --project \"{importToolPath}\" -- --limit {config.Sources.MaxRulesPerSource}",
+                    WorkingDirectory = AppDomain.CurrentDomain.BaseDirectory,
+                    RedirectStandardOutput = true,
+                    RedirectStandardError = true,
+                    UseShellExecute = false,
+                    CreateNoWindow = true
+                };
+
+                using var process = System.Diagnostics.Process.Start(processStartInfo);
+                if (process != null)
+                {
+                    await process.WaitForExitAsync(stoppingToken);
+                    var output = await process.StandardOutput.ReadToEndAsync();
+                    var error = await process.StandardError.ReadToEndAsync();
+
+                    if (process.ExitCode == 0)
+                    {
+                        _logger.LogInformation("YARA rules import completed successfully. Output: {Output}", output);
+
+                        // Update configuration with successful import
+                        config.AutoUpdate.LastUpdate = DateTime.UtcNow;
+                        config.AutoUpdate.NextUpdate = DateTime.UtcNow.AddDays(config.AutoUpdate.UpdateFrequencyDays);
+                        config.Import.LastImportDate = DateTime.UtcNow;
+
+                        // Parse rule count from output if available
+                        if (output.Contains("Total rules in DB:"))
+                        {
+                            var match = System.Text.RegularExpressions.Regex.Match(output, @"Total rules in DB: (\d+)");
+                            if (match.Success && int.TryParse(match.Groups[1].Value, out var totalRules))
+                            {
+                                config.Import.TotalRules = totalRules;
+                                config.Import.EnabledRules = totalRules; // Assuming all imported rules are enabled
+                            }
+                        }
+
+                        // Save updated configuration
+                        var updatedConfigJson = System.Text.Json.JsonSerializer.Serialize(config,
+                            new System.Text.Json.JsonSerializerOptions
+                            {
+                                PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase,
+                                WriteIndented = true
+                            });
+                        await File.WriteAllTextAsync(configPath, updatedConfigJson, stoppingToken);
+
+                        // Copy database to runtime location if needed
+                        var sourceDb = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "..", "..", "..", "..", "..", "data", "castellan.db");
+                        var targetDb = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "data", "castellan.db");
+
+                        if (File.Exists(sourceDb))
+                        {
+                            File.Copy(sourceDb, targetDb, overwrite: true);
+                            _logger.LogInformation("Updated YARA rules database copied to runtime location");
+                        }
+                    }
+                    else
+                    {
+                        _logger.LogError("YARA rules import failed with exit code {ExitCode}. Error: {Error}", process.ExitCode, error);
+                    }
+                }
+                else
+                {
+                    _logger.LogError("Failed to start YARA import process");
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error during YARA rules auto-update check");
+        }
+    }
+}
+
+// Simple model classes for configuration
+public class YaraConfigurationModel
+{
+    public AutoUpdateSettings? AutoUpdate { get; set; }
+    public SourceSettings? Sources { get; set; }
+    public ImportSettings? Import { get; set; }
+}
+
+public class AutoUpdateSettings
+{
+    public bool Enabled { get; set; }
+    public int UpdateFrequencyDays { get; set; }
+    public DateTime? LastUpdate { get; set; }
+    public DateTime? NextUpdate { get; set; }
+}
+
+public class SourceSettings
+{
+    public bool Enabled { get; set; }
+    public List<string> Urls { get; set; } = new();
+    public int MaxRulesPerSource { get; set; }
+}
+
+public class ImportSettings
+{
+    public DateTime? LastImportDate { get; set; }
+    public int TotalRules { get; set; }
+    public int EnabledRules { get; set; }
+    public int FailedRules { get; set; }
 }

@@ -5,13 +5,20 @@
 - **AI-Powered Threat Analysis** - LLM-based event classification with external threat intelligence
 - **Vector Search** - Semantic similarity search using Qdrant vector database for correlation
 - **Advanced Correlation** - M4 correlation engine with threat intelligence enrichment
-- **🆕 File Threat Scanning** - Real-time malware detection with VirusTotal integration and local heuristics
+- **File Threat Scanning** - Real-time malware detection with VirusTotal integration and local heuristics
 
 ## 🛡️ **Security Detection**
 - **Anomaly Detection** - Machine learning-based behavioral analysis with vector similarity
 - **Automated Response** - Real-time threat response with configurable actions and escalation
 - **MITRE ATT&CK Mapping** - Automatic threat technique classification with 800+ techniques
 - **YARA Real-time Malware Detection** - Complete signature-based malware detection system with dnYara 2.1.0 library
+- **YARA Configuration Management** - Advanced rule source management with editable URL configuration
+  - **Editable Rule Sources** - Dynamic add/remove functionality for YARA rule source URLs
+  - **Source URL Management** - Text field interface for configuring malware signature sources
+  - **Auto-Update Configuration** - Configurable frequency and automatic rule import scheduling
+  - **Real Import Processing** - Actual rule import execution with accurate result reporting
+  - **Source Statistics** - Active source count display and import success/failure tracking
+  - **Minimum Source Validation** - Prevents removal of all sources with UI restrictions
 - **React Admin Interface** - Complete web UI for rule management and match analysis
 - **Full CRUD Operations** - REST API and web interface for all rule operations
 - **Performance Metrics** - Thread-safe scanning with execution time tracking
@@ -21,6 +28,16 @@
 - **IP Reputation & Geolocation** - MaxMind GeoLite2 database integration with automated downloads, real IP geolocation, ASN data, and secure HTTP Basic Authentication
 
 ## 📊 **Monitoring & Analysis**
+- **Trend Analysis & Forecasting** - AI-powered predictive analytics with ML.NET time series forecasting
+  - **Historical Trend Analysis** - Security event volume trends with configurable time ranges (7d, 30d, 90d)
+  - **ML.NET Forecasting** - Singular Spectrum Analysis (SSA) for accurate 7-30 day predictions
+  - **Confidence Intervals** - Statistical bounds for forecast reliability assessment
+  - **Interactive Visualizations** - Two-panel responsive UI showing both historical data and AI predictions
+  - **Professional UI** - Material-UI components with color-coded sections and branded ML.NET chips
+  - **Real-time Data Display** - Live historical event counts with formatted dates and prediction ranges
+  - **Real-time API** - Dedicated analytics endpoints for trend data and forecast generation
+  - **Customizable Metrics** - Support for various event types and aggregation methods
+  - **Anomaly Detection** - Statistical identification of significant event volume deviations
 - **Advanced Search & Filtering** - Comprehensive security event search system with complete v0.5.0 implementation
   - **Enhanced Search Interface** - Advanced search drawer with collapsible sections and intuitive controls
   - **Multi-Criteria Filtering** - Date ranges, risk levels, event types, MITRE ATT&CK techniques, machines, users, sources
@@ -64,6 +81,7 @@
 - **Configuration Management** - Centralized configuration system with tabbed interface
   - **Threat Intelligence Tab** - VirusTotal, MalwareBazaar, AlienVault OTX configuration panels
   - **IP Enrichment Tab** - MaxMind GeoLite2 configuration with automated database downloads
+  - **YARA Configuration Tab** - Advanced YARA rule source management with editable URLs and auto-update settings
   - **Notifications Tab** - Teams and Slack webhook configuration with notification type controls
   - **Secure API Key Management** - Password-type fields with show/hide functionality for sensitive credentials
   - **Real-time Validation** - Rate limits (1-1000/min), cache TTL (1-1440min) validation with immediate feedback
@@ -82,15 +100,17 @@
 - **Local Deployment** - No cloud dependencies, runs entirely on your local infrastructure
 
 ## 🔌 **Comprehensive REST API**
-- **Complete API Coverage** - 18+ controllers covering all system functionality
+- **Complete API Coverage** - 19+ controllers covering all system functionality
 - **Authentication API** - Login, refresh, logout, and token validation endpoints
 - **Security Events API** - Full CRUD operations with advanced search and filtering
+- **Analytics API** - Trend analysis and forecasting endpoints with ML.NET predictions
 - **Advanced Search APIs** - Dedicated endpoints for search history and saved searches management
 - **System Monitoring APIs** - Performance metrics, system status, and health check endpoints
 - **Configuration APIs** - Threat intelligence, notifications, and IP enrichment configuration
 - **Export APIs** - Multi-format data export with background processing status
 - **Timeline API** - Historical analysis with heatmaps, statistics, and anomaly detection
 - **YARA Management APIs** - Complete malware detection rule and match management
+- **YARA Configuration API** - Advanced rule source management and auto-update configuration
 - **MITRE ATT&CK API** - 800+ technique browsing and security event mapping
 - **Threat Intelligence APIs** - Health monitoring and configuration for multiple providers
 - **IP Enrichment API** - MaxMind database management and geolocation services

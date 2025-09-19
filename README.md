@@ -24,7 +24,7 @@
 
 **Castellan** is a **100% open source**, enterprise-grade security monitoring platform that transforms Windows event logs into actionable security intelligence using AI-powered analysis, vector search, and real-time threat correlation.
 
-🚀 **Enterprise Features**: 12K+ events/sec processing • Vector similarity search • Real-time Teams/Slack alerts • 800+ MITRE ATT&CK techniques • VirusTotal/MalwareBazaar integration • Complete YARA malware detection • Timeline visualization • Export capabilities • Centralized configuration management
+🚀 **Enterprise Features**: 12K+ events/sec processing • Vector similarity search • Real-time Teams/Slack alerts • 800+ MITRE ATT&CK techniques • VirusTotal/MalwareBazaar integration • Complete YARA malware detection • ML.NET trend forecasting • Timeline visualization • Export capabilities • Centralized configuration management
 
 ⚡ **5-Minute Setup**: `.\scripts\start.ps1` → Open `http://localhost:8080` → Start monitoring (All 10 admin interface pages verified working)
 
@@ -36,7 +36,8 @@
 - **🔔 Smart Notifications** - Rich Teams/Slack alerts with adaptive rate limiting
 - **🎯 MITRE Integration** - Auto-updated 800+ ATT&CK techniques with threat mapping
 - **🔍 Threat Intelligence** - VirusTotal, MalwareBazaar, AlienVault OTX with configuration UI
-- **⚡ YARA Malware Detection** - Complete signature-based detection with React Admin UI
+- **⚡ YARA Malware Detection** - Complete signature-based detection with editable rule source configuration
+- **📈 AI Trend Analysis** - ML.NET forecasting with predictions and confidence intervals
 - **📋 Timeline Visualization** - Interactive security event timeline with granular analysis
 - **📤 Data Export** - CSV, JSON, PDF export with filtering and background processing
 - **📱 Real-time Dashboard** - React admin interface with persistent SignalR live updates

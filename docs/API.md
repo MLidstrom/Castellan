@@ -401,6 +401,72 @@ GET /api/performance/system-resources
 }
 ```
 
+## 📊 Analytics API
+
+### Get Historical Trends
+```http
+GET /api/analytics/trends?metric=TotalEvents&timeRange=7d&groupBy=day
+```
+
+**Query Parameters:**
+- `metric` - Metric type: `TotalEvents`, `CriticalEvents`, `HighRiskEvents` (default: TotalEvents)
+- `timeRange` - Time range: `7d`, `30d`, `90d` (default: 7d)
+- `groupBy` - Grouping interval: `day`, `hour` (default: day)
+
+**Response:**
+```json
+{
+  "data": [
+    {
+      "timestamp": "2025-01-15T00:00:00Z",
+      "value": 120
+    },
+    {
+      "timestamp": "2025-01-16T00:00:00Z",
+      "value": 145
+    }
+  ]
+}
+```
+
+### Generate Forecast
+```http
+GET /api/analytics/forecast?metric=TotalEvents&forecastPeriod=7
+```
+
+**Query Parameters:**
+- `metric` - Metric type: `TotalEvents`, `CriticalEvents`, `HighRiskEvents` (default: TotalEvents)
+- `forecastPeriod` - Number of days to forecast: 1-30 (default: 7)
+
+**Response:**
+```json
+{
+  "data": {
+    "historicalData": [
+      {
+        "timestamp": "2025-01-15T00:00:00Z",
+        "value": 120
+      }
+    ],
+    "forecastedData": [
+      {
+        "timestamp": "2025-01-16T00:00:00Z",
+        "forecastValue": 150,
+        "lowerBound": 130,
+        "upperBound": 170
+      }
+    ]
+  }
+}
+```
+
+**Features:**
+- **ML.NET Time Series Forecasting** - Uses Singular Spectrum Analysis (SSA) for accurate predictions
+- **Confidence Intervals** - Statistical upper and lower bounds for forecast reliability
+- **Historical Context** - 90 days of historical data used for model training
+- **Anonymous Access** - No authentication required for analytics endpoints
+- **Real-time Processing** - On-demand forecast generation with sub-second response times
+
 ## 🎯 MITRE ATT&CK API
 
 ### Get MITRE Techniques
@@ -654,6 +720,158 @@ Content-Type: application/json
   "reporter": "analyst@company.com",
   "comment": "This rule triggered on legitimate software",
   "context": "Windows System File"
+}
+```
+
+## 🆕 YARA Configuration API
+
+### Get YARA Configuration
+```http
+GET /api/yara-configuration
+```
+
+**Response:**
+```json
+{
+  "autoUpdate": {
+    "enabled": false,
+    "updateFrequencyDays": 7,
+    "lastUpdate": null,
+    "nextUpdate": null
+  },
+  "sources": {
+    "enabled": true,
+    "urls": [
+      "https://raw.githubusercontent.com/Yara-Rules/rules/master/malware/APT_APT1.yar",
+      "https://raw.githubusercontent.com/Neo23x0/signature-base/master/yara/apt_cobalt_strike.yar",
+      "https://raw.githubusercontent.com/Yara-Rules/rules/master/malware/MALW_Zeus.yar",
+      "https://raw.githubusercontent.com/Neo23x0/signature-base/master/yara/general_clamav_signature_set.yar",
+      "https://raw.githubusercontent.com/Yara-Rules/rules/master/malware/MALW_Ransomware.yar",
+      "https://raw.githubusercontent.com/YARAHQ/yara-rules/main/malware/TrickBot.yar"
+    ],
+    "maxRulesPerSource": 50
+  },
+  "rules": {
+    "enabledByDefault": true,
+    "autoValidation": true,
+    "performanceThresholdMs": 1000
+  },
+  "import": {
+    "lastImportDate": "2025-09-15T10:30:00Z",
+    "totalRules": 70,
+    "enabledRules": 70,
+    "failedRules": 0
+  },
+  "createdAt": "2025-09-15T10:00:00Z",
+  "updatedAt": "2025-09-15T10:30:00Z"
+}
+```
+
+### Update YARA Configuration
+```http
+PUT /api/yara-configuration
+Content-Type: application/json
+
+{
+  "autoUpdate": {
+    "enabled": true,
+    "updateFrequencyDays": 14
+  },
+  "sources": {
+    "enabled": true,
+    "urls": [
+      "https://raw.githubusercontent.com/Yara-Rules/rules/master/malware/APT_APT1.yar",
+      "https://raw.githubusercontent.com/custom/rules/malware/Custom_Rules.yar"
+    ],
+    "maxRulesPerSource": 100
+  },
+  "rules": {
+    "enabledByDefault": true,
+    "autoValidation": true,
+    "performanceThresholdMs": 2000
+  }
+}
+```
+
+**Validation Rules:**
+- `updateFrequencyDays`: 1-365 days
+- `maxRulesPerSource`: 1-1000 rules
+- `performanceThresholdMs`: 100-10000 milliseconds
+- `urls`: Array of valid HTTP/HTTPS URLs pointing to YARA rule files
+
+### Get YARA Import Statistics
+```http
+GET /api/yara-configuration/stats
+```
+
+**Response:**
+```json
+{
+  "totalRules": 70,
+  "enabledRules": 70,
+  "disabledRules": 0,
+  "failedRules": 0,
+  "lastImportDate": "2025-09-15T10:30:00Z",
+  "sources": [
+    {
+      "name": "GitHub YARA-Rules",
+      "rulesCount": 20,
+      "lastUpdate": "2025-09-15T10:30:00Z"
+    },
+    {
+      "name": "Neo23x0 Signature-Base",
+      "rulesCount": 25,
+      "lastUpdate": "2025-09-15T10:30:00Z"
+    },
+    {
+      "name": "YARAHQ Community",
+      "rulesCount": 25,
+      "lastUpdate": "2025-09-15T10:30:00Z"
+    }
+  ]
+}
+```
+
+### Trigger Manual YARA Rules Import
+```http
+POST /api/yara-configuration/import
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "message": "Successfully imported 15 new YARA rules (Total: 85)",
+  "imported": 15,
+  "totalRules": 85,
+  "enabledRules": 85,
+  "failedRules": 0,
+  "importDate": "2025-09-15T14:30:00Z"
+}
+```
+
+**Features:**
+- **Real Import Processing** - Executes actual YARA import tool with configurable rule limits
+- **Source URL Management** - Dynamic configuration of YARA rule source URLs
+- **Auto-Update Configuration** - Configurable scheduling for automatic rule updates
+- **Import Statistics** - Detailed tracking of rule counts and import success/failure
+- **Performance Monitoring** - Rule execution time thresholds and optimization
+- **Database Integration** - SQLite storage with automatic rule compilation and refresh
+
+### Check Auto-Update Status
+```http
+GET /api/yara-configuration/check-update
+```
+
+**Response:**
+```json
+{
+  "updateNeeded": true,
+  "reason": "Last update was 8.5 days ago (threshold: 7 days)",
+  "nextUpdate": "2025-09-22T10:30:00Z",
+  "lastUpdate": "2025-09-14T10:30:00Z",
+  "updateFrequencyDays": 7,
+  "autoUpdateEnabled": true
 }
 ```
 
