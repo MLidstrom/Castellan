@@ -10,7 +10,7 @@ import {
   Settings as ConfigurationIcon,
   Shield as YaraRulesIcon,
   FindInPage as YaraMatchesIcon,
-  Timeline as TimelineIcon,
+  Schedule as TimelineIcon,
   TrendingUp as TrendAnalysisIcon,
 } from '@mui/icons-material';
 // Using production providers with real backend API

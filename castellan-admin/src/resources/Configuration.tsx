@@ -37,6 +37,7 @@ import {
   Groups as TeamsIcon,
   Chat as SlackIcon,
   Shield as YaraIcon,
+  Security as MitreIcon,
   Download as DownloadIcon,
   Update as UpdateIcon,
   Delete as DeleteIcon,
@@ -67,6 +68,7 @@ const ConfigurationHeader = ({
       <Tab label="Notifications" />
       <Tab label="IP Enrichment" />
       <Tab label="YARA Rules" />
+      <Tab label="MITRE Techniques" />
       <Tab label="Performance" disabled />
       <Tab label="Security" disabled />
     </Tabs>
@@ -1742,6 +1744,155 @@ const YaraConfig = ({ record }: { record?: any }) => {
   );
 };
 
+// MITRE ATT&CK Configuration Component
+const MitreConfig = ({ record }: { record?: any }) => {
+  const dataProvider = useDataProvider();
+  const notify = useNotify();
+  const [mitreStats, setMitreStats] = useState<any>(null);
+  const [importing, setImporting] = useState(false);
+
+  useEffect(() => {
+    const fetchMitreStats = async () => {
+      try {
+        // Direct fetch to avoid dataProvider's ID appending behavior
+        const response = await fetch('http://localhost:5000/api/mitre/count', {
+          headers: {
+            'Authorization': `Bearer ${localStorage.getItem('auth_token')}`
+          }
+        });
+        if (response.ok) {
+          const data = await response.json();
+          setMitreStats(data);
+        } else {
+          throw new Error('Failed to fetch MITRE stats');
+        }
+      } catch (error) {
+        console.warn('Could not fetch MITRE stats:', error);
+        setMitreStats({ count: 0, shouldImport: true });
+      }
+    };
+
+    fetchMitreStats();
+  }, [dataProvider]);
+
+  const handleImport = async () => {
+    setImporting(true);
+    try {
+      const response = await dataProvider.create('mitre/import', { data: {} });
+      notify(`MITRE import completed: ${response.data.message}`, { type: 'success' });
+
+      // Refresh stats - direct fetch to avoid dataProvider's ID appending behavior
+      const countResponse = await fetch('http://localhost:5000/api/mitre/count', {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('auth_token')}`
+        }
+      });
+      if (countResponse.ok) {
+        const data = await countResponse.json();
+        setMitreStats(data);
+      }
+    } catch (error: any) {
+      notify(`MITRE import failed: ${error.message}`, { type: 'error' });
+    } finally {
+      setImporting(false);
+    }
+  };
+
+  return (
+    <Box>
+      <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
+        <MitreIcon sx={{ mr: 1, color: 'primary.main' }} />
+        <Typography variant="h5" component="h2">
+          MITRE ATT&CK Techniques
+        </Typography>
+      </Box>
+
+      <Grid container spacing={3}>
+        <Grid item xs={12} md={6}>
+          <Paper sx={{ p: 3 }}>
+            <Typography variant="h6" gutterBottom sx={{ display: 'flex', alignItems: 'center' }}>
+              <MitreIcon sx={{ mr: 1 }} />
+              Database Status
+            </Typography>
+
+            {mitreStats && (
+              <Box sx={{ mb: 3 }}>
+                <Typography variant="body1" sx={{ mb: 1 }}>
+                  <strong>Techniques in Database:</strong> {mitreStats.count?.toLocaleString() || 0}
+                </Typography>
+
+                {mitreStats.count > 0 ? (
+                  <Chip
+                    icon={<CheckIcon />}
+                    label="Database Ready"
+                    color="success"
+                    sx={{ mb: 2 }}
+                  />
+                ) : (
+                  <Chip
+                    icon={<WarningIcon />}
+                    label="Database Empty - Import Required"
+                    color="warning"
+                    sx={{ mb: 2 }}
+                  />
+                )}
+
+                <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                  Last checked: {new Date().toLocaleString()}
+                </Typography>
+              </Box>
+            )}
+
+            <Button
+              variant="contained"
+              disabled={importing}
+              startIcon={importing ? <UpdateIcon sx={{ animation: 'spin 1s linear infinite' }} /> : <DownloadIcon />}
+              onClick={handleImport}
+              sx={{ mr: 2 }}
+            >
+              {importing ? 'Importing...' : 'Import MITRE Techniques'}
+            </Button>
+
+            <Alert severity="info" sx={{ mt: 2 }}>
+              This will download and import the latest MITRE ATT&CK techniques from the official source.
+              The process may take several minutes to complete.
+            </Alert>
+          </Paper>
+        </Grid>
+
+        <Grid item xs={12} md={6}>
+          <Paper sx={{ p: 3 }}>
+            <Typography variant="h6" gutterBottom>
+              About MITRE ATT&CK
+            </Typography>
+
+            <Typography variant="body2" sx={{ mb: 2 }}>
+              The MITRE ATT&CK framework is a comprehensive knowledge base of adversary tactics,
+              techniques, and procedures (TTPs) based on real-world observations.
+            </Typography>
+
+            <Typography variant="body2" sx={{ mb: 2 }}>
+              <strong>Features:</strong>
+            </Typography>
+            <Box component="ul" sx={{ pl: 2 }}>
+              <li>800+ technique definitions</li>
+              <li>Tactic categorization</li>
+              <li>Platform-specific mappings</li>
+              <li>Mitigation strategies</li>
+              <li>Detection data sources</li>
+            </Box>
+
+            <Alert severity="info" sx={{ mt: 2 }}>
+              <strong>Note:</strong> MITRE techniques are used throughout Castellan for
+              threat classification and security event correlation.
+            </Alert>
+          </Paper>
+        </Grid>
+      </Grid>
+    </Box>
+  );
+};
+
 // Configuration List Component (for sidebar navigation)
 export const ConfigurationList = () => {
   const [config, setConfig] = useState<ConfigType>(DEFAULT_CONFIG);
@@ -1830,6 +1981,8 @@ export const ConfigurationList = () => {
       case 3:
         return <YaraConfig record={{ id: 'yara-rules', ...yaraConfig }} />;
       case 4:
+        return <MitreConfig record={{ id: 'mitre-techniques' }} />;
+      case 5:
         return (
           <Box sx={{ p: 3, textAlign: 'center' }}>
             <Typography variant="h6" color="text.secondary">
@@ -1837,7 +1990,7 @@ export const ConfigurationList = () => {
             </Typography>
           </Box>
         );
-      case 5:
+      case 6:
         return (
           <Box sx={{ p: 3, textAlign: 'center' }}>
             <Typography variant="h6" color="text.secondary">
