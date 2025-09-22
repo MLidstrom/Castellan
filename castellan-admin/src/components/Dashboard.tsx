@@ -1,10 +1,10 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
-import { 
-  Card, 
-  CardContent, 
-  CardHeader, 
-  Typography, 
-  Box, 
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  Typography,
+  Box,
   Button,
   ButtonGroup,
   CircularProgress,
@@ -12,7 +12,8 @@ import {
   Chip,
   IconButton,
   Tooltip as MuiTooltip,
-  Badge
+  Badge,
+  Stack
 } from '@mui/material';
 import { useNotify } from 'react-admin';
 import { 
@@ -118,7 +119,7 @@ export const Dashboard = React.memo(() => {
   const notify = useNotify();
 
   const authToken = localStorage.getItem('auth_token');
-  
+
   // Debug authentication
   console.log('🔐 Auth Token:', authToken ? 'Present (' + authToken.substring(0, 20) + '...)' : 'Missing');
   
@@ -163,6 +164,146 @@ export const Dashboard = React.memo(() => {
   const [threatScanner, setThreatScanner] = useState<ThreatScan[]>([]);
   const [threatScannerLoading, setThreatScannerLoading] = useState(true);
   const [threatScannerError, setThreatScannerError] = useState<string | null>(null);
+  const [scanInProgress, setScanInProgress] = useState(false);
+  const [scanProgress, setScanProgress] = useState<any>(null);
+  const [currentScanType, setCurrentScanType] = useState<string>('');
+
+  // Check scan progress function
+  const checkScanProgress = async () => {
+    try {
+      console.log('🔍 Checking scan progress...');
+      const response = await fetch('http://localhost:5000/api/threat-scanner/progress', {
+        headers: {
+          'Authorization': `Bearer ${authToken}`,
+        },
+      });
+
+      console.log('📡 Progress API response status:', response.status);
+      if (response.ok) {
+        const data = await response.json();
+        console.log('📊 Progress API response data:', data);
+
+        if (data.progress) {
+          console.log('✅ Progress data found:', data.progress);
+          setScanInProgress(true);
+          setScanProgress(data.progress);
+
+          // Check if scan completed
+          if (data.progress.status === 'Completed' ||
+              data.progress.status === 'CompletedWithThreats' ||
+              data.progress.status === 'Failed' ||
+              data.progress.status === 'Cancelled') {
+            console.log('🏁 Scan completed with status:', data.progress.status);
+            setScanInProgress(false);
+            setCurrentScanType('');
+            setRefreshing(true); // Refresh dashboard data
+            return false; // Stop polling
+          }
+          return true; // Continue polling
+        } else {
+          console.log('❌ No progress data in response');
+          setScanInProgress(false);
+          setScanProgress(null);
+          setCurrentScanType('');
+          return false;
+        }
+      } else {
+        console.log('❌ Progress API failed with status:', response.status);
+      }
+      return false;
+    } catch (error) {
+      console.error('❌ Error checking scan progress:', error);
+      return false;
+    }
+  };
+
+  // Threat Scanner handlers
+  const handleQuickScan = async () => {
+    try {
+      const response = await fetch('http://localhost:5000/api/threat-scanner/quick-scan', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${authToken}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (response.ok) {
+        notify('Quick scan started successfully', { type: 'success' });
+        setScanInProgress(true);
+        setCurrentScanType('Quick Scan');
+        checkScanProgress(); // Start checking progress immediately
+      } else {
+        notify('Failed to start quick scan', { type: 'error' });
+      }
+    } catch (error) {
+      notify('Error starting quick scan', { type: 'error' });
+    }
+  };
+
+  const handleFullScan = async () => {
+    console.log('🚀 Full scan button clicked!'); // Debug log
+    try {
+      const response = await fetch('http://localhost:5000/api/threat-scanner/full-scan?async=true', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${authToken}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      console.log('🔄 Full scan response:', response.status); // Debug log
+      if (response.ok) {
+        notify('Full scan started successfully', { type: 'success' });
+        console.log('✅ Setting scan in progress and checking initial progress...');
+        setScanInProgress(true);
+        setCurrentScanType('Full Scan');
+
+        // Wait a moment for the backend to initialize the scan, then check progress
+        setTimeout(() => {
+          console.log('⏰ Delayed progress check (after 1 second)...');
+          checkScanProgress();
+        }, 1000);
+      } else {
+        notify('Failed to start full scan', { type: 'error' });
+      }
+    } catch (error) {
+      console.error('❌ Full scan error:', error); // Debug log
+      notify('Error starting full scan', { type: 'error' });
+    }
+  };
+
+  // Check for scan on initial load and poll for scan progress
+  useEffect(() => {
+    console.log('🔄 useEffect triggered - scanInProgress:', scanInProgress, 'authToken:', !!authToken);
+
+    // Check if a scan is already in progress on load
+    if (!scanInProgress && authToken) {
+      console.log('🔍 Initial scan progress check...');
+      checkScanProgress();
+    }
+
+    let interval: NodeJS.Timeout | null = null;
+
+    if (scanInProgress) {
+      console.log('⏱️ Starting progress polling (every 2 seconds)...');
+      interval = setInterval(async () => {
+        console.log('🔄 Polling scan progress...');
+        const shouldContinue = await checkScanProgress();
+        if (!shouldContinue && interval) {
+          console.log('🛑 Stopping progress polling');
+          clearInterval(interval);
+        }
+      }, 2000); // Poll every 2 seconds
+    }
+
+    return () => {
+      if (interval) {
+        console.log('🧹 Cleaning up progress polling interval');
+        clearInterval(interval);
+      }
+    };
+  }, [scanInProgress, authToken]);
 
   // Use SignalR context for persistent real-time connection
   const {
@@ -831,14 +972,80 @@ export const Dashboard = React.memo(() => {
               <Typography color="error" variant="body2">
                 Error: {threatScannerError}
               </Typography>
+            ) : scanInProgress && scanProgress ? (
+              <Box>
+                <Typography variant="body2" color="primary" sx={{ mb: 1 }}>
+                  {currentScanType || 'Scan'} in Progress
+                </Typography>
+                <Box sx={{ mb: 1 }}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <Typography variant="caption" color="text.secondary">
+                      {scanProgress.scanPhase || 'Scanning...'}
+                    </Typography>
+                    <Typography variant="caption" fontWeight="bold">
+                      {scanProgress.percentComplete?.toFixed(0) || 0}%
+                    </Typography>
+                  </Box>
+                  <LinearProgress
+                    variant="determinate"
+                    value={scanProgress.percentComplete || 0}
+                    sx={{ height: 6, borderRadius: 3 }}
+                  />
+                </Box>
+                <Typography variant="caption" color="text.secondary">
+                  Files: {scanProgress.filesScanned?.toLocaleString() || 0}
+                  {scanProgress.threatsFound > 0 && (
+                    <span style={{ color: '#ff9800', marginLeft: 8 }}>
+                      • {scanProgress.threatsFound} threats found
+                    </span>
+                  )}
+                </Typography>
+                <Stack direction="row" spacing={1} sx={{ mt: 1 }}>
+                  <Button
+                    size="small"
+                    variant="outlined"
+                    color="error"
+                    onClick={async () => {
+                      await fetch('http://localhost:5000/api/threat-scanner/cancel', {
+                        method: 'POST',
+                        headers: { 'Authorization': `Bearer ${authToken}` },
+                      });
+                      setScanInProgress(false);
+                      setCurrentScanType('');
+                    }}
+                  >
+                    Cancel
+                  </Button>
+                </Stack>
+              </Box>
             ) : (
               <Box>
                 <Typography variant="h4" color="warning.main">
                   {threatScanner.length}
                 </Typography>
-                <Typography variant="body2" color="text.secondary">
-                  Active Scans
+                <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                  Scan History
                 </Typography>
+                <Stack direction="row" spacing={1}>
+                  <Button
+                    size="small"
+                    variant="outlined"
+                    onClick={handleQuickScan}
+                    startIcon={<ScannerIcon />}
+                    disabled={scanInProgress}
+                  >
+                    Quick Scan
+                  </Button>
+                  <Button
+                    size="small"
+                    variant="contained"
+                    onClick={handleFullScan}
+                    startIcon={<SecurityIcon />}
+                    disabled={scanInProgress}
+                  >
+                    Full Scan
+                  </Button>
+                </Stack>
               </Box>
             )}
           </CardContent>

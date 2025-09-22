@@ -1,7 +1,7 @@
 # Castellan API Documentation
 
 **Status**: ✅ **Production Ready**
-**Last Updated**: September 16, 2025
+**Last Updated**: September 20, 2025
 **API Version**: v1.1
 
 ## 🎯 Overview
@@ -469,6 +469,38 @@ GET /api/analytics/forecast?metric=TotalEvents&forecastPeriod=7
 
 ## 🎯 MITRE ATT&CK API
 
+### Get MITRE Technique Count
+```http
+GET /api/mitre/count
+```
+
+**Response:**
+```json
+{
+  "count": 823,
+  "shouldImport": false,
+  "lastUpdated": "2025-09-20T10:00:00Z"
+}
+```
+
+### Import MITRE Techniques
+```http
+POST /api/mitre/import
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "message": "Successfully imported 823 new techniques and updated 0 existing techniques",
+  "result": {
+    "techniquesImported": 823,
+    "techniquesUpdated": 0,
+    "errors": []
+  }
+}
+```
+
 ### Get MITRE Techniques
 ```http
 GET /api/mitre/techniques?category=execution&limit=50
@@ -505,6 +537,299 @@ GET /api/mitre/techniques?category=execution&limit=50
 ```http
 GET /api/mitre/techniques/{techniqueId}/events
 ```
+
+## 🔗 Correlation Engine API
+
+### Get Correlation Statistics
+```http
+GET /api/correlation/statistics
+```
+
+**Response:**
+```json
+{
+  "totalEventsProcessed": 45320,
+  "correlationsDetected": 127,
+  "correlationsByType": {
+    "TemporalBurst": 45,
+    "BruteForce": 23,
+    "LateralMovement": 34,
+    "PrivilegeEscalation": 25
+  },
+  "averageConfidenceScore": 0.82,
+  "averageProcessingTime": "00:00:00.0234",
+  "lastUpdated": "2025-09-20T14:30:00Z",
+  "topPatterns": [
+    {
+      "pattern": "Multiple failed authentications followed by success",
+      "count": 23,
+      "riskLevel": "high"
+    }
+  ]
+}
+```
+
+### Get Correlation Rules
+```http
+GET /api/correlation/rules
+```
+
+**Response:**
+```json
+[
+  {
+    "id": "temporal-burst",
+    "name": "Temporal Burst Detection",
+    "description": "Detects multiple events from same source in short time",
+    "type": 0,
+    "patterns": [],
+    "timeWindow": "00:05:00",
+    "minEventCount": 5,
+    "minConfidence": 0.7,
+    "isEnabled": true,
+    "requiredEventTypes": [],
+    "parameters": {}
+  },
+  {
+    "id": "brute-force",
+    "name": "Brute Force Attack",
+    "description": "Multiple failed authentications followed by success",
+    "type": 1,
+    "patterns": [],
+    "timeWindow": "00:10:00",
+    "minEventCount": 3,
+    "minConfidence": 0.8,
+    "isEnabled": true,
+    "requiredEventTypes": ["AuthenticationFailure", "AuthenticationSuccess"],
+    "parameters": {}
+  },
+  {
+    "id": "lateral-movement",
+    "name": "Lateral Movement Detection",
+    "description": "Similar events across multiple machines",
+    "type": 2,
+    "patterns": [],
+    "timeWindow": "00:30:00",
+    "minEventCount": 3,
+    "minConfidence": 0.75,
+    "isEnabled": true,
+    "requiredEventTypes": [],
+    "parameters": {}
+  },
+  {
+    "id": "privilege-escalation",
+    "name": "Privilege Escalation",
+    "description": "Events indicating privilege escalation attempts",
+    "type": 3,
+    "patterns": [],
+    "timeWindow": "00:15:00",
+    "minEventCount": 2,
+    "minConfidence": 0.85,
+    "isEnabled": true,
+    "requiredEventTypes": ["PrivilegeEscalation", "ProcessCreation"],
+    "parameters": {}
+  }
+]
+```
+
+### Update Correlation Rule
+```http
+PUT /api/correlation/rules/{ruleId}
+Content-Type: application/json
+
+{
+  "name": "Updated Rule Name",
+  "description": "Updated description",
+  "isEnabled": false,
+  "minConfidence": 0.9,
+  "minEventCount": 5,
+  "timeWindow": "00:15:00"
+}
+```
+
+### Get Correlations
+```http
+GET /api/correlation/correlations?startTime=2025-09-20T00:00:00Z&endTime=2025-09-20T23:59:59Z&limit=50
+```
+
+**Query Parameters:**
+- `startTime` - Start time for correlation filter (ISO 8601)
+- `endTime` - End time for correlation filter (ISO 8601)
+- `correlationType` - Filter by correlation type: `TemporalBurst`, `BruteForce`, `LateralMovement`, `PrivilegeEscalation`
+- `minConfidence` - Minimum confidence score (0.0-1.0)
+- `limit` - Maximum number of correlations to return (default: 50)
+
+**Response:**
+```json
+{
+  "data": [
+    {
+      "id": "corr-uuid-123",
+      "correlationType": "BruteForce",
+      "confidenceScore": 0.87,
+      "riskLevel": "high",
+      "pattern": "Multiple authentication failures followed by success",
+      "eventIds": ["evt-456", "evt-457", "evt-458", "evt-459"],
+      "mitreTechniques": ["T1110.001"],
+      "detectedAt": "2025-09-20T14:25:00Z",
+      "timeWindow": "00:10:00",
+      "matchedRule": "brute-force",
+      "metadata": {
+        "sourceHost": "DC-01.contoso.com",
+        "targetUser": "administrator",
+        "failedAttempts": 8,
+        "timeBetweenEvents": "00:01:30"
+      }
+    }
+  ],
+  "total": 1,
+  "startTime": "2025-09-20T00:00:00Z",
+  "endTime": "2025-09-20T23:59:59Z"
+}
+```
+
+### Analyze Event for Correlations
+```http
+POST /api/correlation/analyze
+Content-Type: application/json
+
+{
+  "eventId": "evt-789",
+  "eventType": "AuthenticationSuccess",
+  "timestamp": "2025-09-20T14:30:00Z",
+  "sourceHost": "DC-01.contoso.com",
+  "user": "administrator"
+}
+```
+
+**Response:**
+```json
+{
+  "hasCorrelation": true,
+  "confidenceScore": 0.89,
+  "explanation": "Detected brute force attack pattern: 8 failed authentication attempts followed by successful login",
+  "matchedRules": ["Brute Force Attack"],
+  "correlation": {
+    "id": "corr-uuid-124",
+    "correlationType": "BruteForce",
+    "riskLevel": "high",
+    "mitreTechniques": ["T1110.001"],
+    "relatedEventIds": ["evt-780", "evt-781", "evt-782", "evt-783", "evt-784", "evt-785", "evt-786", "evt-787", "evt-789"]
+  },
+  "recommendations": [
+    "Investigate source IP address",
+    "Review account security policies",
+    "Consider account lockout mechanisms",
+    "Monitor for further suspicious activity"
+  ]
+}
+```
+
+### Detect Attack Chains
+```http
+POST /api/correlation/attack-chains
+Content-Type: application/json
+
+{
+  "eventIds": ["evt-100", "evt-101", "evt-102"],
+  "timeWindow": "00:30:00"
+}
+```
+
+**Response:**
+```json
+{
+  "attackChains": [
+    {
+      "id": "chain-uuid-456",
+      "attackType": "Privilege Escalation",
+      "confidenceScore": 0.92,
+      "riskLevel": "high",
+      "stages": [
+        {
+          "stageNumber": 1,
+          "eventId": "evt-100",
+          "description": "Initial authentication",
+          "mitreTechnique": "T1078"
+        },
+        {
+          "stageNumber": 2,
+          "eventId": "evt-101",
+          "description": "Privilege escalation attempt",
+          "mitreTechnique": "T1068"
+        },
+        {
+          "stageNumber": 3,
+          "eventId": "evt-102",
+          "description": "Suspicious process creation",
+          "mitreTechnique": "T1059"
+        }
+      ],
+      "detectedAt": "2025-09-20T14:35:00Z",
+      "timeSpan": "00:05:30"
+    }
+  ],
+  "totalChains": 1
+}
+```
+
+### Train Correlation Models
+```http
+POST /api/correlation/train
+Content-Type: application/json
+
+{
+  "confirmedCorrelations": [
+    {
+      "id": "corr-uuid-123",
+      "correlationType": "BruteForce",
+      "confidenceScore": 0.87,
+      "isConfirmed": true,
+      "feedback": "True positive - confirmed malicious activity"
+    }
+  ]
+}
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "message": "Models retrained successfully with 1 confirmed correlations",
+  "trainingStats": {
+    "correlationsProcessed": 1,
+    "modelAccuracyImprovement": 0.03,
+    "trainingTime": "00:00:02.456"
+  }
+}
+```
+
+### Cleanup Old Correlations
+```http
+DELETE /api/correlation/cleanup?retentionPeriod=30
+```
+
+**Query Parameters:**
+- `retentionPeriod` - Number of days to retain correlations (default: 30)
+
+**Response:**
+```json
+{
+  "success": true,
+  "message": "Cleanup completed successfully",
+  "correlationsRemoved": 145,
+  "retentionPeriod": "30.00:00:00"
+}
+```
+
+**Features:**
+- **Real-time Analysis** - Immediate correlation detection on new security events
+- **Multiple Correlation Types** - Temporal bursts, brute force, lateral movement, privilege escalation
+- **Attack Chain Detection** - Sequential attack pattern recognition across multiple events
+- **Machine Learning Integration** - Model training with confirmed correlations for improved accuracy
+- **MITRE ATT&CK Mapping** - Automatic technique assignment based on correlation patterns
+- **Configurable Rules** - Customizable thresholds, time windows, and confidence levels
+- **Performance Optimized** - Sub-second response times for real-time threat detection
 
 ## 🔔 Notifications API
 

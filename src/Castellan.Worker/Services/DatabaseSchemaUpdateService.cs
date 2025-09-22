@@ -15,7 +15,7 @@ public class DatabaseSchemaUpdateService
         _logger = logger;
     }
 
-    public async Task EnsureSearchTablesExistAsync()
+    public async Task EnsureTablesExistAsync()
     {
         try
         {
@@ -53,6 +53,15 @@ public class DatabaseSchemaUpdateService
                 _logger.LogInformation("Creating SearchHistory table...");
                 await CreateSearchHistoryTableAsync(connection);
                 _logger.LogInformation("SearchHistory table created successfully");
+            }
+
+            // Check if ThreatScanHistory table exists
+            var threatScanHistoryExists = await TableExistsAsync(connection, "ThreatScanHistory");
+            if (!threatScanHistoryExists)
+            {
+                _logger.LogInformation("Creating ThreatScanHistory table...");
+                await CreateThreatScanHistoryTableAsync(connection);
+                _logger.LogInformation("ThreatScanHistory table created successfully");
             }
         }
         catch (Exception ex)
@@ -145,6 +154,40 @@ public class DatabaseSchemaUpdateService
             CREATE INDEX ""IX_SearchHistory_UserTime"" ON ""SearchHistory"" (""UserId"", ""CreatedAt"");
         ";
         
+        using var command = new SqliteCommand(sql, connection);
+        await command.ExecuteNonQueryAsync();
+    }
+
+    private async Task CreateThreatScanHistoryTableAsync(SqliteConnection connection)
+    {
+        var sql = @"
+            CREATE TABLE ""ThreatScanHistory"" (
+                ""Id"" TEXT NOT NULL CONSTRAINT ""PK_ThreatScanHistory"" PRIMARY KEY,
+                ""ScanType"" TEXT NOT NULL,
+                ""Status"" TEXT NOT NULL,
+                ""StartTime"" TEXT NOT NULL,
+                ""EndTime"" TEXT NULL,
+                ""Duration"" REAL NOT NULL DEFAULT 0,
+                ""FilesScanned"" INTEGER NOT NULL DEFAULT 0,
+                ""DirectoriesScanned"" INTEGER NOT NULL DEFAULT 0,
+                ""BytesScanned"" INTEGER NOT NULL DEFAULT 0,
+                ""ThreatsFound"" INTEGER NOT NULL DEFAULT 0,
+                ""MalwareDetected"" INTEGER NOT NULL DEFAULT 0,
+                ""BackdoorsDetected"" INTEGER NOT NULL DEFAULT 0,
+                ""SuspiciousFiles"" INTEGER NOT NULL DEFAULT 0,
+                ""RiskLevel"" TEXT NOT NULL DEFAULT 'Low',
+                ""Summary"" TEXT NULL,
+                ""ErrorMessage"" TEXT NULL,
+                ""ScanPath"" TEXT NULL,
+                ""CreatedAt"" TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+            );
+
+            CREATE INDEX ""IX_ThreatScanHistory_StartTime"" ON ""ThreatScanHistory"" (""StartTime"");
+            CREATE INDEX ""IX_ThreatScanHistory_Status"" ON ""ThreatScanHistory"" (""Status"");
+            CREATE INDEX ""IX_ThreatScanHistory_ScanType"" ON ""ThreatScanHistory"" (""ScanType"");
+            CREATE INDEX ""IX_ThreatScanHistory_CreatedAt"" ON ""ThreatScanHistory"" (""CreatedAt"");
+        ";
+
         using var command = new SqliteCommand(sql, connection);
         await command.ExecuteNonQueryAsync();
     }

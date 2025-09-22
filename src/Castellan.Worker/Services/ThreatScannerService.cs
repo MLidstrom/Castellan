@@ -2,6 +2,7 @@ using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Security.Cryptography;
 using System.Text;
+using Microsoft.Extensions.Options;
 using Castellan.Worker.Abstractions;
 using Castellan.Worker.Models;
 using Castellan.Worker.Models.ThreatIntelligence;
@@ -12,15 +13,16 @@ namespace Castellan.Worker.Services;
 public class ThreatScannerService : IThreatScanner
 {
     private readonly ILogger<ThreatScannerService> _logger;
-    private readonly ThreatScanOptions _options;
+    private readonly IOptionsMonitor<ThreatScanOptions> _optionsMonitor;
     private readonly IVirusTotalService? _virusTotalService;
     private readonly IMalwareBazaarService? _malwareBazaarService;
     private readonly IOtxService? _otxService;
     private readonly IThreatIntelligenceCacheService? _cacheService;
+    private readonly IThreatScanHistoryRepository? _historyRepository;
+    private readonly IThreatScanProgressStore _progressStore;
     private readonly ConcurrentQueue<ThreatScanResult> _scanHistory = new();
     private ThreatScanResult? _currentScan;
     private CancellationTokenSource? _currentScanCancellation;
-    private ThreatScanProgress? _currentProgress;
     private readonly object _progressLock = new();
     
     // Progress tracking event
@@ -62,24 +64,29 @@ public class ThreatScannerService : IThreatScanner
     };
 
     public ThreatScannerService(
-        ILogger<ThreatScannerService> logger, 
-        ThreatScanOptions options,
+        ILogger<ThreatScannerService> logger,
+        IOptionsMonitor<ThreatScanOptions> optionsMonitor,
+        IThreatScanProgressStore progressStore,
         IVirusTotalService? virusTotalService = null,
         IMalwareBazaarService? malwareBazaarService = null,
         IOtxService? otxService = null,
-        IThreatIntelligenceCacheService? cacheService = null)
+        IThreatIntelligenceCacheService? cacheService = null,
+        IThreatScanHistoryRepository? historyRepository = null)
     {
         _logger = logger;
-        _options = options;
+        _optionsMonitor = optionsMonitor;
+        _progressStore = progressStore;
         _virusTotalService = virusTotalService;
         _malwareBazaarService = malwareBazaarService;
         _otxService = otxService;
         _cacheService = cacheService;
-        
+        _historyRepository = historyRepository;
+
         // Ensure quarantine directory exists
-        if (_options.QuarantineThreats && !string.IsNullOrEmpty(_options.QuarantineDirectory))
+        var options = _optionsMonitor.CurrentValue;
+        if (options.QuarantineThreats && !string.IsNullOrEmpty(options.QuarantineDirectory))
         {
-            Directory.CreateDirectory(_options.QuarantineDirectory);
+            Directory.CreateDirectory(options.QuarantineDirectory);
         }
     }
 
@@ -91,26 +98,44 @@ public class ThreatScannerService : IThreatScanner
         {
             ScanType = ThreatScanType.FullScan,
             StartTime = DateTime.UtcNow,
-            Status = ThreatScanStatus.Running
+            Status = ThreatScanStatus.Running,
+            ScanId = Guid.NewGuid().ToString(),
+            ScanPath = "Full System Scan"
         };
 
         _currentScan = scanResult;
         _currentScanCancellation = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
 
+        // Initialize progress tracking
+        var scanId = scanResult.ScanId!;
+        UpdateProgress(scanId, ThreatScanStatus.Running, phase: "Initializing Full Scan");
+
+        // Estimate total files to scan for progress calculation
+        UpdateProgress(scanId, ThreatScanStatus.Running, phase: "Calculating scan scope");
+        var drives = DriveInfo.GetDrives().Where(d => d.IsReady && d.DriveType == DriveType.Fixed);
+
+        // Rough estimate of files to scan (this could be improved with actual counting)
+        int totalEstimated = drives.Count() * 10000; // Rough estimate per drive
+
         try
         {
-            var drives = DriveInfo.GetDrives().Where(d => d.IsReady && d.DriveType == DriveType.Fixed);
-            
+
             foreach (var drive in drives)
             {
                 if (_currentScanCancellation.Token.IsCancellationRequested)
                     break;
-                    
+
                 _logger.LogInformation("Scanning drive: {DriveName}", drive.Name);
-                await ScanDirectoryRecursiveAsync(drive.RootDirectory.FullName, scanResult, _currentScanCancellation.Token);
+                UpdateProgress(scanId, ThreatScanStatus.Running,
+                    scanResult.FilesScanned, scanResult.DirectoriesScanned, scanResult.ThreatsFound,
+                    "", drive.Name, "Scanning Drive", totalEstimated);
+
+                await ScanDirectoryRecursiveAsync(drive.RootDirectory.FullName, scanResult, _currentScanCancellation.Token, maxDepth: int.MaxValue, scanId: scanId, totalEstimated: totalEstimated);
             }
 
             scanResult.Status = scanResult.ThreatsFound > 0 ? ThreatScanStatus.CompletedWithThreats : ThreatScanStatus.Completed;
+            UpdateProgress(scanId, scanResult.Status, scanResult.FilesScanned, scanResult.DirectoriesScanned,
+                scanResult.ThreatsFound, "", "", "Completed", totalEstimated);
         }
         catch (OperationCanceledException)
         {
@@ -127,8 +152,29 @@ public class ThreatScannerService : IThreatScanner
         {
             scanResult.EndTime = DateTime.UtcNow;
             _scanHistory.Enqueue(scanResult);
-            
-            // Keep only last 50 scans
+
+            // Clean up progress after some delay to allow final progress check
+            _ = Task.Delay(TimeSpan.FromSeconds(30)).ContinueWith(_ =>
+            {
+                _progressStore.RemoveProgress(scanId);
+                _logger.LogDebug("Cleaned up progress for scan: {ScanId}", scanId);
+            });
+
+            // Persist to database if repository is available
+            if (_historyRepository != null)
+            {
+                try
+                {
+                    await _historyRepository.CreateScanAsync(scanResult);
+                    _logger.LogDebug("Saved scan result to database: {ScanId}", scanResult.ScanId);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Failed to save scan result to database: {ScanId}", scanResult.ScanId);
+                }
+            }
+
+            // Keep only last 50 scans in memory
             while (_scanHistory.Count > 50)
             {
                 _scanHistory.TryDequeue(out _);
@@ -153,14 +199,16 @@ public class ThreatScannerService : IThreatScanner
         {
             ScanType = ThreatScanType.QuickScan,
             StartTime = DateTime.UtcNow,
-            Status = ThreatScanStatus.Running
+            Status = ThreatScanStatus.Running,
+            ScanId = Guid.NewGuid().ToString(),
+            ScanPath = "Quick System Scan"
         };
 
         _currentScan = scanResult;
         _currentScanCancellation = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         
         // Initialize progress tracking
-        var scanId = scanResult.Id;
+        var scanId = scanResult.ScanId!;
         UpdateProgress(scanId, ThreatScanStatus.Running, phase: "Initializing Quick Scan");
         
         try
@@ -205,13 +253,28 @@ public class ThreatScannerService : IThreatScanner
         {
             scanResult.EndTime = DateTime.UtcNow;
             _scanHistory.Enqueue(scanResult);
-            
-            // Clear progress
-            lock (_progressLock)
+
+            // Clean up progress after some delay to allow final progress check
+            _ = Task.Delay(TimeSpan.FromSeconds(30)).ContinueWith(_ =>
             {
-                _currentProgress = null;
+                _progressStore.RemoveProgress(scanId);
+                _logger.LogDebug("Cleaned up progress for scan: {ScanId}", scanId);
+            });
+
+            // Persist to database if repository is available
+            if (_historyRepository != null)
+            {
+                try
+                {
+                    await _historyRepository.CreateScanAsync(scanResult);
+                    _logger.LogDebug("Saved scan result to database: {ScanId}", scanResult.ScanId);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Failed to save scan result to database: {ScanId}", scanResult.ScanId);
+                }
             }
-            
+
             _currentScan = null;
             _currentScanCancellation?.Dispose();
             _currentScanCancellation = null;
@@ -231,7 +294,9 @@ public class ThreatScannerService : IThreatScanner
         {
             ScanType = ThreatScanType.DirectoryScan,
             StartTime = DateTime.UtcNow,
-            Status = ThreatScanStatus.Running
+            Status = ThreatScanStatus.Running,
+            ScanId = Guid.NewGuid().ToString(),
+            ScanPath = path
         };
 
         try
@@ -313,62 +378,89 @@ public class ThreatScannerService : IThreatScanner
 
     public async Task<IEnumerable<ThreatScanResult>> GetScanHistoryAsync(int count = 10)
     {
+        if (_historyRepository != null)
+        {
+            try
+            {
+                return await _historyRepository.GetScanHistoryAsync(1, count);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to get scan history from database, falling back to memory");
+            }
+        }
+
+        // Fallback to in-memory history
         var history = _scanHistory.ToArray().TakeLast(count).Reverse();
         return await Task.FromResult(history);
     }
     
     public async Task<ThreatScanProgress?> GetScanProgressAsync()
     {
-        lock (_progressLock)
-        {
-            return _currentProgress;
-        }
+        return await Task.FromResult(_progressStore.GetCurrentProgress());
     }
     
-    private void UpdateProgress(string scanId, ThreatScanStatus status, int filesScanned = 0, 
-        int directoriesScanned = 0, int threatsFound = 0, string currentFile = "", 
+    private void UpdateProgress(string scanId, ThreatScanStatus status, int filesScanned = 0,
+        int directoriesScanned = 0, int threatsFound = 0, string currentFile = "",
         string currentDirectory = "", string phase = "", int totalEstimated = 0)
     {
         lock (_progressLock)
         {
-            if (_currentProgress == null || _currentProgress.ScanId != scanId)
+            _logger.LogInformation("📊 UpdateProgress called for scanId: {ScanId}, phase: {Phase}, filesScanned: {FilesScanned}", scanId, phase, filesScanned);
+
+            var currentProgress = _progressStore.GetProgress(scanId);
+            if (currentProgress == null)
             {
-                _currentProgress = new ThreatScanProgress
+                _logger.LogInformation("📊 Creating new progress for scanId: {ScanId}", scanId);
+                currentProgress = new ThreatScanProgress
                 {
                     ScanId = scanId,
                     StartTime = DateTime.UtcNow,
                     Status = status
                 };
             }
-            
-            _currentProgress.Status = status;
-            _currentProgress.FilesScanned = filesScanned;
-            _currentProgress.DirectoriesScanned = directoriesScanned;
-            _currentProgress.ThreatsFound = threatsFound;
-            _currentProgress.CurrentFile = currentFile;
-            _currentProgress.CurrentDirectory = currentDirectory;
-            _currentProgress.TotalEstimatedFiles = totalEstimated;
-            
+            else
+            {
+                _logger.LogInformation("📊 Updating existing progress for scanId: {ScanId}", scanId);
+            }
+
+            currentProgress.Status = status;
+            currentProgress.FilesScanned = filesScanned;
+            currentProgress.DirectoriesScanned = directoriesScanned;
+            currentProgress.ThreatsFound = threatsFound;
+            currentProgress.CurrentFile = currentFile;
+            currentProgress.CurrentDirectory = currentDirectory;
+            currentProgress.TotalEstimatedFiles = totalEstimated;
+
             if (!string.IsNullOrEmpty(phase))
-                _currentProgress.ScanPhase = phase;
-            
+                currentProgress.ScanPhase = phase;
+
             // Calculate percentage if we have an estimate
             if (totalEstimated > 0)
             {
-                _currentProgress.PercentComplete = Math.Min(100.0, (double)filesScanned / totalEstimated * 100);
-                
+                currentProgress.PercentComplete = Math.Min(100.0, (double)filesScanned / totalEstimated * 100);
+
                 // Estimate remaining time
                 if (filesScanned > 0)
                 {
-                    var avgTimePerFile = _currentProgress.ElapsedTime.TotalSeconds / filesScanned;
+                    var avgTimePerFile = currentProgress.ElapsedTime.TotalSeconds / filesScanned;
                     var remainingFiles = totalEstimated - filesScanned;
-                    _currentProgress.EstimatedTimeRemaining = TimeSpan.FromSeconds(avgTimePerFile * remainingFiles);
+                    currentProgress.EstimatedTimeRemaining = TimeSpan.FromSeconds(avgTimePerFile * remainingFiles);
                 }
             }
+
+            // Store the updated progress
+            _progressStore.SetProgress(scanId, currentProgress);
+            _logger.LogInformation("📊 Progress stored for scanId: {ScanId}, status: {Status}, percent: {Percent}%",
+                scanId, status, currentProgress.PercentComplete);
         }
-        
-        // Fire progress event
-        ProgressUpdated?.Invoke(this, _currentProgress);
+
+        // Fire progress event with current progress
+        var storedProgress = _progressStore.GetProgress(scanId);
+        if (storedProgress != null)
+        {
+            ProgressUpdated?.Invoke(this, storedProgress);
+        }
     }
     
     private async Task<int> EstimateFilesToScanAsync(string[] directories, int maxDepth = int.MaxValue)
@@ -394,7 +486,7 @@ public class ThreatScannerService : IThreatScanner
         try
         {
             // Skip excluded directories
-            if (_options.ExcludedDirectories.Any(excluded => 
+            if (_optionsMonitor.CurrentValue.ExcludedDirectories.Any(excluded => 
                 directoryPath.StartsWith(excluded, StringComparison.OrdinalIgnoreCase)))
             {
                 return 0;
@@ -444,7 +536,7 @@ public class ThreatScannerService : IThreatScanner
         try
         {
             // Skip excluded directories
-            if (_options.ExcludedDirectories.Any(excluded => 
+            if (_optionsMonitor.CurrentValue.ExcludedDirectories.Any(excluded => 
                 directoryPath.StartsWith(excluded, StringComparison.OrdinalIgnoreCase)))
             {
                 return;
@@ -459,7 +551,7 @@ public class ThreatScannerService : IThreatScanner
             // Scan files in current directory
             var files = directory.GetFiles().Where(f => ShouldScanFile(f));
             
-            var semaphore = new SemaphoreSlim(_options.MaxConcurrentFiles, _options.MaxConcurrentFiles);
+            var semaphore = new SemaphoreSlim(_optionsMonitor.CurrentValue.MaxConcurrentFiles, _optionsMonitor.CurrentValue.MaxConcurrentFiles);
             var scanTasks = files.Select(async file =>
             {
                 await semaphore.WaitAsync(cancellationToken);
@@ -540,11 +632,11 @@ public class ThreatScannerService : IThreatScanner
     private bool ShouldScanFile(FileInfo file)
     {
         // Skip files that are too large
-        if (file.Length > _options.MaxFileSizeMB * 1024 * 1024)
+        if (file.Length > _optionsMonitor.CurrentValue.MaxFileSizeMB * 1024 * 1024)
             return false;
 
         // Skip excluded extensions
-        if (_options.ExcludedExtensions.Contains(file.Extension, StringComparer.OrdinalIgnoreCase))
+        if (_optionsMonitor.CurrentValue.ExcludedExtensions.Contains(file.Extension, StringComparer.OrdinalIgnoreCase))
             return false;
 
         // Focus on suspicious extensions for efficiency

@@ -55,6 +55,11 @@ const RESOURCE_MAP: Record<string, string> = {
     'settings': 'settings',
     'analytics': 'analytics',
     'reports': 'reports',
+    // Correlation Engine mappings - v0.6.0
+    'correlation': 'correlation',
+    'correlation/statistics': 'correlation/statistics',
+    'correlation/analyze': 'correlation/analyze',
+    'correlation/attack-chains': 'correlation/attack-chains',
     // MITRE ATT&CK resource mappings
     'mitre/techniques': 'mitre/techniques',
     'mitre/tactics': 'mitre/tactics',

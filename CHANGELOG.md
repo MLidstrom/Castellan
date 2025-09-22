@@ -5,6 +5,52 @@ All notable changes to the Castellan Security Platform will be documented in thi
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Fixed
+- **Full Scan Progress Bar**: Fixed progress tracking for Full Scan operations in threat scanner
+  - **Root Cause**: Service scoping issue - IThreatScanner was scoped, causing progress loss across HTTP requests
+  - **Solution**: Implemented shared singleton progress store (IThreatScanProgressStore) for persistent progress tracking
+  - **Files Updated**: Created `IThreatScanProgressStore.cs`, `ThreatScanProgressStore.cs`; Updated `ThreatScannerService.cs`, `ThreatScannerController.cs`, `Program.cs`
+  - **Impact**: Progress bars now correctly display during Full Scan operations
+
+### Added
+- **Advanced Correlation Engine**: Comprehensive threat pattern detection and analysis system
+  - **Temporal Burst Detection**: Identifies rapid event sequences from same source (5+ events in 5 minutes)
+  - **Brute Force Attack Detection**: Recognizes failed authentication patterns followed by success (3+ failures in 10 minutes)
+  - **Lateral Movement Detection**: Tracks similar activities across multiple machines (3+ hosts in 30 minutes)
+  - **Privilege Escalation Detection**: Monitors escalation attempts and suspicious privilege changes (2+ events in 15 minutes)
+  - **Attack Chain Analysis**: Sequential attack pattern recognition with MITRE ATT&CK mapping
+  - **Real-time Correlation**: Sub-second threat correlation with configurable confidence thresholds
+  - **Machine Learning Integration**: Model training with confirmed correlations for improved accuracy
+  - **Rule Management**: Customizable correlation rules with time windows, event counts, and confidence levels
+  - **Statistics & Metrics**: Comprehensive correlation analytics with pattern trending and risk assessment
+  - **REST API**: Complete `/api/correlation/` endpoints for statistics, rules, correlations, and analysis
+  - **Comprehensive Testing**: 100+ unit and integration tests covering all correlation scenarios
+- **MITRE Configuration Tab**: New configuration interface for managing MITRE ATT&CK techniques
+  - Database status display with technique count
+  - Manual import functionality for MITRE techniques
+  - Information panel about MITRE framework features
+  - Real-time status updates after import operations
+
+### Changed
+- **Timeline Icon Update**: Changed Timeline menu icon from `Timeline` to `Schedule` for better visual distinction from Trend Analysis icon
+- **MitreController Enhancement**: Added React Admin compatible pagination and sorting support
+
+### Fixed
+- **Database Corruption Issue**: Fixed SQLite database corruption preventing Worker API from starting
+  - Resolved "malformed database schema" error
+  - Automatic fresh database creation on corruption detection
+
+## [0.6.0-preview] - 2025-09-20
+
+### Added
+- **Trend Analysis with ML.NET**
+  - Historical trend visualization with predictive analytics
+  - Machine learning-based forecasting
+  - Time series analysis and predictions
+  - Integrated into main dashboard
+
 ## [2.0.2] - 2025-09-15
 
 ### Fixed

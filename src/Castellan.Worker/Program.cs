@@ -160,17 +160,11 @@ builder.Services.AddHttpClient<IMalwareBazaarService, MalwareBazaarService>();
 // Register AlienVault OTX service with HttpClient
 builder.Services.AddHttpClient<IOtxService, OtxService>();
 
+// Register threat scan progress store as singleton to share across scoped services
+builder.Services.AddSingleton<IThreatScanProgressStore, ThreatScanProgressStore>();
+
 // Register threat scanner service with threat intelligence
-builder.Services.AddSingleton<IThreatScanner>(provider =>
-{
-    var options = provider.GetRequiredService<IOptions<ThreatScanOptions>>().Value;
-    var logger = provider.GetRequiredService<ILogger<ThreatScannerService>>();
-    var virusTotalService = provider.GetRequiredService<IVirusTotalService>();
-    var malwareBazaarService = provider.GetRequiredService<IMalwareBazaarService>();
-    var otxService = provider.GetRequiredService<IOtxService>();
-    var cacheService = provider.GetRequiredService<IThreatIntelligenceCacheService>();
-    return new ThreatScannerService(logger, options, virusTotalService, malwareBazaarService, otxService, cacheService);
-});
+builder.Services.AddScoped<IThreatScanner, ThreatScannerService>();
 
 var embedProvider = builder.Configuration["Embeddings:Provider"] ?? "Ollama";
 if (embedProvider.Equals("Ollama", StringComparison.OrdinalIgnoreCase))
@@ -208,17 +202,28 @@ builder.Services.AddScoped<IAdvancedSearchService, AdvancedSearchService>();
 builder.Services.AddScoped<ISavedSearchService, SavedSearchService>();
 builder.Services.AddScoped<ISearchHistoryService, SearchHistoryService>();
 
+// Register Correlation Engine - v0.6.0
+builder.Services.AddSingleton<ICorrelationEngine, CorrelationEngine>();
+
 // Register YARA services
 builder.Services.Configure<YaraScanningOptions>(builder.Configuration.GetSection(YaraScanningOptions.SectionName));
 builder.Services.AddSingleton<DatabaseYaraRuleStore>();
 builder.Services.AddSingleton<IYaraRuleStore>(sp => sp.GetRequiredService<DatabaseYaraRuleStore>());
 builder.Services.AddSingleton<IYaraScanService, YaraScanService>();
-builder.Services.AddHostedService<YaraScanService>(provider => 
+builder.Services.AddHostedService<YaraScanService>(provider =>
     (YaraScanService)provider.GetRequiredService<IYaraScanService>());
+
+// Register threat scan history repository
+builder.Services.AddScoped<IThreatScanHistoryRepository, ThreatScanHistoryRepository>();
+
+// Register threat scan configuration service
+builder.Services.AddSingleton<IThreatScanConfigurationService, ThreatScanConfigurationService>();
+
 builder.Services.AddHostedService<Pipeline>();
 builder.Services.AddHostedService<StartupOrchestratorService>(); // Automatically start all required services
 builder.Services.AddHostedService<MitreImportStartupService>(); // Auto-import MITRE data if needed
 builder.Services.AddHostedService<DailyRefreshHostedService>(); // Daily refresh for MITRE/YARA
+builder.Services.AddHostedService<ScheduledThreatScanService>(); // Scheduled threat scanning
 
 // Add Web API services
 builder.Services.AddControllers();
@@ -369,7 +374,7 @@ using (var scope = app.Services.CreateScope())
         
         // Ensure new search tables exist (for v0.5.0)
         var schemaUpdateService = scope.ServiceProvider.GetRequiredService<DatabaseSchemaUpdateService>();
-        await schemaUpdateService.EnsureSearchTablesExistAsync();
+        await schemaUpdateService.EnsureTablesExistAsync();
         Console.WriteLine("Search tables schema validated");
     }
     catch (Exception ex)

@@ -5,28 +5,46 @@ namespace Castellan.Worker.Models;
 public class ThreatScanResult
 {
     public string Id { get; set; } = Guid.NewGuid().ToString();
+    public string? ScanId { get; set; }
+    public string? ScanPath { get; set; }
     public DateTime StartTime { get; set; }
     public DateTime? EndTime { get; set; }
     public ThreatScanType ScanType { get; set; }
     public ThreatScanStatus Status { get; set; }
     public string? ErrorMessage { get; set; }
-    
+
     // Scan Statistics
     public int FilesScanned { get; set; }
     public int DirectoriesScanned { get; set; }
     public long BytesScanned { get; set; }
-    public TimeSpan Duration => EndTime?.Subtract(StartTime) ?? TimeSpan.Zero;
-    
+    private TimeSpan? _duration;
+    public TimeSpan Duration
+    {
+        get => _duration ?? (EndTime?.Subtract(StartTime) ?? TimeSpan.Zero);
+        set => _duration = value;
+    }
+
     // Threat Results
     public int ThreatsFound { get; set; }
     public int MalwareDetected { get; set; }
     public int BackdoorsDetected { get; set; }
     public int SuspiciousFiles { get; set; }
     public List<FileThreatResult> ThreatDetails { get; set; } = new();
-    
+
     // Summary
-    public string Summary => $"Scanned {FilesScanned} files, found {ThreatsFound} threats";
-    public ThreatRiskLevel RiskLevel => ThreatsFound > 0 ? ThreatRiskLevel.High : ThreatRiskLevel.Low;
+    private string? _summary;
+    public string Summary
+    {
+        get => _summary ?? $"Scanned {FilesScanned} files, found {ThreatsFound} threats";
+        set => _summary = value;
+    }
+
+    private ThreatRiskLevel? _riskLevel;
+    public ThreatRiskLevel RiskLevel
+    {
+        get => _riskLevel ?? (ThreatsFound > 0 ? ThreatRiskLevel.High : ThreatRiskLevel.Low);
+        set => _riskLevel = value;
+    }
 }
 
 public class FileThreatResult

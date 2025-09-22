@@ -4,8 +4,9 @@
 - **Real-time Windows Event Log Collection** - Monitors security, application, and system events
 - **AI-Powered Threat Analysis** - LLM-based event classification with external threat intelligence
 - **Vector Search** - Semantic similarity search using Qdrant vector database for correlation
-- **Advanced Correlation** - M4 correlation engine with threat intelligence enrichment
+- **Advanced Correlation Engine** - Multi-pattern threat correlation with real-time attack chain detection
 - **File Threat Scanning** - Real-time malware detection with VirusTotal integration and local heuristics
+- **MITRE ATT&CK Integration** - 800+ techniques with configuration management and import functionality
 
 ## 🛡️ **Security Detection**
 - **Anomaly Detection** - Machine learning-based behavioral analysis with vector similarity
@@ -61,8 +62,18 @@
   - **Summary Statistics** - Risk level breakdown and event type analysis
   - **Responsive Design** - Two-column layout with timeline chart and summary panels
   - **API Integration** - Timeline, events, heatmap, stats, and anomaly detection endpoints
-- **Security Event Correlation** - Pattern detection and event relationship analysis
-- **Threat Pattern Recognition** - AI-powered identification of attack sequences
+- **Advanced Correlation Engine** - Comprehensive threat pattern detection and analysis
+  - **Temporal Burst Detection** - Identifies rapid event sequences from same source (configurable 5+ events in 5 minutes)
+  - **Brute Force Attack Detection** - Recognizes failed authentication patterns followed by success (3+ failures in 10 minutes)
+  - **Lateral Movement Detection** - Tracks similar activities across multiple machines (3+ hosts in 30 minutes)
+  - **Privilege Escalation Detection** - Monitors escalation attempts and suspicious privilege changes (2+ events in 15 minutes)
+  - **Attack Chain Analysis** - Sequential attack pattern recognition across multiple events with MITRE ATT&CK mapping
+  - **Real-time Correlation** - Sub-second threat correlation with configurable confidence thresholds (70-85%)
+  - **Machine Learning Integration** - Model training with confirmed correlations for improved accuracy
+  - **Rule Management** - Customizable correlation rules with time windows, event counts, and confidence levels
+  - **Statistics & Metrics** - Comprehensive correlation analytics with pattern trending and risk assessment
+  - **Performance Optimized** - High-throughput correlation processing with efficient batch analysis
+- **Threat Pattern Recognition** - AI-powered identification of attack sequences with MITRE technique classification
 - **Performance Monitoring** - System health and security service status with real-time dashboards
 - **Persistent Storage** - 24-hour rolling window with automatic restart recovery
 - **Application Data Management** - SQLite database with FTS5 full-text search for enhanced performance, MITRE ATT&CK techniques, and unified security event storage
@@ -111,7 +122,7 @@
 - **Timeline API** - Historical analysis with heatmaps, statistics, and anomaly detection
 - **YARA Management APIs** - Complete malware detection rule and match management
 - **YARA Configuration API** - Advanced rule source management and auto-update configuration
-- **MITRE ATT&CK API** - 800+ technique browsing and security event mapping
+- **MITRE ATT&CK API** - 800+ technique browsing, import, and security event mapping with configuration tab
 - **Threat Intelligence APIs** - Health monitoring and configuration for multiple providers
 - **IP Enrichment API** - MaxMind database management and geolocation services
 

@@ -463,47 +463,57 @@ const ScanActions = () => {
   const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || 'http://localhost:5000';
 
   const handleQuickScan = async () => {
+    console.log('Quick scan button clicked');
     try {
-      const response = await fetch(`${API_BASE_URL}/api/threat-scanner/quick-scan`, {
+      const response = await fetch(`${API_BASE_URL}/api/threat-scanner/quick-scan?async=true`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('auth_token')}`,
           'Content-Type': 'application/json',
         },
       });
-      
+
+      console.log('Quick scan response:', response.status);
       if (response.ok) {
         notify('Quick scan started successfully', { type: 'success' });
         setScanType('Quick Scan');
         setProgressOpen(true);
         setTimeout(() => refresh(), 1000);
       } else {
+        const errorText = await response.text();
+        console.error('Quick scan failed:', response.status, errorText);
         notify('Failed to start quick scan', { type: 'error' });
       }
     } catch (error) {
+      console.error('Error starting quick scan:', error);
       notify('Error starting quick scan', { type: 'error' });
     }
   };
 
   const handleFullScan = async () => {
+    console.log('Full scan button clicked');
     try {
-      const response = await fetch(`${API_BASE_URL}/api/threat-scanner/full-scan`, {
+      const response = await fetch(`${API_BASE_URL}/api/threat-scanner/full-scan?async=true`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('auth_token')}`,
           'Content-Type': 'application/json',
         },
       });
-      
+
+      console.log('Full scan response:', response.status);
       if (response.ok) {
         notify('Full scan started successfully', { type: 'success' });
         setScanType('Full Scan');
         setProgressOpen(true);
         setTimeout(() => refresh(), 1000);
       } else {
+        const errorText = await response.text();
+        console.error('Full scan failed:', response.status, errorText);
         notify('Failed to start full scan', { type: 'error' });
       }
     } catch (error) {
+      console.error('Error starting full scan:', error);
       notify('Error starting full scan', { type: 'error' });
     }
   };
@@ -512,14 +522,14 @@ const ScanActions = () => {
     <>
       <TopToolbar>
         <Button
-          onClick={handleQuickScan}
+          onClick={() => handleQuickScan()}
           startIcon={<ScanIcon />}
           label="Quick Scan"
           variant="outlined"
           size="small"
         />
         <Button
-          onClick={handleFullScan}
+          onClick={() => handleFullScan()}
           startIcon={<SecurityIcon />}
           label="Full Scan"
           variant="contained"
@@ -590,12 +600,23 @@ const ThreatScannerFilters = [
 export const ThreatScannerList = () => (
   <Box>
     <ThreatScannerHeader />
-    <List 
+    <List
       filters={<Filter>{ThreatScannerFilters}</Filter>}
       sort={{ field: 'startTime', order: 'DESC' }}
       perPage={25}
       title=" "
       actions={<ScanActions />}
+      empty={
+        <Box sx={{ p: 2, textAlign: 'center' }}>
+          <Typography variant="h6" gutterBottom>No scan history yet</Typography>
+          <Typography variant="body2" color="textSecondary" gutterBottom>
+            Start a security scan to check for threats in your system
+          </Typography>
+          <Box sx={{ mt: 2 }}>
+            <ScanActions />
+          </Box>
+        </Box>
+      }
     >
       <Datagrid rowClick="show" size="small">
         <TextField source="id" label="Scan ID" />

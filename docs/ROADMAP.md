@@ -17,11 +17,11 @@
 - **Saved Searches** - Bookmark frequently used search configurations
 - **MaxMind IP Enrichment** - Real-time IP geolocation with automated database downloads
 
-## 🚀 v0.6.0 - Analytics & Reporting (Planned Q1 2026)
+## 🚀 v0.6.0 - Analytics & Reporting (In Progress - Q1 2026)
 
 ### 📊 Advanced Analytics
-- **Trend Analysis** - Historical trend visualization with predictive analytics
-- **Correlation Engine** - Advanced event correlation with machine learning
+- **Trend Analysis** - ✅ COMPLETE - Historical trend visualization with ML.NET predictive analytics
+- **Correlation Engine** - ✅ COMPLETE - Advanced event correlation with temporal bursts, brute force, lateral movement, and privilege escalation detection
 - **Custom Dashboards** - User-configurable dashboard widgets
 - **Scheduled Reports** - Automated report generation and distribution
 - **Compliance Templates** - Pre-built compliance reporting for SOX, HIPAA, PCI-DSS
@@ -171,7 +171,7 @@
 | Version | Features | Target Date | Status |
 |---------|----------|-------------|---------|
 | v0.5.0 | Advanced Search, Saved Searches, MaxMind IP Enrichment | Sept 15, 2025 | ✅ **COMPLETE** |
-| v0.6.0 | Analytics & Reporting | Q1 2026 | 📋 **PLANNED** |
+| v0.6.0 | Analytics & Reporting | Q1 2026 | 🚧 **IN PROGRESS** (20%) |
 | v0.7.0 | Performance & Caching Overhaul | Q2 2026 | 📋 **PLANNED** |
 | v0.8.0 | External Data Collection | Q3 2026 | 📋 **PLANNED** |
 | v0.9.0 | Threat Intelligence & Enrichment | Q4 2026 | 📋 **PLANNED** |

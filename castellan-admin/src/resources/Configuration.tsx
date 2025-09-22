@@ -38,6 +38,7 @@ import {
   Chat as SlackIcon,
   Shield as YaraIcon,
   Security as MitreIcon,
+  BugReport as ThreatScannerIcon,
   Download as DownloadIcon,
   Update as UpdateIcon,
   Delete as DeleteIcon,
@@ -69,6 +70,7 @@ const ConfigurationHeader = ({
       <Tab label="IP Enrichment" />
       <Tab label="YARA Rules" />
       <Tab label="MITRE Techniques" />
+      <Tab label="Threat Scanner" />
       <Tab label="Performance" disabled />
       <Tab label="Security" disabled />
     </Tabs>
@@ -1893,6 +1895,428 @@ const MitreConfig = ({ record }: { record?: any }) => {
   );
 };
 
+// Threat Scanner Configuration Component
+const ThreatScannerConfig = ({ record }: { record: any }) => {
+  const [config, setConfig] = useState({
+    enabled: false,
+    scheduledScanInterval: { days: 1, hours: 0, minutes: 0 },
+    defaultScanType: 0, // 0=QuickScan, 1=FullScan
+    excludedDirectories: [] as string[],
+    excludedExtensions: [] as string[],
+    maxFileSizeMB: 100,
+    maxConcurrentFiles: 4,
+    quarantineThreats: false,
+    quarantineDirectory: 'C:\\Quarantine',
+    enableRealTimeProtection: false,
+    notificationThreshold: 1 // 1=Medium
+  });
+  const [status, setStatus] = useState<any>(null);
+  const [saving, setSaving] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [newExcludedDir, setNewExcludedDir] = useState('');
+  const [newExcludedExt, setNewExcludedExt] = useState('');
+  const notify = useNotify();
+  const dataProvider = useDataProvider();
+
+  // Load configuration on component mount
+  useEffect(() => {
+    loadConfiguration();
+    loadStatus();
+  }, []);
+
+  const loadConfiguration = async () => {
+    try {
+      const response = await fetch('http://localhost:5000/api/scheduledscan/config');
+      if (response.ok) {
+        const data = await response.json();
+        // Convert TimeSpan to our format
+        const totalHours = Math.floor(data.scheduledScanInterval.ticks / 36000000000);
+        setConfig({
+          enabled: data.enabled,
+          scheduledScanInterval: {
+            days: Math.floor(totalHours / 24),
+            hours: totalHours % 24,
+            minutes: 0
+          },
+          defaultScanType: data.defaultScanType,
+          excludedDirectories: data.excludedDirectories || [],
+          excludedExtensions: data.excludedExtensions || [],
+          maxFileSizeMB: data.maxFileSizeMB,
+          maxConcurrentFiles: data.maxConcurrentFiles,
+          quarantineThreats: data.quarantineThreats,
+          quarantineDirectory: data.quarantineDirectory,
+          enableRealTimeProtection: data.enableRealTimeProtection,
+          notificationThreshold: data.notificationThreshold
+        });
+      }
+    } catch (error) {
+      console.error('Failed to load configuration:', error);
+      notify('Failed to load threat scanner configuration', { type: 'error' });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const loadStatus = async () => {
+    try {
+      const response = await fetch('http://localhost:5000/api/scheduledscan/status');
+      if (response.ok) {
+        const data = await response.json();
+        setStatus(data);
+      }
+    } catch (error) {
+      console.error('Failed to load status:', error);
+    }
+  };
+
+  const handleSave = async () => {
+    setSaving(true);
+    try {
+      // Convert our format to TimeSpan
+      const totalHours = config.scheduledScanInterval.days * 24 + config.scheduledScanInterval.hours;
+      const timeSpan = `${totalHours}:${config.scheduledScanInterval.minutes}:00`;
+
+      const payload = {
+        ...config,
+        scheduledScanInterval: timeSpan
+      };
+
+      const response = await fetch('http://localhost:5000/api/scheduledscan/config', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(payload)
+      });
+
+      if (response.ok) {
+        notify('Threat scanner configuration saved successfully', { type: 'success' });
+        await loadStatus(); // Reload status after save
+      } else {
+        const error = await response.json();
+        notify(`Failed to save: ${error.error}`, { type: 'error' });
+      }
+    } catch (error) {
+      notify('Failed to save threat scanner configuration', { type: 'error' });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <Box sx={{ p: 3, textAlign: 'center' }}>
+        <Typography>Loading threat scanner configuration...</Typography>
+      </Box>
+    );
+  }
+
+  return (
+    <Box sx={{ p: 3 }}>
+      <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
+        <ThreatScannerIcon sx={{ mr: 1, color: 'primary.main' }} />
+        <Typography variant="h5" component="h2">
+          Threat Scanner Configuration
+        </Typography>
+      </Box>
+
+      {status && (
+        <Box sx={{ mb: 3 }}>
+          <Alert severity={status.isEnabled ? "success" : "warning"}>
+            Scheduled scanning is {status.isEnabled ? "enabled" : "disabled"}
+            {status.lastScanTime && ` • Last scan: ${new Date(status.lastScanTime).toLocaleString()}`}
+            {status.nextScanTime && ` • Next scan: ${new Date(status.nextScanTime).toLocaleString()}`}
+            {status.isScanInProgress && " • Scan currently in progress"}
+          </Alert>
+        </Box>
+      )}
+
+      <Grid container spacing={3}>
+        <Grid item xs={12} md={6}>
+          <Paper sx={{ p: 3 }}>
+            <Typography variant="h6" gutterBottom>
+              Scheduled Scans
+            </Typography>
+
+            <FormControlLabel
+              control={
+                <Switch
+                  checked={config.enabled}
+                  onChange={(e) => setConfig({
+                    ...config,
+                    enabled: e.target.checked
+                  })}
+                />
+              }
+              label="Enable Scheduled Scans"
+              sx={{ mb: 2 }}
+            />
+
+            {config.enabled && (
+              <Box>
+                <Typography variant="body2" gutterBottom>
+                  Scan Interval
+                </Typography>
+                <Box sx={{ display: 'flex', gap: 2, mb: 2 }}>
+                  <MuiTextField
+                    label="Days"
+                    type="number"
+                    value={config.scheduledScanInterval.days}
+                    onChange={(e) => setConfig({
+                      ...config,
+                      scheduledScanInterval: {
+                        ...config.scheduledScanInterval,
+                        days: parseInt(e.target.value) || 0
+                      }
+                    })}
+                    size="small"
+                    inputProps={{ min: 0, max: 30 }}
+                  />
+                  <MuiTextField
+                    label="Hours"
+                    type="number"
+                    value={config.scheduledScanInterval.hours}
+                    onChange={(e) => setConfig({
+                      ...config,
+                      scheduledScanInterval: {
+                        ...config.scheduledScanInterval,
+                        hours: parseInt(e.target.value) || 0
+                      }
+                    })}
+                    size="small"
+                    inputProps={{ min: 0, max: 23 }}
+                  />
+                </Box>
+
+                <Typography variant="body2" gutterBottom>
+                  Default Scan Type
+                </Typography>
+                <select
+                  value={config.defaultScanType}
+                  onChange={(e) => setConfig({
+                    ...config,
+                    defaultScanType: parseInt(e.target.value)
+                  })}
+                  style={{ width: '100%', padding: '8px', marginBottom: '16px' }}
+                >
+                  <option value={0}>Quick Scan</option>
+                  <option value={1}>Full Scan</option>
+                </select>
+              </Box>
+            )}
+          </Paper>
+        </Grid>
+
+        <Grid item xs={12} md={6}>
+          <Paper sx={{ p: 3 }}>
+            <Typography variant="h6" gutterBottom>
+              Quarantine Settings
+            </Typography>
+
+            <FormControlLabel
+              control={
+                <Switch
+                  checked={config.quarantineThreats}
+                  onChange={(e) => setConfig({
+                    ...config,
+                    quarantineThreats: e.target.checked
+                  })}
+                />
+              }
+              label="Enable Threat Quarantine"
+              sx={{ mb: 2 }}
+            />
+
+            {config.quarantineThreats && (
+              <MuiTextField
+                label="Quarantine Directory"
+                value={config.quarantineDirectory}
+                onChange={(e) => setConfig({
+                  ...config,
+                  quarantineDirectory: e.target.value
+                })}
+                fullWidth
+                helperText="Directory where threats will be quarantined"
+              />
+            )}
+          </Paper>
+        </Grid>
+
+        <Grid item xs={12} md={6}>
+          <Paper sx={{ p: 3 }}>
+            <Typography variant="h6" gutterBottom>
+              Performance Settings
+            </Typography>
+
+            <Typography variant="body2" gutterBottom>
+              Max Concurrent Files: {config.maxConcurrentFiles}
+            </Typography>
+            <input
+              type="range"
+              min="1"
+              max="16"
+              value={config.maxConcurrentFiles}
+              onChange={(e) => setConfig({
+                ...config,
+                maxConcurrentFiles: parseInt(e.target.value)
+              })}
+              style={{ width: '100%', marginBottom: '16px' }}
+            />
+
+            <MuiTextField
+              label="Max File Size (MB)"
+              type="number"
+              value={config.maxFileSizeMB}
+              onChange={(e) => setConfig({
+                ...config,
+                maxFileSizeMB: parseInt(e.target.value) || 100
+              })}
+              fullWidth
+              helperText="Maximum file size to scan (larger files will be skipped)"
+              sx={{ mb: 2 }}
+            />
+
+            <Typography variant="body2" gutterBottom>
+              Notification Threshold
+            </Typography>
+            <select
+              value={config.notificationThreshold}
+              onChange={(e) => setConfig({
+                ...config,
+                notificationThreshold: parseInt(e.target.value)
+              })}
+              style={{ width: '100%', padding: '8px' }}
+            >
+              <option value={0}>Low</option>
+              <option value={1}>Medium</option>
+              <option value={2}>High</option>
+            </select>
+          </Paper>
+        </Grid>
+
+        <Grid item xs={12} md={6}>
+          <Paper sx={{ p: 3 }}>
+            <Typography variant="h6" gutterBottom>
+              Exclusions
+            </Typography>
+
+            <Typography variant="body2" gutterBottom>
+              Excluded Directories
+            </Typography>
+            <Box sx={{ mb: 2 }}>
+              {config.excludedDirectories.map((dir, index) => (
+                <Chip
+                  key={index}
+                  label={dir}
+                  onDelete={() => {
+                    const newDirs = [...config.excludedDirectories];
+                    newDirs.splice(index, 1);
+                    setConfig({ ...config, excludedDirectories: newDirs });
+                  }}
+                  sx={{ m: 0.5 }}
+                />
+              ))}
+            </Box>
+            <Box sx={{ display: 'flex', gap: 1, mb: 2 }}>
+              <MuiTextField
+                label="Add directory to exclude"
+                value={newExcludedDir}
+                onChange={(e) => setNewExcludedDir(e.target.value)}
+                size="small"
+                fullWidth
+              />
+              <IconButton
+                onClick={() => {
+                  if (newExcludedDir.trim()) {
+                    setConfig({
+                      ...config,
+                      excludedDirectories: [...config.excludedDirectories, newExcludedDir.trim()]
+                    });
+                    setNewExcludedDir('');
+                  }
+                }}
+              >
+                <AddIcon />
+              </IconButton>
+            </Box>
+
+            <Typography variant="body2" gutterBottom>
+              Excluded Extensions
+            </Typography>
+            <Box sx={{ mb: 2 }}>
+              {config.excludedExtensions.map((ext, index) => (
+                <Chip
+                  key={index}
+                  label={ext}
+                  onDelete={() => {
+                    const newExts = [...config.excludedExtensions];
+                    newExts.splice(index, 1);
+                    setConfig({ ...config, excludedExtensions: newExts });
+                  }}
+                  sx={{ m: 0.5 }}
+                />
+              ))}
+            </Box>
+            <Box sx={{ display: 'flex', gap: 1 }}>
+              <MuiTextField
+                label="Add extension to exclude (e.g., .txt)"
+                value={newExcludedExt}
+                onChange={(e) => setNewExcludedExt(e.target.value)}
+                size="small"
+                fullWidth
+              />
+              <IconButton
+                onClick={() => {
+                  if (newExcludedExt.trim()) {
+                    setConfig({
+                      ...config,
+                      excludedExtensions: [...config.excludedExtensions, newExcludedExt.trim()]
+                    });
+                    setNewExcludedExt('');
+                  }
+                }}
+              >
+                <AddIcon />
+              </IconButton>
+            </Box>
+          </Paper>
+        </Grid>
+
+        <Grid item xs={12}>
+          <Paper sx={{ p: 3 }}>
+            <Typography variant="h6" gutterBottom>
+              About Threat Scanner
+            </Typography>
+            <Typography variant="body2" sx={{ mb: 2 }}>
+              The Threat Scanner provides automated malware detection and system protection capabilities.
+            </Typography>
+            <Typography variant="body2" sx={{ mb: 2 }}>
+              <strong>Features:</strong>
+            </Typography>
+            <Box component="ul" sx={{ pl: 2 }}>
+              <li>Scheduled security scans with configurable intervals</li>
+              <li>Threat quarantine and isolation</li>
+              <li>Performance-optimized scanning with concurrent file processing</li>
+              <li>Integration with threat intelligence feeds (VirusTotal, MalwareBazaar, OTX)</li>
+              <li>Database persistence for scan history</li>
+            </Box>
+
+            <Button
+              variant="contained"
+              onClick={handleSave}
+              disabled={saving}
+              startIcon={saving ? <UpdateIcon sx={{ animation: 'spin 1s linear infinite' }} /> : <SaveIcon />}
+              sx={{ mt: 2 }}
+            >
+              {saving ? 'Saving...' : 'Save Configuration'}
+            </Button>
+          </Paper>
+        </Grid>
+      </Grid>
+    </Box>
+  );
+};
+
 // Configuration List Component (for sidebar navigation)
 export const ConfigurationList = () => {
   const [config, setConfig] = useState<ConfigType>(DEFAULT_CONFIG);
@@ -1983,6 +2407,8 @@ export const ConfigurationList = () => {
       case 4:
         return <MitreConfig record={{ id: 'mitre-techniques' }} />;
       case 5:
+        return <ThreatScannerConfig record={{ id: 'threat-scanner' }} />;
+      case 6:
         return (
           <Box sx={{ p: 3, textAlign: 'center' }}>
             <Typography variant="h6" color="text.secondary">
@@ -1990,7 +2416,7 @@ export const ConfigurationList = () => {
             </Typography>
           </Box>
         );
-      case 6:
+      case 7:
         return (
           <Box sx={{ p: 3, textAlign: 'center' }}>
             <Typography variant="h6" color="text.secondary">

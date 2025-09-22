@@ -12,25 +12,52 @@ public class ThreatScannerController : ControllerBase
 {
     private readonly ILogger<ThreatScannerController> _logger;
     private readonly IThreatScanner _threatScanner;
+    private readonly IThreatScanProgressStore _progressStore;
 
-    public ThreatScannerController(ILogger<ThreatScannerController> logger, IThreatScanner threatScanner)
+    public ThreatScannerController(ILogger<ThreatScannerController> logger, IThreatScanner threatScanner, IThreatScanProgressStore progressStore)
     {
         _logger = logger;
         _threatScanner = threatScanner;
+        _progressStore = progressStore;
     }
 
     [HttpPost("full-scan")]
-    public async Task<IActionResult> StartFullScan()
+    public async Task<IActionResult> StartFullScan([FromQuery] bool async = true)
     {
         try
         {
-            _logger.LogInformation("Starting full threat scan via API");
-            var result = await _threatScanner.PerformFullScanAsync();
-            
-            return Ok(new { 
-                message = "Full scan completed", 
-                data = result 
-            });
+            _logger.LogInformation("Starting full threat scan via API (async: {Async})", async);
+
+            if (async)
+            {
+                // Start scan asynchronously and return immediately
+                _ = Task.Run(async () =>
+                {
+                    try
+                    {
+                        await _threatScanner.PerformFullScanAsync();
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogError(ex, "Error in background full scan");
+                    }
+                });
+
+                return Ok(new {
+                    message = "Full scan started",
+                    async = true,
+                    note = "Use /api/threat-scanner/progress to monitor scan progress"
+                });
+            }
+            else
+            {
+                // Wait for scan to complete (original behavior)
+                var result = await _threatScanner.PerformFullScanAsync();
+                return Ok(new {
+                    message = "Full scan completed",
+                    data = result
+                });
+            }
         }
         catch (Exception ex)
         {
@@ -153,20 +180,27 @@ public class ThreatScannerController : ControllerBase
     }
     
     [HttpGet("progress")]
-    public async Task<IActionResult> GetScanProgress()
+    [AllowAnonymous]
+    public IActionResult GetScanProgress()
     {
         try
         {
-            var progress = await _threatScanner.GetScanProgressAsync();
+            _logger.LogInformation("🔍 Getting scan progress from progress store");
+            var progress = _progressStore.GetCurrentProgress();
+
             if (progress == null)
             {
-                return Ok(new { 
+                _logger.LogInformation("🔍 No current progress found in store");
+                return Ok(new {
                     progress = (object?)null,
                     message = "No scan in progress"
                 });
             }
-            
-            return Ok(new { 
+
+            _logger.LogInformation("🔍 Found progress for scanId: {ScanId}, status: {Status}, percent: {Percent}%",
+                progress.ScanId, progress.Status, progress.PercentComplete);
+
+            return Ok(new {
                 progress = new
                 {
                     scanId = progress.ScanId,
