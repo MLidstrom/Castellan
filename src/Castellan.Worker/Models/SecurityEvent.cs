@@ -24,6 +24,8 @@ public class SecurityEvent
     public double BurstScore { get; init; }
     public double AnomalyScore { get; init; }
     public string? EnrichmentData { get; init; }
+    public List<string>? CorrelationIds { get; init; }
+    public string? CorrelationContext { get; init; }
 
     public SecurityEvent() { }
 
@@ -54,7 +56,9 @@ public class SecurityEvent
             IsEnhanced = false,
             CorrelationScore = 0.0,
             BurstScore = 0.0,
-            AnomalyScore = 0.0
+            AnomalyScore = 0.0,
+            CorrelationIds = null,
+            CorrelationContext = null
         };
     }
 
@@ -88,7 +92,9 @@ public class SecurityEvent
             IsEnhanced = false,
             CorrelationScore = correlationScore,
             BurstScore = burstScore,
-            AnomalyScore = anomalyScore
+            AnomalyScore = anomalyScore,
+            CorrelationIds = null,
+            CorrelationContext = null
         };
     }
 
@@ -123,7 +129,39 @@ public class SecurityEvent
             IsEnhanced = true,
             CorrelationScore = correlationScore,
             BurstScore = burstScore,
-            AnomalyScore = anomalyScore
+            AnomalyScore = anomalyScore,
+            CorrelationIds = null,
+            CorrelationContext = null
+        };
+    }
+
+    /// <summary>
+    /// Creates a security event enriched with correlation information.
+    /// </summary>
+    public static SecurityEvent CreateWithCorrelation(
+        SecurityEvent baseEvent,
+        List<string> correlationIds,
+        string correlationContext)
+    {
+        return new SecurityEvent
+        {
+            Id = baseEvent.Id,
+            OriginalEvent = baseEvent.OriginalEvent,
+            EventType = baseEvent.EventType,
+            RiskLevel = baseEvent.RiskLevel,
+            Confidence = baseEvent.Confidence,
+            Summary = baseEvent.Summary,
+            MitreTechniques = baseEvent.MitreTechniques,
+            RecommendedActions = baseEvent.RecommendedActions,
+            IsDeterministic = baseEvent.IsDeterministic,
+            IsCorrelationBased = true,
+            IsEnhanced = true,
+            CorrelationScore = baseEvent.CorrelationScore,
+            BurstScore = baseEvent.BurstScore,
+            AnomalyScore = baseEvent.AnomalyScore,
+            EnrichmentData = baseEvent.EnrichmentData,
+            CorrelationIds = correlationIds,
+            CorrelationContext = correlationContext
         };
     }
 
@@ -162,7 +200,9 @@ public class SecurityEvent
                 IsEnhanced = false,
                 CorrelationScore = 0.0,
                 BurstScore = 0.0,
-                AnomalyScore = 0.0
+                AnomalyScore = 0.0,
+                CorrelationIds = null,
+                CorrelationContext = null
             };
         }
         catch (JsonException)
@@ -183,7 +223,9 @@ public class SecurityEvent
                 IsEnhanced = false,
                 CorrelationScore = 0.0,
                 BurstScore = 0.0,
-                AnomalyScore = 0.0
+                AnomalyScore = 0.0,
+                CorrelationIds = null,
+                CorrelationContext = null
             };
         }
     }
@@ -226,6 +268,8 @@ public class SecurityEvent
             IsCorrelationBased = IsCorrelationBased,
             IsEnhanced = IsEnhanced,
             EnrichmentData = EnrichmentData,
+            CorrelationIds = CorrelationIds != null ? JsonSerializer.Serialize(CorrelationIds) : null,
+            CorrelationContext = CorrelationContext,
             CreatedAt = DateTime.UtcNow
         };
     }

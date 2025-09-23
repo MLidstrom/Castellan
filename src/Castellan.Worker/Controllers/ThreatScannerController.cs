@@ -8,17 +8,23 @@ namespace Castellan.Worker.Controllers;
 [ApiController]
 [Route("api/threat-scanner")]
 [Authorize]
-public class ThreatScannerController : ControllerBase
+public class ThreatScannerController : ControllerBase, IDisposable
 {
     private readonly ILogger<ThreatScannerController> _logger;
     private readonly IThreatScanner _threatScanner;
     private readonly IThreatScanProgressStore _progressStore;
+    private CancellationTokenSource? _currentScanCancellation;
 
     public ThreatScannerController(ILogger<ThreatScannerController> logger, IThreatScanner threatScanner, IThreatScanProgressStore progressStore)
     {
         _logger = logger;
         _threatScanner = threatScanner;
         _progressStore = progressStore;
+    }
+
+    public void Dispose()
+    {
+        _currentScanCancellation?.Dispose();
     }
 
     [HttpPost("full-scan")]
@@ -30,16 +36,28 @@ public class ThreatScannerController : ControllerBase
 
             if (async)
             {
+                // Create cancellation token for this scan
+                _currentScanCancellation = new CancellationTokenSource();
+
                 // Start scan asynchronously and return immediately
                 _ = Task.Run(async () =>
                 {
                     try
                     {
-                        await _threatScanner.PerformFullScanAsync();
+                        await _threatScanner.PerformFullScanAsync(_currentScanCancellation.Token);
+                    }
+                    catch (OperationCanceledException)
+                    {
+                        _logger.LogInformation("Full scan was cancelled");
                     }
                     catch (Exception ex)
                     {
                         _logger.LogError(ex, "Error in background full scan");
+                    }
+                    finally
+                    {
+                        _currentScanCancellation?.Dispose();
+                        _currentScanCancellation = null;
                     }
                 });
 
@@ -75,16 +93,28 @@ public class ThreatScannerController : ControllerBase
             
             if (async)
             {
+                // Create cancellation token for this scan
+                _currentScanCancellation = new CancellationTokenSource();
+
                 // Start scan asynchronously and return immediately
                 _ = Task.Run(async () =>
                 {
                     try
                     {
-                        await _threatScanner.PerformQuickScanAsync();
+                        await _threatScanner.PerformQuickScanAsync(_currentScanCancellation.Token);
+                    }
+                    catch (OperationCanceledException)
+                    {
+                        _logger.LogInformation("Quick scan was cancelled");
                     }
                     catch (Exception ex)
                     {
                         _logger.LogError(ex, "Error in background quick scan");
+                    }
+                    finally
+                    {
+                        _currentScanCancellation?.Dispose();
+                        _currentScanCancellation = null;
                     }
                 });
                 
@@ -232,6 +262,14 @@ public class ThreatScannerController : ControllerBase
     {
         try
         {
+            // Cancel the scan using controller's cancellation token
+            if (_currentScanCancellation != null)
+            {
+                _currentScanCancellation.Cancel();
+                _logger.LogInformation("Scan cancellation requested via API - controller token cancelled");
+            }
+
+            // Also call service cancel for any additional cleanup
             await _threatScanner.CancelScanAsync();
             _logger.LogInformation("Scan cancellation requested via API");
             return Ok(new { message = "Scan cancellation requested" });

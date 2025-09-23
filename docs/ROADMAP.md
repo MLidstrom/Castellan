@@ -21,7 +21,7 @@
 
 ### 📊 Advanced Analytics
 - **Trend Analysis** - ✅ COMPLETE - Historical trend visualization with ML.NET predictive analytics
-- **Correlation Engine** - ✅ COMPLETE - Advanced event correlation with temporal bursts, brute force, lateral movement, and privilege escalation detection
+- **Correlation Engine** - ✅ COMPLETE - Background intelligence system with ML.NET-powered pattern detection, automatic event enhancement, and risk intelligence
 - **Custom Dashboards** - User-configurable dashboard widgets
 - **Scheduled Reports** - Automated report generation and distribution
 - **Compliance Templates** - Pre-built compliance reporting for SOX, HIPAA, PCI-DSS

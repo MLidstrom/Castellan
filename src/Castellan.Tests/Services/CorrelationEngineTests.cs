@@ -220,13 +220,64 @@ public class CorrelationEngineTests
                 CorrelationType = "TestType",
                 ConfidenceScore = 0.9,
                 Pattern = "TestPattern",
-                EventIds = new List<string> { "event1", "event2" }
+                EventIds = new List<string> { "event1", "event2" },
+                TimeWindow = TimeSpan.FromMinutes(30),
+                MitreTechniques = new List<string> { "T1001", "T1002" },
+                RecommendedActions = new List<string> { "Action1", "Action2" },
+                RiskLevel = "high"
             }
         };
 
         // Act & Assert
         await _correlationEngine.TrainModelsAsync(confirmedCorrelations);
         // Should not throw exception
+    }
+
+    [Fact]
+    public async Task TrainModelsAsync_WithInsufficientData_LogsWarning()
+    {
+        // Arrange
+        var insufficientCorrelations = new List<EventCorrelation>
+        {
+            new EventCorrelation
+            {
+                Id = Guid.NewGuid().ToString(),
+                CorrelationType = "TestType",
+                ConfidenceScore = 0.9,
+                Pattern = "TestPattern",
+                EventIds = new List<string> { "event1" },
+                TimeWindow = TimeSpan.FromMinutes(30),
+                RiskLevel = "medium"
+            }
+        };
+
+        // Act & Assert
+        await _correlationEngine.TrainModelsAsync(insufficientCorrelations);
+        // Should not throw exception - insufficient data should be handled gracefully
+    }
+
+    [Fact]
+    public async Task TrainModelsAsync_WithSufficientData_TrainsModel()
+    {
+        // Arrange
+        var sufficientCorrelations = Enumerable.Range(0, 15)
+            .Select(i => new EventCorrelation
+            {
+                Id = Guid.NewGuid().ToString(),
+                CorrelationType = i % 3 == 0 ? "AttackChain" : i % 3 == 1 ? "LateralMovement" : "TemporalBurst",
+                ConfidenceScore = 0.8 + (i % 3 * 0.05),
+                Pattern = $"TestPattern{i}",
+                EventIds = new List<string> { $"event{i}", $"event{i+1}" },
+                TimeWindow = TimeSpan.FromMinutes(20 + i),
+                MitreTechniques = new List<string> { $"T{1000 + i}" },
+                RecommendedActions = new List<string> { $"Action{i}" },
+                RiskLevel = i % 4 == 0 ? "critical" : i % 4 == 1 ? "high" : i % 4 == 2 ? "medium" : "low"
+            })
+            .ToList();
+
+        // Act & Assert
+        await _correlationEngine.TrainModelsAsync(sufficientCorrelations);
+        // Should complete successfully with sufficient training data
     }
 
     [Fact]

@@ -16,6 +16,7 @@ import {
   Stack
 } from '@mui/material';
 import { useNotify } from 'react-admin';
+import { useNavigate } from 'react-router-dom';
 import { 
   XAxis, 
   YAxis, 
@@ -117,6 +118,7 @@ export const Dashboard = React.memo(() => {
   const [lastRefresh, setLastRefresh] = useState(new Date());
   const [initialLoad, setInitialLoad] = useState(true);
   const notify = useNotify();
+  const navigate = useNavigate();
 
   const authToken = localStorage.getItem('auth_token');
 
@@ -274,13 +276,16 @@ export const Dashboard = React.memo(() => {
   };
 
   // Check for scan on initial load and poll for scan progress
+  const [hasCheckedInitialScan, setHasCheckedInitialScan] = useState(false);
+
   useEffect(() => {
     console.log('🔄 useEffect triggered - scanInProgress:', scanInProgress, 'authToken:', !!authToken);
 
-    // Check if a scan is already in progress on load
-    if (!scanInProgress && authToken) {
+    // Only check for existing scan once on initial load
+    if (!hasCheckedInitialScan && !scanInProgress && authToken) {
       console.log('🔍 Initial scan progress check...');
       checkScanProgress();
+      setHasCheckedInitialScan(true);
     }
 
     let interval: NodeJS.Timeout | null = null;
@@ -303,7 +308,7 @@ export const Dashboard = React.memo(() => {
         clearInterval(interval);
       }
     };
-  }, [scanInProgress, authToken]);
+  }, [scanInProgress, authToken, hasCheckedInitialScan]);
 
   // Use SignalR context for persistent real-time connection
   const {
@@ -811,11 +816,16 @@ export const Dashboard = React.memo(() => {
     }));
   };
 
-  // Chart data
-  const securityEventsChartData = processSecurityEventsForChart();
-  const complianceChartData = processComplianceData();
-  const systemHealthChartData = processSystemHealthData();
-  const threatScanChartData = processThreatScanData();
+  // Chart data - memoized to prevent unnecessary re-renders
+  const securityEventsChartData = useMemo(() => processSecurityEventsForChart(), [securityEvents]);
+  const complianceChartData = useMemo(() => processComplianceData(), [complianceReports]);
+  const systemHealthChartData = useMemo(() => processSystemHealthData(), [systemStatus]);
+  const threatScanChartData = useMemo(() => processThreatScanData(), [threatScanner]);
+
+  // Stable label renderer for pie chart to prevent blinking
+  const renderPieLabel = useCallback(({ name, percent }: any) => {
+    return `${name} ${percent ? (percent * 100).toFixed(0) : 0}%`;
+  }, []);
 
   // Show loading overlay on initial load
   if (initialLoad) {
@@ -959,7 +969,18 @@ export const Dashboard = React.memo(() => {
           </CardContent>
         </Card>
 
-        <Card sx={{ minWidth: 200, flex: 1 }}>
+        <Card
+          sx={{
+            minWidth: 200,
+            flex: 1,
+            cursor: 'pointer',
+            '&:hover': {
+              boxShadow: 3,
+              backgroundColor: 'action.hover'
+            }
+          }}
+          onClick={() => navigate('/threat-scanner')}
+        >
           <CardHeader
             avatar={<ScannerIcon color="warning" />}
             title="Threat Scans"
@@ -972,80 +993,14 @@ export const Dashboard = React.memo(() => {
               <Typography color="error" variant="body2">
                 Error: {threatScannerError}
               </Typography>
-            ) : scanInProgress && scanProgress ? (
-              <Box>
-                <Typography variant="body2" color="primary" sx={{ mb: 1 }}>
-                  {currentScanType || 'Scan'} in Progress
-                </Typography>
-                <Box sx={{ mb: 1 }}>
-                  <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                    <Typography variant="caption" color="text.secondary">
-                      {scanProgress.scanPhase || 'Scanning...'}
-                    </Typography>
-                    <Typography variant="caption" fontWeight="bold">
-                      {scanProgress.percentComplete?.toFixed(0) || 0}%
-                    </Typography>
-                  </Box>
-                  <LinearProgress
-                    variant="determinate"
-                    value={scanProgress.percentComplete || 0}
-                    sx={{ height: 6, borderRadius: 3 }}
-                  />
-                </Box>
-                <Typography variant="caption" color="text.secondary">
-                  Files: {scanProgress.filesScanned?.toLocaleString() || 0}
-                  {scanProgress.threatsFound > 0 && (
-                    <span style={{ color: '#ff9800', marginLeft: 8 }}>
-                      • {scanProgress.threatsFound} threats found
-                    </span>
-                  )}
-                </Typography>
-                <Stack direction="row" spacing={1} sx={{ mt: 1 }}>
-                  <Button
-                    size="small"
-                    variant="outlined"
-                    color="error"
-                    onClick={async () => {
-                      await fetch('http://localhost:5000/api/threat-scanner/cancel', {
-                        method: 'POST',
-                        headers: { 'Authorization': `Bearer ${authToken}` },
-                      });
-                      setScanInProgress(false);
-                      setCurrentScanType('');
-                    }}
-                  >
-                    Cancel
-                  </Button>
-                </Stack>
-              </Box>
             ) : (
               <Box>
                 <Typography variant="h4" color="warning.main">
                   {threatScanner.length}
                 </Typography>
-                <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                  Scan History
+                <Typography variant="body2" color="text.secondary">
+                  Total Scans
                 </Typography>
-                <Stack direction="row" spacing={1}>
-                  <Button
-                    size="small"
-                    variant="outlined"
-                    onClick={handleQuickScan}
-                    startIcon={<ScannerIcon />}
-                    disabled={scanInProgress}
-                  >
-                    Quick Scan
-                  </Button>
-                  <Button
-                    size="small"
-                    variant="contained"
-                    onClick={handleFullScan}
-                    startIcon={<SecurityIcon />}
-                    disabled={scanInProgress}
-                  >
-                    Full Scan
-                  </Button>
-                </Stack>
               </Box>
             )}
           </CardContent>
@@ -1066,13 +1021,14 @@ export const Dashboard = React.memo(() => {
                       cx="50%"
                       cy="50%"
                       labelLine={false}
-                      label={({ name, percent }) => `${name} ${percent ? (percent * 100).toFixed(0) : 0}%`}
+                      label={renderPieLabel}
                       outerRadius={80}
                       fill="#8884d8"
                       dataKey="value"
+                      isAnimationActive={false}
                     >
                       {securityEventsChartData.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                        <Cell key={`cell-${entry.name}`} fill={COLORS[index % COLORS.length]} />
                       ))}
                     </Pie>
                     <Tooltip />

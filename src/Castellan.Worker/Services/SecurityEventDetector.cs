@@ -1,9 +1,12 @@
 using Microsoft.Extensions.Logging;
 using Castellan.Worker.Models;
+using Castellan.Worker.Abstractions;
 
 namespace Castellan.Worker.Services;
 
-public sealed class SecurityEventDetector(ILogger<SecurityEventDetector> logger)
+public sealed class SecurityEventDetector(
+    ILogger<SecurityEventDetector> logger,
+    ICorrelationEngine correlationEngine)
 {
     private static readonly Dictionary<int, SecurityEventRule> SecurityEventRules = new()
     {
@@ -143,6 +146,169 @@ public sealed class SecurityEventDetector(ILogger<SecurityEventDetector> logger)
             enhancedRule.MitreTechniques,
             enhancedRule.RecommendedActions
         );
+    }
+
+    /// <summary>
+    /// Detects a security event and enhances it with correlation analysis
+    /// </summary>
+    public async Task<SecurityEvent?> DetectAndCorrelateSecurityEventAsync(LogEvent logEvent)
+    {
+        var baseSecurityEvent = DetectSecurityEvent(logEvent);
+        if (baseSecurityEvent == null)
+        {
+            return null;
+        }
+
+        try
+        {
+            // Analyze the event for correlations
+            var correlationResult = await correlationEngine.AnalyzeEventAsync(baseSecurityEvent);
+
+            if (correlationResult.HasCorrelation)
+            {
+                // Enhance the event with correlation information
+                var correlationIds = new List<string> { correlationResult.Correlation!.Id };
+                var correlationContext = GenerateCorrelationContext(correlationResult);
+
+                // Apply correlation-based risk adjustment
+                var adjustedEvent = ApplyCorrelationRiskAdjustment(baseSecurityEvent, correlationResult);
+
+                // Create enhanced event with correlation context
+                return SecurityEvent.CreateWithCorrelation(
+                    adjustedEvent,
+                    correlationIds,
+                    correlationContext
+                );
+            }
+
+            return baseSecurityEvent;
+        }
+        catch (Exception ex)
+        {
+            logger.LogWarning(ex, "Error analyzing event for correlations, returning base event: {EventId}", logEvent.EventId);
+            return baseSecurityEvent;
+        }
+    }
+
+    private string GenerateCorrelationContext(CorrelationResult correlationResult)
+    {
+        if (!correlationResult.HasCorrelation || correlationResult.Correlation == null)
+            return string.Empty;
+
+        var correlation = correlationResult.Correlation;
+        var contextParts = new List<string>();
+
+        // Add correlation type and confidence
+        contextParts.Add($"Part of {correlation.CorrelationType.ToLower()} pattern");
+        contextParts.Add($"with {correlationResult.ConfidenceScore:P0} confidence");
+
+        // Add event count
+        if (correlation.EventIds.Count > 1)
+        {
+            contextParts.Add($"involving {correlation.EventIds.Count} related events");
+        }
+
+        // Add time window context
+        var timeWindow = correlation.TimeWindow.TotalMinutes;
+        if (timeWindow < 60)
+        {
+            contextParts.Add($"within {timeWindow:F0} minutes");
+        }
+        else
+        {
+            contextParts.Add($"within {timeWindow / 60:F1} hours");
+        }
+
+        // Add attack chain context if available
+        if (!string.IsNullOrEmpty(correlation.AttackChainStage))
+        {
+            contextParts.Add($"as part of {correlation.AttackChainStage}");
+        }
+
+        // Add MITRE techniques if any
+        if (correlation.MitreTechniques?.Any() == true)
+        {
+            contextParts.Add($"matching techniques: {string.Join(", ", correlation.MitreTechniques.Take(3))}");
+        }
+
+        return string.Join(", ", contextParts) + ".";
+    }
+
+    private SecurityEvent ApplyCorrelationRiskAdjustment(SecurityEvent baseEvent, CorrelationResult correlationResult)
+    {
+        if (!correlationResult.HasCorrelation || correlationResult.Correlation == null)
+            return baseEvent;
+
+        var correlation = correlationResult.Correlation;
+        var adjustedRiskLevel = baseEvent.RiskLevel;
+        var adjustedConfidence = baseEvent.Confidence;
+        var additionalActions = new List<string>(baseEvent.RecommendedActions);
+
+        // Risk level adjustments based on correlation type
+        switch (correlation.CorrelationType.ToLower())
+        {
+            case "attackchain":
+                adjustedRiskLevel = UpgradeRiskLevel(baseEvent.RiskLevel, 2); // Significant upgrade
+                adjustedConfidence = Math.Min(100, adjustedConfidence + 15);
+                additionalActions.Add("Investigate entire attack sequence");
+                additionalActions.Add("Consider incident response procedures");
+                break;
+
+            case "lateralmovement":
+                adjustedRiskLevel = UpgradeRiskLevel(baseEvent.RiskLevel, 1); // Moderate upgrade
+                adjustedConfidence = Math.Min(100, adjustedConfidence + 10);
+                additionalActions.Add("Investigate lateral movement across systems");
+                additionalActions.Add("Check for compromised credentials");
+                break;
+
+            case "temporalburst":
+                adjustedConfidence = Math.Min(100, adjustedConfidence + 5);
+                additionalActions.Add("Investigate burst pattern for automation");
+                break;
+
+            case "privilegeescalation":
+                adjustedRiskLevel = UpgradeRiskLevel(baseEvent.RiskLevel, 1);
+                adjustedConfidence = Math.Min(100, adjustedConfidence + 10);
+                additionalActions.Add("Review privilege escalation sequence");
+                break;
+
+            case "mldetected":
+                adjustedConfidence = Math.Min(100, adjustedConfidence + 5);
+                additionalActions.Add("Review ML-detected anomaly pattern");
+                additionalActions.Add("Consider updating correlation rules");
+                break;
+        }
+
+        // Additional confidence boost for high-confidence correlations
+        if (correlationResult.ConfidenceScore > 0.8)
+        {
+            adjustedConfidence = Math.Min(100, adjustedConfidence + 5);
+        }
+
+        return SecurityEvent.CreateEnhanced(
+            baseEvent.OriginalEvent,
+            baseEvent.EventType,
+            adjustedRiskLevel,
+            adjustedConfidence,
+            baseEvent.Summary,
+            baseEvent.MitreTechniques,
+            additionalActions.ToArray(),
+            baseEvent.IsDeterministic,
+            correlationResult.ConfidenceScore,
+            0.0, // BurstScore will be set by correlation engine
+            0.0  // AnomalyScore will be set by correlation engine
+        );
+    }
+
+    private string UpgradeRiskLevel(string currentLevel, int upgradeSteps)
+    {
+        var riskLevels = new[] { "low", "medium", "high", "critical" };
+        var currentIndex = Array.IndexOf(riskLevels, currentLevel.ToLower());
+
+        if (currentIndex == -1) return currentLevel; // Unknown level, don't change
+
+        var newIndex = Math.Min(riskLevels.Length - 1, currentIndex + upgradeSteps);
+        return riskLevels[newIndex];
     }
 
     private SecurityEventRule ApplyContextRules(LogEvent logEvent, SecurityEventRule baseRule)

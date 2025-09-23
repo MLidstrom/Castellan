@@ -12,7 +12,6 @@ import {
   FindInPage as YaraMatchesIcon,
   Schedule as TimelineIcon,
   TrendingUp as TrendAnalysisIcon,
-  Analytics as CorrelationIcon,
 } from '@mui/icons-material';
 // Using production providers with real backend API
 import { enhancedCastellanDataProvider } from './dataProvider/castellanDataProvider';
@@ -57,7 +56,6 @@ const YaraMatchesShow = React.lazy(() => import('./resources/YaraMatches').then(
 const TimelineList = React.lazy(() => import('./resources/Timeline').then(module => ({ default: module.TimelineList })));
 
 const TrendAnalysisPage = React.lazy(() => import('./components/TrendAnalysisPage'));
-const CorrelationDashboard = React.lazy(() => import('./components/CorrelationDashboard'));
 
 
 const ConfigurationList = React.lazy(() => import('./resources/Configuration').then(module => ({ default: module.ConfigurationList })));
@@ -152,13 +150,6 @@ const App = () => {
               recordRepresentation={() => 'Trend Analysis'}
             />
 
-            {/* Correlation Engine - New in v0.6.0 */}
-            <Resource
-              name="correlation"
-              list={CorrelationDashboard}
-              icon={CorrelationIcon}
-              recordRepresentation={() => 'Event Correlations'}
-            />
 
             {/* Compliance Reports Resource - Now Available */}
             <Resource

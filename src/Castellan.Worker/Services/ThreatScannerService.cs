@@ -24,6 +24,7 @@ public class ThreatScannerService : IThreatScanner
     private ThreatScanResult? _currentScan;
     private CancellationTokenSource? _currentScanCancellation;
     private readonly object _progressLock = new();
+    private volatile bool _isCancelled = false;
     
     // Progress tracking event
     public event EventHandler<ThreatScanProgress>? ProgressUpdated;
@@ -93,13 +94,18 @@ public class ThreatScannerService : IThreatScanner
     public async Task<ThreatScanResult> PerformFullScanAsync(CancellationToken cancellationToken = default)
     {
         _logger.LogInformation("Starting full system threat scan");
-        
+
+        // Reset cancellation flag for new scan
+        _isCancelled = false;
+
+        var scanId = Guid.NewGuid().ToString();
         var scanResult = new ThreatScanResult
         {
+            Id = scanId,  // Fix: Set Id to same value as ScanId to prevent GUID regeneration
             ScanType = ThreatScanType.FullScan,
             StartTime = DateTime.UtcNow,
             Status = ThreatScanStatus.Running,
-            ScanId = Guid.NewGuid().ToString(),
+            ScanId = scanId,
             ScanPath = "Full System Scan"
         };
 
@@ -107,7 +113,6 @@ public class ThreatScannerService : IThreatScanner
         _currentScanCancellation = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
 
         // Initialize progress tracking
-        var scanId = scanResult.ScanId!;
         UpdateProgress(scanId, ThreatScanStatus.Running, phase: "Initializing Full Scan");
 
         // Estimate total files to scan for progress calculation
@@ -122,8 +127,7 @@ public class ThreatScannerService : IThreatScanner
 
             foreach (var drive in drives)
             {
-                if (_currentScanCancellation.Token.IsCancellationRequested)
-                    break;
+                _currentScanCancellation.Token.ThrowIfCancellationRequested();
 
                 _logger.LogInformation("Scanning drive: {DriveName}", drive.Name);
                 UpdateProgress(scanId, ThreatScanStatus.Running,
@@ -141,6 +145,9 @@ public class ThreatScannerService : IThreatScanner
         {
             scanResult.Status = ThreatScanStatus.Cancelled;
             _logger.LogInformation("Full scan was cancelled");
+            // Update progress to reflect cancellation
+            UpdateProgress(scanId, ThreatScanStatus.Cancelled, scanResult.FilesScanned, scanResult.DirectoriesScanned,
+                scanResult.ThreatsFound, "", "", "Cancelled", totalEstimated);
         }
         catch (Exception ex)
         {
@@ -194,13 +201,18 @@ public class ThreatScannerService : IThreatScanner
     public async Task<ThreatScanResult> PerformQuickScanAsync(CancellationToken cancellationToken = default)
     {
         _logger.LogInformation("Starting quick threat scan");
-        
+
+        // Reset cancellation flag for new scan
+        _isCancelled = false;
+
+        var scanId = Guid.NewGuid().ToString();
         var scanResult = new ThreatScanResult
         {
+            Id = scanId,  // Fix: Set Id to same value as ScanId to prevent GUID regeneration
             ScanType = ThreatScanType.QuickScan,
             StartTime = DateTime.UtcNow,
             Status = ThreatScanStatus.Running,
-            ScanId = Guid.NewGuid().ToString(),
+            ScanId = scanId,
             ScanPath = "Quick System Scan"
         };
 
@@ -208,20 +220,19 @@ public class ThreatScannerService : IThreatScanner
         _currentScanCancellation = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         
         // Initialize progress tracking
-        var scanId = scanResult.ScanId!;
         UpdateProgress(scanId, ThreatScanStatus.Running, phase: "Initializing Quick Scan");
-        
+
+        // Estimate total files to scan for progress calculation (declare outside try block)
+        UpdateProgress(scanId, ThreatScanStatus.Running, phase: "Calculating scan scope");
+        int totalEstimated = await EstimateFilesToScanAsync(_highRiskDirectories, maxDepth: 3);
+
         try
         {
-            // Estimate total files to scan for progress calculation
-            UpdateProgress(scanId, ThreatScanStatus.Running, phase: "Calculating scan scope");
-            int totalEstimated = await EstimateFilesToScanAsync(_highRiskDirectories, maxDepth: 3);
             
             // Quick scan focuses on high-risk directories
             foreach (var directory in _highRiskDirectories)
             {
-                if (_currentScanCancellation.Token.IsCancellationRequested)
-                    break;
+                _currentScanCancellation.Token.ThrowIfCancellationRequested();
                     
                 if (Directory.Exists(directory))
                 {
@@ -242,6 +253,9 @@ public class ThreatScannerService : IThreatScanner
         {
             scanResult.Status = ThreatScanStatus.Cancelled;
             _logger.LogInformation("Quick scan was cancelled");
+            // Update progress to reflect cancellation
+            UpdateProgress(scanId, ThreatScanStatus.Cancelled, scanResult.FilesScanned, scanResult.DirectoriesScanned,
+                scanResult.ThreatsFound, "", "", "Cancelled", totalEstimated);
         }
         catch (Exception ex)
         {
@@ -290,12 +304,14 @@ public class ThreatScannerService : IThreatScanner
     {
         _logger.LogInformation("Starting directory scan: {Path}", path);
         
+        var scanId = Guid.NewGuid().ToString();
         var scanResult = new ThreatScanResult
         {
+            Id = scanId,  // Fix: Set Id to same value as ScanId to prevent GUID regeneration
             ScanType = ThreatScanType.DirectoryScan,
             StartTime = DateTime.UtcNow,
             Status = ThreatScanStatus.Running,
-            ScanId = Guid.NewGuid().ToString(),
+            ScanId = scanId,
             ScanPath = path
         };
 
@@ -363,10 +379,33 @@ public class ThreatScannerService : IThreatScanner
 
     public async Task CancelScanAsync()
     {
-        if (_currentScanCancellation != null)
+        if (_currentScanCancellation != null && _currentScan != null)
         {
+            _logger.LogInformation("Scan cancellation requested for scanId: {ScanId}", _currentScan.ScanId);
+
+            // Set the cancellation flag immediately to stop all progress updates
+            _isCancelled = true;
+
+            // Cancel the cancellation token
             _currentScanCancellation.Cancel();
-            _logger.LogInformation("Scan cancellation requested");
+
+            // Immediately update the current scan status
+            _currentScan.Status = ThreatScanStatus.Cancelled;
+            _currentScan.EndTime = DateTime.UtcNow;
+
+            // Update progress tracking to reflect cancellation immediately
+            if (!string.IsNullOrEmpty(_currentScan.ScanId))
+            {
+                UpdateProgress(_currentScan.ScanId, ThreatScanStatus.Cancelled,
+                    _currentScan.FilesScanned, _currentScan.DirectoriesScanned,
+                    _currentScan.ThreatsFound, "", "", "Cancelled", 0);
+            }
+
+            _logger.LogInformation("Scan cancelled successfully");
+        }
+        else
+        {
+            _logger.LogWarning("No active scan to cancel");
         }
         await Task.CompletedTask;
     }
@@ -382,15 +421,23 @@ public class ThreatScannerService : IThreatScanner
         {
             try
             {
-                return await _historyRepository.GetScanHistoryAsync(1, count);
+                _logger.LogDebug("🔍 Using database repository for scan history");
+                var dbResults = await _historyRepository.GetScanHistoryAsync(1, count);
+                _logger.LogDebug("🔍 Database returned {Count} scan results", dbResults.Count());
+                return dbResults;
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Failed to get scan history from database, falling back to memory");
             }
         }
+        else
+        {
+            _logger.LogWarning("🔍 History repository is null, using in-memory fallback");
+        }
 
         // Fallback to in-memory history
+        _logger.LogDebug("🔍 Using in-memory history fallback, found {Count} items", _scanHistory.Count);
         var history = _scanHistory.ToArray().TakeLast(count).Reverse();
         return await Task.FromResult(history);
     }
@@ -404,6 +451,13 @@ public class ThreatScannerService : IThreatScanner
         int directoriesScanned = 0, int threatsFound = 0, string currentFile = "",
         string currentDirectory = "", string phase = "", int totalEstimated = 0)
     {
+        // Don't update progress if scan has been cancelled, unless we're setting it to Cancelled
+        if (_isCancelled && status != ThreatScanStatus.Cancelled)
+        {
+            _logger.LogDebug("📊 Ignoring progress update - scan is cancelled");
+            return;
+        }
+
         lock (_progressLock)
         {
             _logger.LogInformation("📊 UpdateProgress called for scanId: {ScanId}, phase: {Phase}, filesScanned: {FilesScanned}", scanId, phase, filesScanned);
@@ -422,6 +476,14 @@ public class ThreatScannerService : IThreatScanner
             else
             {
                 _logger.LogInformation("📊 Updating existing progress for scanId: {ScanId}", scanId);
+
+                // Don't overwrite Cancelled or Failed status with Running status
+                if ((currentProgress.Status == ThreatScanStatus.Cancelled || currentProgress.Status == ThreatScanStatus.Failed)
+                    && status == ThreatScanStatus.Running)
+                {
+                    _logger.LogInformation("📊 Ignoring status update to Running - scan is already {Status}", currentProgress.Status);
+                    return;
+                }
             }
 
             currentProgress.Status = status;
@@ -530,8 +592,10 @@ public class ThreatScannerService : IThreatScanner
         CancellationToken cancellationToken, int currentDepth = 0, int maxDepth = int.MaxValue, 
         string scanId = "", int totalEstimated = 0)
     {
-        if (cancellationToken.IsCancellationRequested || currentDepth > maxDepth)
+        if (currentDepth > maxDepth)
             return;
+
+        cancellationToken.ThrowIfCancellationRequested();
 
         try
         {
@@ -554,17 +618,20 @@ public class ThreatScannerService : IThreatScanner
             var semaphore = new SemaphoreSlim(_optionsMonitor.CurrentValue.MaxConcurrentFiles, _optionsMonitor.CurrentValue.MaxConcurrentFiles);
             var scanTasks = files.Select(async file =>
             {
+                // Check cancellation before starting each file
+                cancellationToken.ThrowIfCancellationRequested();
+
                 await semaphore.WaitAsync(cancellationToken);
                 try
                 {
                     // Update progress with current file being scanned
                     if (!string.IsNullOrEmpty(scanId))
                     {
-                        UpdateProgress(scanId, ThreatScanStatus.Running, scanResult.FilesScanned, 
-                            scanResult.DirectoriesScanned, scanResult.ThreatsFound, 
+                        UpdateProgress(scanId, ThreatScanStatus.Running, scanResult.FilesScanned,
+                            scanResult.DirectoriesScanned, scanResult.ThreatsFound,
                             file.Name, directoryPath, "Scanning", totalEstimated);
                     }
-                    
+
                     var threat = await AnalyzeFileAsync(file, cancellationToken);
                     if (threat.ThreatType != ThreatType.Unknown)
                     {
@@ -603,7 +670,15 @@ public class ThreatScannerService : IThreatScanner
                 }
             });
 
-            await Task.WhenAll(scanTasks);
+            try
+            {
+                await Task.WhenAll(scanTasks);
+            }
+            catch (OperationCanceledException)
+            {
+                // Rethrow to propagate cancellation up the stack
+                throw;
+            }
 
             // Recursively scan subdirectories
             if (currentDepth < maxDepth)
@@ -611,8 +686,7 @@ public class ThreatScannerService : IThreatScanner
                 var subdirectories = directory.GetDirectories();
                 foreach (var subdirectory in subdirectories)
                 {
-                    if (cancellationToken.IsCancellationRequested)
-                        break;
+                    cancellationToken.ThrowIfCancellationRequested();
                         
                     await ScanDirectoryRecursiveAsync(subdirectory.FullName, scanResult, 
                         cancellationToken, currentDepth + 1, maxDepth, scanId, totalEstimated);
@@ -646,6 +720,9 @@ public class ThreatScannerService : IThreatScanner
 
     private async Task<FileThreatResult> AnalyzeFileAsync(FileInfo file, CancellationToken cancellationToken)
     {
+        // Check for cancellation before analyzing each file
+        cancellationToken.ThrowIfCancellationRequested();
+
         var result = new FileThreatResult
         {
             FilePath = file.FullName,

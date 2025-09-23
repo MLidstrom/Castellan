@@ -63,6 +63,9 @@ public class DatabaseSchemaUpdateService
                 await CreateThreatScanHistoryTableAsync(connection);
                 _logger.LogInformation("ThreatScanHistory table created successfully");
             }
+
+            // Ensure correlation fields exist in SecurityEvents table
+            await EnsureCorrelationFieldsExistAsync(connection);
         }
         catch (Exception ex)
         {
@@ -186,6 +189,61 @@ public class DatabaseSchemaUpdateService
             CREATE INDEX ""IX_ThreatScanHistory_Status"" ON ""ThreatScanHistory"" (""Status"");
             CREATE INDEX ""IX_ThreatScanHistory_ScanType"" ON ""ThreatScanHistory"" (""ScanType"");
             CREATE INDEX ""IX_ThreatScanHistory_CreatedAt"" ON ""ThreatScanHistory"" (""CreatedAt"");
+        ";
+
+        using var command = new SqliteCommand(sql, connection);
+        await command.ExecuteNonQueryAsync();
+    }
+
+    private async Task EnsureCorrelationFieldsExistAsync(SqliteConnection connection)
+    {
+        try
+        {
+            // Check if SecurityEvents table has correlation fields
+            var hasCorrelationFields = await SecurityEventsHasCorrelationFieldsAsync(connection);
+            if (!hasCorrelationFields)
+            {
+                _logger.LogInformation("Adding correlation fields to SecurityEvents table...");
+                await AddCorrelationFieldsToSecurityEventsAsync(connection);
+                _logger.LogInformation("Correlation fields added to SecurityEvents table successfully");
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to ensure correlation fields exist");
+            throw;
+        }
+    }
+
+    private async Task<bool> SecurityEventsHasCorrelationFieldsAsync(SqliteConnection connection)
+    {
+        try
+        {
+            // Check if the table has the correlation columns
+            var query = "PRAGMA table_info(SecurityEvents)";
+            using var command = new SqliteCommand(query, connection);
+            using var reader = await command.ExecuteReaderAsync();
+
+            var columns = new HashSet<string>();
+            while (await reader.ReadAsync())
+            {
+                columns.Add(reader["name"].ToString()!);
+            }
+
+            // Check for correlation fields
+            return columns.Contains("CorrelationIds") && columns.Contains("CorrelationContext");
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
+    private async Task AddCorrelationFieldsToSecurityEventsAsync(SqliteConnection connection)
+    {
+        var sql = @"
+            ALTER TABLE ""SecurityEvents"" ADD COLUMN ""CorrelationIds"" TEXT NULL;
+            ALTER TABLE ""SecurityEvents"" ADD COLUMN ""CorrelationContext"" TEXT NULL;
         ";
 
         using var command = new SqliteCommand(sql, connection);

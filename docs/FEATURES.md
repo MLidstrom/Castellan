@@ -4,7 +4,7 @@
 - **Real-time Windows Event Log Collection** - Monitors security, application, and system events
 - **AI-Powered Threat Analysis** - LLM-based event classification with external threat intelligence
 - **Vector Search** - Semantic similarity search using Qdrant vector database for correlation
-- **Advanced Correlation Engine** - Multi-pattern threat correlation with real-time attack chain detection
+- **Advanced Correlation Engine** - Background intelligence system with ML.NET-powered pattern detection
 - **File Threat Scanning** - Real-time malware detection with VirusTotal integration and local heuristics
 - **MITRE ATT&CK Integration** - 800+ techniques with configuration management and import functionality
 
@@ -62,17 +62,18 @@
   - **Summary Statistics** - Risk level breakdown and event type analysis
   - **Responsive Design** - Two-column layout with timeline chart and summary panels
   - **API Integration** - Timeline, events, heatmap, stats, and anomaly detection endpoints
-- **Advanced Correlation Engine** - Comprehensive threat pattern detection and analysis
-  - **Temporal Burst Detection** - Identifies rapid event sequences from same source (configurable 5+ events in 5 minutes)
-  - **Brute Force Attack Detection** - Recognizes failed authentication patterns followed by success (3+ failures in 10 minutes)
-  - **Lateral Movement Detection** - Tracks similar activities across multiple machines (3+ hosts in 30 minutes)
-  - **Privilege Escalation Detection** - Monitors escalation attempts and suspicious privilege changes (2+ events in 15 minutes)
-  - **Attack Chain Analysis** - Sequential attack pattern recognition across multiple events with MITRE ATT&CK mapping
-  - **Real-time Correlation** - Sub-second threat correlation with configurable confidence thresholds (70-85%)
-  - **Machine Learning Integration** - Model training with confirmed correlations for improved accuracy
-  - **Rule Management** - Customizable correlation rules with time windows, event counts, and confidence levels
-  - **Statistics & Metrics** - Comprehensive correlation analytics with pattern trending and risk assessment
-  - **Performance Optimized** - High-throughput correlation processing with efficient batch analysis
+- **Advanced Correlation Engine** - Background intelligence system that enhances existing security workflows
+  - **Invisible Operation** - Runs automatically via CorrelationBackgroundService without user intervention
+  - **Event Enhancement** - Security events automatically enriched with correlation indicators and context
+  - **ML.NET Integration** - K-means clustering with 8-feature vector analysis for pattern detection
+  - **Background Processing** - Continuous analysis every 5 minutes with ML training every 24 hours
+  - **Risk Intelligence** - Automatic risk level upgrades based on correlation types (attack chains, lateral movement)
+  - **Temporal Burst Detection** - Identifies rapid event sequences from same source
+  - **Brute Force Attack Detection** - Recognizes failed authentication patterns followed by success
+  - **Lateral Movement Detection** - Tracks similar activities across multiple machines
+  - **Attack Chain Analysis** - Sequential attack pattern recognition with MITRE ATT&CK mapping
+  - **Smart Notifications** - Correlation-aware alerts with adaptive throttling and confidence filtering
+  - **API Access** - Statistics and configuration endpoints for monitoring correlation performance
 - **Threat Pattern Recognition** - AI-powered identification of attack sequences with MITRE technique classification
 - **Performance Monitoring** - System health and security service status with real-time dashboards
 - **Persistent Storage** - 24-hour rolling window with automatic restart recovery

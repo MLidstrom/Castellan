@@ -17,11 +17,12 @@ import {
   useNotify,
   useRefresh,
 } from 'react-admin';
-import { 
-  Chip, 
-  Box, 
-  LinearProgress, 
-  Typography, 
+import {
+  Chip,
+  Box,
+  LinearProgress,
+  CircularProgress,
+  Typography,
   Card,
   CardContent,
   CardHeader,
@@ -273,22 +274,33 @@ const ScanProgressDialog = ({ open, onClose, scanType }: { open: boolean; onClos
             setProgress(data.progress);
             
             // Check if scan is completed
-            if (data.progress.status === 'Completed' || data.progress.status === 'CompletedWithThreats') {
+            const statusLower = data.progress.status?.toLowerCase();
+            console.log(`📊 Scan progress status check: "${data.progress.status}" (lowercase: "${statusLower}")`);
+
+            if (statusLower === 'completed' || statusLower === 'completedwiththreats') {
               const findings = data.progress.threatsFound;
+              console.log(`✅ Scan completed with status: ${data.progress.status}, findings: ${findings}`);
               notify(
                 `${scanType} completed! Found ${findings} security finding${findings !== 1 ? 's' : ''}.`,
                 { type: findings > 0 ? 'info' : 'success' }
               );
+              console.log('🔄 Will close dialog in 2 seconds...');
               setTimeout(() => {
+                console.log('🔄 Closing dialog now');
                 refresh();
                 onClose();
               }, 2000);
               return;
             }
             
-            if (data.progress.status === 'Failed' || data.progress.status === 'Cancelled') {
+            if (statusLower === 'failed' || statusLower === 'cancelled') {
+              console.log(`🔄 Scan status detected: ${data.progress.status}`);
               setError(`Scan ${data.progress.status.toLowerCase()}`);
-              setTimeout(() => onClose(), 3000);
+              setTimeout(() => {
+                console.log('🔄 Auto-closing dialog after scan cancellation/failure');
+                refresh();
+                onClose();
+              }, 3000);
               return;
             }
           } else {
@@ -314,19 +326,49 @@ const ScanProgressDialog = ({ open, onClose, scanType }: { open: boolean; onClos
   }, [open, API_BASE_URL, notify, refresh, onClose, scanType]);
   
   const handleCancel = async () => {
+    console.log('🛑 Cancel scan button clicked');
     try {
+      const authToken = localStorage.getItem('auth_token');
+      console.log('🔑 Auth token available:', !!authToken);
+
       const response = await fetch(`${API_BASE_URL}/api/threat-scanner/cancel`, {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('auth_token')}`,
+          'Authorization': `Bearer ${authToken}`,
+          'Content-Type': 'application/json',
         },
       });
-      
+
+      console.log('📡 Cancel response status:', response.status);
+
       if (response.ok) {
+        const result = await response.json();
+        console.log('✅ Cancel successful:', result);
         notify('Scan cancellation requested', { type: 'info' });
+
+        // Immediately update progress state to Cancelled
+        if (progress) {
+          console.log('🔄 Immediately setting progress to Cancelled');
+          setProgress({
+            ...progress,
+            status: 'Cancelled'
+          });
+
+          // Auto-close dialog after 3 seconds
+          setTimeout(() => {
+            console.log('🔄 Closing dialog after cancellation');
+            refresh();
+            onClose();
+          }, 3000);
+        }
+      } else {
+        const errorText = await response.text();
+        console.error('❌ Cancel failed:', response.status, errorText);
+        notify(`Failed to cancel scan: ${response.status}`, { type: 'error' });
       }
     } catch (err) {
-      notify('Failed to cancel scan', { type: 'error' });
+      console.error('❌ Error cancelling scan:', err);
+      notify('Failed to cancel scan: Network error', { type: 'error' });
     }
   };
   
@@ -436,13 +478,13 @@ const ScanProgressDialog = ({ open, onClose, scanType }: { open: boolean; onClos
       </DialogContent>
       
       <DialogActions>
-        {progress && (progress.status === 'Running') && (
+        {progress && (progress.status?.toLowerCase() === 'running') && (
           <Button onClick={handleCancel} color="error" variant="outlined">
             Cancel Scan
           </Button>
         )}
         <Button onClick={onClose} variant="contained">
-          {error || (progress && (progress.status === 'Completed' || progress.status === 'CompletedWithThreats')) ? 'Close' : 'Hide'}
+          {error || (progress && (progress.status?.toLowerCase() === 'completed' || progress.status?.toLowerCase() === 'completedwiththreats')) ? 'Close' : 'Hide'}
         </Button>
       </DialogActions>
     </Dialog>
@@ -455,12 +497,53 @@ const ScanActions = () => {
   const refresh = useRefresh();
   const [progressOpen, setProgressOpen] = useState(false);
   const [scanType, setScanType] = useState('');
+  const [scanInProgress, setScanInProgress] = useState(false);
+  const [currentScanStatus, setCurrentScanStatus] = useState<string | null>(null);
 
   // SignalR connection for real-time scan updates
   const { isConnected: signalRConnected, connectionState } = useSignalRContext();
-  
+
   // Get API base URL from environment or default to localhost:5000
   const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || 'http://localhost:5000';
+
+  // Check scan progress on mount and periodically
+  useEffect(() => {
+    const checkScanProgress = async () => {
+      try {
+        const response = await fetch(`${API_BASE_URL}/api/threat-scanner/progress`, {
+          headers: {
+            'Authorization': `Bearer ${localStorage.getItem('auth_token')}`,
+          },
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          if (data.progress &&
+              (data.progress.status === 'Running' ||
+               data.progress.status === 'Initializing')) {
+            setScanInProgress(true);
+            setCurrentScanStatus(data.progress.status);
+            setScanType(data.progress.scanType || 'Scan');
+            // Don't automatically open progress dialog
+            // Let user click on the progress indicator to open it
+          } else {
+            setScanInProgress(false);
+            setCurrentScanStatus(null);
+          }
+        }
+      } catch (error) {
+        console.error('Error checking scan progress:', error);
+      }
+    };
+
+    // Check immediately on mount
+    checkScanProgress();
+
+    // Check every 3 seconds
+    const interval = setInterval(checkScanProgress, 3000);
+
+    return () => clearInterval(interval);
+  }, [API_BASE_URL, progressOpen]);
 
   const handleQuickScan = async () => {
     console.log('Quick scan button clicked');
@@ -521,12 +604,37 @@ const ScanActions = () => {
   return (
     <>
       <TopToolbar>
+        {/* Show scan in progress indicator - clickable to open dialog */}
+        {scanInProgress && (
+          <Box
+            sx={{
+              display: 'flex',
+              alignItems: 'center',
+              mr: 2,
+              cursor: 'pointer',
+              padding: 1,
+              borderRadius: 1,
+              '&:hover': {
+                backgroundColor: 'action.hover'
+              }
+            }}
+            onClick={() => setProgressOpen(true)}
+            title="Click to view scan progress details"
+          >
+            <CircularProgress size={20} sx={{ mr: 1 }} />
+            <Typography variant="body2" color="primary">
+              {scanType || 'Scan'} in progress...
+            </Typography>
+          </Box>
+        )}
+
         <Button
           onClick={() => handleQuickScan()}
           startIcon={<ScanIcon />}
           label="Quick Scan"
           variant="outlined"
           size="small"
+          disabled={scanInProgress}
         />
         <Button
           onClick={() => handleFullScan()}
@@ -534,6 +642,7 @@ const ScanActions = () => {
           label="Full Scan"
           variant="contained"
           size="small"
+          disabled={scanInProgress}
         />
         <IconButton onClick={() => refresh()}>
           <RefreshIcon />

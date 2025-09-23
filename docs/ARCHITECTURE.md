@@ -34,7 +34,9 @@ flowchart LR
     E --> F[Desktop Notifications]
     E --> G[Web Admin Interface]
     E --> M[Teams/Slack Channels]
-    D --> H[Vector Search & Correlation]
+    D --> H[Vector Search & Correlation Engine]
+    B --> U[Correlation Background Service]
+    U --> I
     K --> L[Application & MITRE Data]
     N --> I[Threat Detection Engine]
     R --> I
@@ -220,11 +222,11 @@ flowchart LR
 
 ### Qdrant Vector Database
 - **Purpose**: AI/ML embeddings and vector similarity search
-- **Data**: Event embeddings, semantic search, correlation analysis
+- **Data**: Event embeddings, semantic search, ML.NET correlation models
 - **Location**: Docker container (localhost:6333)
 
 ### SQLite Database
 - **Purpose**: Application metadata and MITRE ATT&CK techniques
-- **Data**: Application inventory, security configurations, MITRE techniques, security event persistence
+- **Data**: Application inventory, security configurations, MITRE techniques, security event persistence, correlation data
 - **Location**: `src/Castellan.Worker/data/castellan.db` (automatically created)
-- **Schema**: Applications, MITRE techniques, security events, system configuration
+- **Schema**: Applications, MITRE techniques, security events with correlation fields, system configuration

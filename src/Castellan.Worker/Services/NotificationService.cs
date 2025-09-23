@@ -13,6 +13,8 @@ public interface INotificationService
 {
     Task ShowNotificationAsync(string title, string message, string level = "Info");
     Task SendSecurityNotificationAsync(SecurityEvent securityEvent);
+    Task SendCorrelationNotificationAsync(SecurityEvent securityEvent, EventCorrelation correlation);
+    Task SendAttackChainNotificationAsync(List<SecurityEvent> events, AttackChain attackChain);
     bool ShouldShowNotification(string level);
 }
 
@@ -106,6 +108,143 @@ public class NotificationService : INotificationService
         var title = $"🚨 Castellan Security Alert - {securityEvent.RiskLevel.ToUpperInvariant()}";
         var message = CreateSecurityNotificationMessage(securityEvent);
         await ShowNotificationAsync(title, message, securityEvent.RiskLevel);
+    }
+
+    public async Task SendCorrelationNotificationAsync(SecurityEvent securityEvent, EventCorrelation correlation)
+    {
+        _logger.LogInformation("🔗 Sending correlation notification for event {EventId} with correlation type {CorrelationType}",
+            securityEvent.OriginalEvent.EventId, correlation.CorrelationType);
+
+        // Determine if this correlation warrants a notification
+        if (!ShouldSendCorrelationNotification(correlation))
+        {
+            _logger.LogDebug("Correlation notification suppressed for low-confidence correlation");
+            return;
+        }
+
+        // Use the original security event for notification
+
+        // Send to notification channels with correlation context
+        await _notificationManager.SendCorrelationAlertAsync(securityEvent, correlation);
+
+        // Send enhanced desktop notification
+        var title = $"🔗 Castellan Correlation Alert - {correlation.CorrelationType}";
+        var message = CreateCorrelationNotificationMessage(securityEvent, correlation);
+        var notificationLevel = DetermineCorrelationNotificationLevel(correlation);
+        await ShowNotificationAsync(title, message, notificationLevel);
+    }
+
+    public async Task SendAttackChainNotificationAsync(List<SecurityEvent> events, AttackChain attackChain)
+    {
+        _logger.LogInformation("⚔️ Sending attack chain notification for {AttackType} with {EventCount} events",
+            attackChain.AttackType, events.Count);
+
+        // Attack chains are always high priority
+        await _notificationManager.SendAttackChainAlertAsync(events, attackChain);
+
+        // Send critical desktop notification
+        var title = $"⚔️ CRITICAL: {attackChain.AttackType} Detected";
+        var message = CreateAttackChainNotificationMessage(events, attackChain);
+        await ShowNotificationAsync(title, message, "critical");
+    }
+
+    private bool ShouldSendCorrelationNotification(EventCorrelation correlation)
+    {
+        // Always send notifications for attack chains and lateral movement
+        if (correlation.CorrelationType.Equals("AttackChain", StringComparison.OrdinalIgnoreCase) ||
+            correlation.CorrelationType.Equals("LateralMovement", StringComparison.OrdinalIgnoreCase))
+        {
+            return true;
+        }
+
+        // Send notifications for high-confidence correlations
+        if (correlation.ConfidenceScore > 0.8)
+        {
+            return true;
+        }
+
+        // Send notifications for high/critical risk correlations
+        if (correlation.RiskLevel.Equals("high", StringComparison.OrdinalIgnoreCase) ||
+            correlation.RiskLevel.Equals("critical", StringComparison.OrdinalIgnoreCase))
+        {
+            return true;
+        }
+
+        return false;
+    }
+
+    private string DetermineCorrelationNotificationLevel(EventCorrelation correlation)
+    {
+        if (correlation.RiskLevel.Equals("critical", StringComparison.OrdinalIgnoreCase))
+            return "critical";
+        if (correlation.RiskLevel.Equals("high", StringComparison.OrdinalIgnoreCase))
+            return "high";
+        if (correlation.ConfidenceScore > 0.8)
+            return "medium";
+        return "info";
+    }
+
+    private string CreateCorrelationNotificationMessage(SecurityEvent securityEvent, EventCorrelation correlation)
+    {
+        var message = $"Correlation Type: {correlation.CorrelationType}\n";
+        message += $"Pattern: {correlation.Pattern}\n";
+        message += $"Confidence: {correlation.ConfidenceScore:P0}\n";
+        message += $"Risk Level: {correlation.RiskLevel}\n";
+        message += $"Related Events: {correlation.EventIds.Count}\n";
+
+        if (correlation.TimeWindow.TotalMinutes < 60)
+        {
+            message += $"Time Window: {correlation.TimeWindow.TotalMinutes:F0} minutes\n";
+        }
+        else
+        {
+            message += $"Time Window: {correlation.TimeWindow.TotalHours:F1} hours\n";
+        }
+
+        if (!string.IsNullOrEmpty(correlation.AttackChainStage))
+        {
+            message += $"Attack Stage: {correlation.AttackChainStage}\n";
+        }
+
+        if (correlation.MitreTechniques?.Any() == true)
+        {
+            message += $"MITRE Techniques: {string.Join(", ", correlation.MitreTechniques.Take(3))}\n";
+        }
+
+        message += $"\nOriginal Event: {securityEvent.EventType} ({securityEvent.OriginalEvent.EventId})";
+        return message;
+    }
+
+    private string CreateAttackChainNotificationMessage(List<SecurityEvent> events, AttackChain attackChain)
+    {
+        var message = $"Attack Type: {attackChain.AttackType}\n";
+        message += $"Confidence: {attackChain.ConfidenceScore:P0}\n";
+        message += $"Risk Level: {attackChain.RiskLevel}\n";
+        message += $"Total Events: {events.Count}\n";
+        message += $"Affected Systems: {string.Join(", ", attackChain.AffectedAssets.Take(3))}\n";
+
+        var duration = attackChain.EndTime - attackChain.StartTime;
+        if (duration.TotalMinutes < 60)
+        {
+            message += $"Duration: {duration.TotalMinutes:F0} minutes\n";
+        }
+        else
+        {
+            message += $"Duration: {duration.TotalHours:F1} hours\n";
+        }
+
+        if (attackChain.MitreTechniques?.Any() == true)
+        {
+            message += $"MITRE Techniques: {string.Join(", ", attackChain.MitreTechniques.Take(3))}\n";
+        }
+
+        message += "\nAttack Stages:\n";
+        foreach (var stage in attackChain.Stages.Take(5))
+        {
+            message += $"  {stage.Sequence}. {stage.Name}\n";
+        }
+
+        return message;
     }
 
     /// <summary>

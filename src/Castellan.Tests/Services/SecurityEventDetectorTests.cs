@@ -1,6 +1,7 @@
 using FluentAssertions;
 using Castellan.Worker.Models;
 using Castellan.Worker.Services;
+using Castellan.Worker.Abstractions;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
@@ -10,12 +11,14 @@ namespace Castellan.Tests.Services;
 public class SecurityEventDetectorTests
 {
     private readonly Mock<ILogger<SecurityEventDetector>> _mockLogger;
+    private readonly Mock<ICorrelationEngine> _mockCorrelationEngine;
     private readonly SecurityEventDetector _detector;
 
     public SecurityEventDetectorTests()
     {
         _mockLogger = new Mock<ILogger<SecurityEventDetector>>();
-        _detector = new SecurityEventDetector(_mockLogger.Object);
+        _mockCorrelationEngine = new Mock<ICorrelationEngine>();
+        _detector = new SecurityEventDetector(_mockLogger.Object, _mockCorrelationEngine.Object);
     }
 
     [Fact]
@@ -435,6 +438,262 @@ public class SecurityEventDetectorTests
         result.Should().NotBeNull();
         result!.RiskLevel.Should().Be("medium"); // Off-hours activity is higher risk
         result.Confidence.Should().BeGreaterThan(85);
+    }
+
+    [Fact]
+    public async Task DetectAndCorrelateSecurityEventAsync_WithNoCorrelation_ShouldReturnBaseEvent()
+    {
+        // Arrange
+        var logEvent = new LogEvent(
+            DateTimeOffset.UtcNow,
+            "TEST-HOST",
+            "Security",
+            4624,
+            "Information",
+            "testuser",
+            "An account was successfully logged on"
+        );
+
+        _mockCorrelationEngine.Setup(x => x.AnalyzeEventAsync(It.IsAny<SecurityEvent>()))
+            .ReturnsAsync(new CorrelationResult
+            {
+                HasCorrelation = false,
+                ConfidenceScore = 0.0,
+                Explanation = "No correlations found"
+            });
+
+        // Act
+        var result = await _detector.DetectAndCorrelateSecurityEventAsync(logEvent);
+
+        // Assert
+        result.Should().NotBeNull();
+        result!.EventType.Should().Be(SecurityEventType.AuthenticationSuccess);
+        result.CorrelationIds.Should().BeNull();
+        result.CorrelationContext.Should().BeNull();
+        result.IsCorrelationBased.Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task DetectAndCorrelateSecurityEventAsync_WithAttackChainCorrelation_ShouldEnhanceEvent()
+    {
+        // Arrange
+        var logEvent = new LogEvent(
+            DateTimeOffset.UtcNow,
+            "TEST-HOST",
+            "Security",
+            4624,
+            "Information",
+            "testuser",
+            "An account was successfully logged on"
+        );
+
+        var correlation = new EventCorrelation
+        {
+            Id = Guid.NewGuid().ToString(),
+            CorrelationType = "AttackChain",
+            ConfidenceScore = 0.9,
+            Pattern = "Brute Force -> Privilege Escalation",
+            RiskLevel = "high",
+            EventIds = new List<string> { "event1", "event2" },
+            TimeWindow = TimeSpan.FromMinutes(15),
+            AttackChainStage = "Initial Access",
+            MitreTechniques = new List<string> { "T1078", "T1110" }
+        };
+
+        _mockCorrelationEngine.Setup(x => x.AnalyzeEventAsync(It.IsAny<SecurityEvent>()))
+            .ReturnsAsync(new CorrelationResult
+            {
+                HasCorrelation = true,
+                ConfidenceScore = 0.9,
+                Correlation = correlation,
+                Explanation = "Attack chain detected"
+            });
+
+        // Act
+        var result = await _detector.DetectAndCorrelateSecurityEventAsync(logEvent);
+
+        // Assert
+        result.Should().NotBeNull();
+        result!.EventType.Should().Be(SecurityEventType.AuthenticationSuccess);
+        result.IsCorrelationBased.Should().BeTrue();
+        result.IsEnhanced.Should().BeTrue();
+        result.CorrelationIds.Should().NotBeNull();
+        result.CorrelationIds!.Should().Contain(correlation.Id);
+        result.CorrelationContext.Should().NotBeNullOrEmpty();
+        result.CorrelationContext.Should().Contain("attackchain pattern");
+        result.CorrelationScore.Should().Be(0.9);
+
+        // Risk level should be upgraded due to attack chain
+        result.RiskLevel.Should().Be("critical"); // Upgraded from medium to critical
+        result.Confidence.Should().BeGreaterThan(95); // Enhanced confidence
+        result.RecommendedActions.Should().Contain("Investigate entire attack sequence");
+    }
+
+    [Fact]
+    public async Task DetectAndCorrelateSecurityEventAsync_WithLateralMovementCorrelation_ShouldUpgradeRisk()
+    {
+        // Arrange
+        var logEvent = new LogEvent(
+            DateTimeOffset.UtcNow,
+            "TEST-HOST",
+            "Security",
+            4624,
+            "Information",
+            "testuser",
+            "An account was successfully logged on"
+        );
+
+        var correlation = new EventCorrelation
+        {
+            Id = Guid.NewGuid().ToString(),
+            CorrelationType = "LateralMovement",
+            ConfidenceScore = 0.85,
+            Pattern = "Cross-host authentication",
+            RiskLevel = "high",
+            EventIds = new List<string> { "event1", "event2", "event3" },
+            TimeWindow = TimeSpan.FromMinutes(30),
+            MitreTechniques = new List<string> { "T1021" }
+        };
+
+        _mockCorrelationEngine.Setup(x => x.AnalyzeEventAsync(It.IsAny<SecurityEvent>()))
+            .ReturnsAsync(new CorrelationResult
+            {
+                HasCorrelation = true,
+                ConfidenceScore = 0.85,
+                Correlation = correlation,
+                Explanation = "Lateral movement detected"
+            });
+
+        // Act
+        var result = await _detector.DetectAndCorrelateSecurityEventAsync(logEvent);
+
+        // Assert
+        result.Should().NotBeNull();
+        result!.IsCorrelationBased.Should().BeTrue();
+        result.RiskLevel.Should().Be("high"); // Upgraded from medium to high
+        result.CorrelationContext.Should().Contain("lateralmovement pattern");
+        result.RecommendedActions.Should().Contain("Investigate lateral movement across systems");
+    }
+
+    [Fact]
+    public async Task DetectAndCorrelateSecurityEventAsync_WithMLDetectedCorrelation_ShouldAddMLActions()
+    {
+        // Arrange
+        var logEvent = new LogEvent(
+            DateTimeOffset.UtcNow,
+            "TEST-HOST",
+            "Security",
+            4688,
+            "Information",
+            "testuser",
+            "A new process has been created"
+        );
+
+        var correlation = new EventCorrelation
+        {
+            Id = Guid.NewGuid().ToString(),
+            CorrelationType = "MLDetected",
+            ConfidenceScore = 0.75,
+            Pattern = "ML Anomaly Detection",
+            RiskLevel = "medium",
+            EventIds = new List<string> { "event1" },
+            TimeWindow = TimeSpan.FromMinutes(5)
+        };
+
+        _mockCorrelationEngine.Setup(x => x.AnalyzeEventAsync(It.IsAny<SecurityEvent>()))
+            .ReturnsAsync(new CorrelationResult
+            {
+                HasCorrelation = true,
+                ConfidenceScore = 0.75,
+                Correlation = correlation,
+                Explanation = "ML anomaly detected"
+            });
+
+        // Act
+        var result = await _detector.DetectAndCorrelateSecurityEventAsync(logEvent);
+
+        // Assert
+        result.Should().NotBeNull();
+        result!.IsCorrelationBased.Should().BeTrue();
+        result.CorrelationContext.Should().Contain("mldetected pattern");
+        result.RecommendedActions.Should().Contain("Review ML-detected anomaly pattern");
+        result.RecommendedActions.Should().Contain("Consider updating correlation rules");
+    }
+
+    [Fact]
+    public async Task DetectAndCorrelateSecurityEventAsync_WithCorrelationEngineError_ShouldReturnBaseEvent()
+    {
+        // Arrange
+        var logEvent = new LogEvent(
+            DateTimeOffset.UtcNow,
+            "TEST-HOST",
+            "Security",
+            4624,
+            "Information",
+            "testuser",
+            "An account was successfully logged on"
+        );
+
+        _mockCorrelationEngine.Setup(x => x.AnalyzeEventAsync(It.IsAny<SecurityEvent>()))
+            .ThrowsAsync(new Exception("Correlation engine error"));
+
+        // Act
+        var result = await _detector.DetectAndCorrelateSecurityEventAsync(logEvent);
+
+        // Assert
+        result.Should().NotBeNull();
+        result!.EventType.Should().Be(SecurityEventType.AuthenticationSuccess);
+        result.IsCorrelationBased.Should().BeFalse();
+        result.CorrelationIds.Should().BeNull();
+        // Should return base event when correlation fails
+    }
+
+    [Theory]
+    [InlineData("low", "low")]
+    [InlineData("medium", "medium")]
+    [InlineData("high", "high")]
+    [InlineData("critical", "critical")]
+    public async Task DetectAndCorrelateSecurityEventAsync_WithTemporalBurst_ShouldMaintainRiskLevel(string baseRisk, string expectedRisk)
+    {
+        // Arrange
+        var logEvent = new LogEvent(
+            DateTimeOffset.UtcNow,
+            "TEST-HOST",
+            "Security",
+            4688,
+            "Information",
+            "testuser",
+            "A new process has been created"
+        );
+
+        var correlation = new EventCorrelation
+        {
+            Id = Guid.NewGuid().ToString(),
+            CorrelationType = "TemporalBurst",
+            ConfidenceScore = 0.70,
+            Pattern = "Rapid process creation",
+            RiskLevel = baseRisk,
+            EventIds = new List<string> { "event1", "event2", "event3" },
+            TimeWindow = TimeSpan.FromMinutes(2)
+        };
+
+        _mockCorrelationEngine.Setup(x => x.AnalyzeEventAsync(It.IsAny<SecurityEvent>()))
+            .ReturnsAsync(new CorrelationResult
+            {
+                HasCorrelation = true,
+                ConfidenceScore = 0.70,
+                Correlation = correlation,
+                Explanation = "Temporal burst detected"
+            });
+
+        // Act
+        var result = await _detector.DetectAndCorrelateSecurityEventAsync(logEvent);
+
+        // Assert
+        result.Should().NotBeNull();
+        result!.IsCorrelationBased.Should().BeTrue();
+        result.RiskLevel.Should().Be(expectedRisk); // Temporal burst doesn't upgrade risk level
+        result.RecommendedActions.Should().Contain("Investigate burst pattern for automation");
     }
 }
 

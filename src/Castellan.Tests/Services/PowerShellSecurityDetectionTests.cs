@@ -2,6 +2,7 @@ using FluentAssertions;
 using Microsoft.Extensions.Logging;
 using Castellan.Worker.Models;
 using Castellan.Worker.Services;
+using Castellan.Worker.Abstractions;
 using Moq;
 using Xunit;
 
@@ -10,12 +11,14 @@ namespace Castellan.Tests.Services;
 public class PowerShellSecurityDetectionTests
 {
     private readonly Mock<ILogger<SecurityEventDetector>> _mockLogger;
+    private readonly Mock<ICorrelationEngine> _mockCorrelationEngine;
     private readonly SecurityEventDetector _detector;
 
     public PowerShellSecurityDetectionTests()
     {
         _mockLogger = new Mock<ILogger<SecurityEventDetector>>();
-        _detector = new SecurityEventDetector(_mockLogger.Object);
+        _mockCorrelationEngine = new Mock<ICorrelationEngine>();
+        _detector = new SecurityEventDetector(_mockLogger.Object, _mockCorrelationEngine.Object);
     }
 
     [Fact]

@@ -540,6 +540,8 @@ GET /api/mitre/techniques/{techniqueId}/events
 
 ## 🔗 Correlation Engine API
 
+**Note**: The Correlation Engine operates as background intelligence and automatically enhances security events. These APIs provide access to correlation statistics and configuration, but the correlation analysis runs automatically without requiring dashboard interaction.
+
 ### Get Correlation Statistics
 ```http
 GET /api/correlation/statistics
@@ -823,13 +825,13 @@ DELETE /api/correlation/cleanup?retentionPeriod=30
 ```
 
 **Features:**
-- **Real-time Analysis** - Immediate correlation detection on new security events
+- **Background Intelligence** - Automatic correlation analysis without user intervention
+- **Event Enhancement** - Security events automatically enriched with correlation context and indicators
+- **ML.NET Integration** - K-means clustering with 8-feature vector analysis for pattern detection
 - **Multiple Correlation Types** - Temporal bursts, brute force, lateral movement, privilege escalation
-- **Attack Chain Detection** - Sequential attack pattern recognition across multiple events
-- **Machine Learning Integration** - Model training with confirmed correlations for improved accuracy
-- **MITRE ATT&CK Mapping** - Automatic technique assignment based on correlation patterns
-- **Configurable Rules** - Customizable thresholds, time windows, and confidence levels
-- **Performance Optimized** - Sub-second response times for real-time threat detection
+- **Risk Intelligence** - Automatic risk level upgrades based on correlation types
+- **Smart Notifications** - Correlation-aware alerts with adaptive throttling
+- **Performance Optimized** - Continuous background processing with efficient batch analysis
 
 ## 🔔 Notifications API
 

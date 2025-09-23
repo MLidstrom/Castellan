@@ -65,7 +65,11 @@ public class SecurityEventEntity
     public bool IsEnhanced { get; set; }
     
     public string? EnrichmentData { get; set; }  // JSON string
-    
+
+    public string? CorrelationIds { get; set; }  // JSON array string
+
+    public string? CorrelationContext { get; set; }
+
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     
     // Navigation properties

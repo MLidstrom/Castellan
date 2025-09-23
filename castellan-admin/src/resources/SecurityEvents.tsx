@@ -24,14 +24,16 @@ import {
   Button,
   // ReferenceField, // Not used
 } from 'react-admin';
-import { Chip, Box, Typography, Tooltip, CircularProgress, Alert } from '@mui/material';
+import { Chip, Box, Typography, Tooltip, CircularProgress, Alert, Card, CardContent } from '@mui/material';
 import {
   Security as SecurityIcon,
   FilterList as FilterListIcon,
   Share as ShareIcon,
   Download as DownloadIcon,
   SignalWifi4Bar as ConnectedIcon,
-  SignalWifiOff as DisconnectedIcon
+  SignalWifiOff as DisconnectedIcon,
+  AccountTree as CorrelationIcon,
+  Timeline as TimelineIcon
 } from '@mui/icons-material';
 
 // Import our advanced search components
@@ -245,6 +247,91 @@ const RiskLevelField = React.memo(({ source }: any) => {
       color={getRiskColor(riskLevel)}
       size="small"
     />
+  );
+});
+
+// Simple correlation indicator for list view
+const CorrelationIndicator = React.memo(() => {
+  const record = useRecordContext();
+  const isCorrelated = record?.isCorrelationBased || false;
+  const correlationScore = record?.correlationScore || 0;
+
+  if (!isCorrelated && correlationScore === 0) {
+    return null;
+  }
+
+  return (
+    <Tooltip title={`Correlation Score: ${(correlationScore * 100).toFixed(1)}%`}>
+      <CorrelationIcon
+        sx={{
+          color: correlationScore > 0.7 ? 'error.main' : correlationScore > 0.5 ? 'warning.main' : 'info.main',
+          fontSize: 18
+        }}
+      />
+    </Tooltip>
+  );
+});
+
+// Custom component for displaying correlation context
+const CorrelationField = React.memo(({ source }: any) => {
+  const record = useRecordContext();
+
+  const correlationIds = record?.correlationIds || [];
+  const correlationContext = record?.correlationContext;
+  const isCorrelated = record?.isCorrelationBased || false;
+  const correlationScore = record?.correlationScore || 0;
+
+  if (!isCorrelated && correlationScore === 0) {
+    return null;
+  }
+
+  return (
+    <Card sx={{ mt: 1, backgroundColor: 'rgba(25, 118, 210, 0.08)' }}>
+      <CardContent sx={{ py: 1.5, '&:last-child': { pb: 1.5 } }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+          <CorrelationIcon sx={{ mr: 1, color: 'primary.main', fontSize: 20 }} />
+          <Typography variant="subtitle2" color="primary">
+            Correlation Information
+          </Typography>
+        </Box>
+
+        {correlationContext && (
+          <Typography variant="body2" sx={{ mb: 1 }}>
+            {correlationContext}
+          </Typography>
+        )}
+
+        <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', alignItems: 'center' }}>
+          {correlationScore > 0 && (
+            <Chip
+              icon={<TimelineIcon />}
+              label={`Score: ${(correlationScore * 100).toFixed(1)}%`}
+              size="small"
+              color="primary"
+              variant="outlined"
+            />
+          )}
+
+          {correlationIds && correlationIds.length > 0 && (
+            <Chip
+              label={`${correlationIds.length} correlation${correlationIds.length > 1 ? 's' : ''}`}
+              size="small"
+              color="info"
+              variant="outlined"
+            />
+          )}
+
+          {isCorrelated && (
+            <Chip
+              label="Correlated Event"
+              size="small"
+              color="secondary"
+              variant="outlined"
+            />
+          )}
+        </Box>
+      </CardContent>
+    </Card>
   );
 });
 
@@ -594,6 +681,7 @@ export const SecurityEventList = () => {
           <TextField source="id" />
           <TextField source="eventType" sortable={false} />
           <RiskLevelField source="riskLevel" label="Risk Level" />
+          <CorrelationIndicator />
           <NumberField source="correlationScore" options={{ minimumFractionDigits: 2, maximumFractionDigits: 2 }} />
           <NumberField source="confidence" options={{ minimumFractionDigits: 0, maximumFractionDigits: 0 }} />
           <TextField source="machine" sortable={false} label="Machine" />
@@ -649,6 +737,7 @@ export const SecurityEventShow = () => (
       <TextField source="message" label="Message" />
       <TextField source="recommendedActions" />
       <TextField source="enrichedIPs" label="IP Enrichment" />
+      <CorrelationField source="correlationContext" />
       <DateField source="timestamp" showTime />
     </SimpleShowLayout>
     </Show>

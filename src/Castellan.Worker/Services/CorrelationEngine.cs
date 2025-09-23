@@ -197,20 +197,29 @@ public class CorrelationEngine : ICorrelationEngine
         {
             _logger.LogInformation("Training ML model with {Count} confirmed correlations", confirmedCorrelations.Count);
 
-            // This is a placeholder for ML model training
-            // In a real implementation, you would:
-            // 1. Extract features from confirmed correlations
-            // 2. Create training data
-            // 3. Train an ML model (e.g., clustering, sequence prediction)
-            // 4. Save the model for future use
+            if (confirmedCorrelations.Count < 10)
+            {
+                _logger.LogWarning("Insufficient training data. Need at least 10 confirmed correlations, got {Count}", confirmedCorrelations.Count);
+                return;
+            }
+
+            // Extract features from confirmed correlations
+            var trainingData = ExtractFeatures(confirmedCorrelations);
+
+            // Train clustering model for pattern detection
+            var clusteringPipeline = _mlContext.Clustering.Trainers.KMeans(
+                featureColumnName: "Features",
+                numberOfClusters: Math.Min(5, confirmedCorrelations.Count / 3));
+
+            var dataView = _mlContext.Data.LoadFromEnumerable(trainingData);
 
             lock (_modelLock)
             {
-                // Placeholder for model training
-                // _mlModel = TrainModel(confirmedCorrelations);
+                _mlModel = clusteringPipeline.Fit(dataView);
+                _logger.LogInformation("ML clustering model trained with {Clusters} clusters", Math.Min(5, confirmedCorrelations.Count / 3));
             }
 
-            _logger.LogInformation("ML model training completed");
+            _logger.LogInformation("ML model training completed successfully");
         }
         catch (Exception ex)
         {
@@ -587,8 +596,60 @@ public class CorrelationEngine : ICorrelationEngine
 
     private async Task<EventCorrelation?> DetectMLCorrelationAsync(SecurityEvent newEvent, List<SecurityEvent> recentEvents)
     {
-        // Placeholder for ML-based correlation detection
-        // In a real implementation, this would use the trained model to detect patterns
+        if (_mlModel == null)
+            return null;
+
+        try
+        {
+            // Create a synthetic correlation to analyze with ML
+            var syntheticCorrelation = new EventCorrelation
+            {
+                EventIds = new List<string> { newEvent.Id }.Concat(recentEvents.Take(5).Select(e => e.Id)).ToList(),
+                ConfidenceScore = 0.5, // Initial estimate
+                TimeWindow = TimeSpan.FromMinutes(30),
+                CorrelationType = "Unknown",
+                RiskLevel = "medium",
+                MitreTechniques = newEvent.MitreTechniques.Concat(recentEvents.SelectMany(e => e.MitreTechniques)).Distinct().ToList(),
+                RecommendedActions = new List<string>()
+            };
+
+            // Extract features for ML prediction
+            var featureData = ExtractFeatures(new List<EventCorrelation> { syntheticCorrelation }).First();
+
+            lock (_modelLock)
+            {
+                // Use ML model to predict if this is a significant correlation
+                var predictionEngine = _mlContext.Model.CreatePredictionEngine<CorrelationFeatureData, ClusterPrediction>(_mlModel);
+                var prediction = predictionEngine.Predict(featureData);
+
+                // If the prediction indicates this event cluster is anomalous, create a correlation
+                if (prediction.PredictedClusterId == 0 && prediction.Distance[0] > 0.7) // Outlier detection
+                {
+                    return new EventCorrelation
+                    {
+                        CorrelationType = "MLDetected",
+                        ConfidenceScore = Math.Min(0.9, prediction.Distance[0]),
+                        Pattern = "ML Anomaly Detection",
+                        EventIds = syntheticCorrelation.EventIds,
+                        TimeWindow = syntheticCorrelation.TimeWindow,
+                        MitreTechniques = syntheticCorrelation.MitreTechniques,
+                        RiskLevel = prediction.Distance[0] > 0.85 ? "high" : "medium",
+                        Summary = $"ML model detected anomalous event pattern (cluster {prediction.PredictedClusterId}, distance {prediction.Distance[0]:F3})",
+                        RecommendedActions = new List<string>
+                        {
+                            "Investigate event sequence for anomalous behavior",
+                            "Review similar patterns in historical data",
+                            "Consider updating correlation rules based on this pattern"
+                        }
+                    };
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Error in ML correlation detection");
+        }
+
         return null;
     }
 
@@ -676,5 +737,99 @@ public class CorrelationEngine : ICorrelationEngine
         };
     }
 
+    private List<CorrelationFeatureData> ExtractFeatures(List<EventCorrelation> correlations)
+    {
+        var features = new List<CorrelationFeatureData>();
+
+        foreach (var correlation in correlations)
+        {
+            var feature = new CorrelationFeatureData
+            {
+                // Basic correlation features
+                EventCount = correlation.EventIds.Count,
+                ConfidenceScore = (float)correlation.ConfidenceScore,
+                TimeWindowMinutes = (float)correlation.TimeWindow.TotalMinutes,
+
+                // Pattern features (encoded as numeric)
+                CorrelationTypeEncoded = EncodeCorrelationType(correlation.CorrelationType),
+                RiskLevelEncoded = EncodeRiskLevel(correlation.RiskLevel),
+
+                // MITRE technique diversity
+                MitreTechniqueCount = correlation.MitreTechniques?.Count ?? 0,
+
+                // Metadata features
+                HasAttackChain = !string.IsNullOrEmpty(correlation.AttackChainStage),
+                RecommendedActionCount = correlation.RecommendedActions?.Count ?? 0
+            };
+
+            // Create feature vector for ML.NET
+            feature.Features = new float[]
+            {
+                feature.EventCount,
+                feature.ConfidenceScore,
+                feature.TimeWindowMinutes,
+                feature.CorrelationTypeEncoded,
+                feature.RiskLevelEncoded,
+                feature.MitreTechniqueCount,
+                feature.HasAttackChain ? 1.0f : 0.0f,
+                feature.RecommendedActionCount
+            };
+
+            features.Add(feature);
+        }
+
+        return features;
+    }
+
+    private float EncodeCorrelationType(string correlationType)
+    {
+        return correlationType?.ToLower() switch
+        {
+            "temporalburst" => 1.0f,
+            "attackchain" => 2.0f,
+            "lateralmovement" => 3.0f,
+            "privilegeescalation" => 4.0f,
+            "dataexfiltration" => 5.0f,
+            _ => 0.0f
+        };
+    }
+
+    private float EncodeRiskLevel(string riskLevel)
+    {
+        return riskLevel?.ToLower() switch
+        {
+            "low" => 1.0f,
+            "medium" => 2.0f,
+            "high" => 3.0f,
+            "critical" => 4.0f,
+            _ => 0.0f
+        };
+    }
+
     #endregion
+}
+
+// ML.NET data structures for correlation pattern learning
+public class CorrelationFeatureData
+{
+    public float EventCount { get; set; }
+    public float ConfidenceScore { get; set; }
+    public float TimeWindowMinutes { get; set; }
+    public float CorrelationTypeEncoded { get; set; }
+    public float RiskLevelEncoded { get; set; }
+    public float MitreTechniqueCount { get; set; }
+    public bool HasAttackChain { get; set; }
+    public float RecommendedActionCount { get; set; }
+
+    [VectorType(8)]
+    public float[] Features { get; set; } = new float[8];
+}
+
+public class ClusterPrediction
+{
+    [ColumnName("PredictedLabel")]
+    public uint PredictedClusterId { get; set; }
+
+    [ColumnName("Distance")]
+    public float[] Distance { get; set; } = new float[5];
 }

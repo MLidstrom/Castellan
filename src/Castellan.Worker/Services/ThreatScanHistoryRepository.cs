@@ -176,6 +176,7 @@ public class ThreatScanHistoryRepository : IThreatScanHistoryRepository
     {
         var result = new ThreatScanResult
         {
+            Id = entity.Id,  // Fix: Set Id to use the persistent database ID instead of generating new GUID
             ScanId = entity.Id,
             ScanType = Enum.Parse<ThreatScanType>(entity.ScanType),
             Status = Enum.Parse<ThreatScanStatus>(entity.Status),
