@@ -238,6 +238,15 @@ builder.Services.AddSingleton<IScanProgressBroadcaster, ScanProgressBroadcaster>
 // Add enhanced progress tracking service
 builder.Services.AddSingleton<IEnhancedProgressTrackingService, EnhancedProgressTrackingService>();
 
+// Add system metrics background service for SignalR broadcasting
+builder.Services.AddHostedService<SystemMetricsBackgroundService>();
+
+// Add dashboard data consolidation services
+builder.Services.AddScoped<IDashboardDataConsolidationService, DashboardDataConsolidationService>();
+builder.Services.AddSingleton<DashboardDataBroadcastService>();
+builder.Services.AddHostedService<DashboardDataBroadcastService>(provider =>
+    provider.GetRequiredService<DashboardDataBroadcastService>());
+
 // Add CORS for frontend and SignalR
 builder.Services.AddCors(options =>
 {

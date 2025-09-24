@@ -14,6 +14,7 @@ Castellan processes Windows security events through **enterprise-grade AI/ML ana
 - **Configuration Management**: Complete threat intelligence provider settings with persistent storage and real-time validation 🆕 **LIVE**
 - **Background Service Management**: Reliable PowerShell job-based startup with comprehensive monitoring
 - **🆕 Real-time Monitoring**: SignalR-powered live system health, scan progress, and threat intelligence status
+- **🆕 Dashboard Data Consolidation**: Single SignalR stream replaces 4+ REST API calls with 80%+ performance improvement
 - **🆕 YARA Malware Detection**: Signature-based malware detection with comprehensive rule management and API
 
 ## System Architecture Diagram

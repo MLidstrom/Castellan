@@ -117,8 +117,56 @@ public class ScanProgressHub : Hub
         
         _logger.LogInformation("Client {ConnectionId} left system metrics updates", Context.ConnectionId);
         
-        await Clients.Caller.SendAsync("LeftSystemMetrics", new { 
+        await Clients.Caller.SendAsync("LeftSystemMetrics", new {
             message = "Unsubscribed from system metrics updates",
+            timestamp = DateTime.UtcNow
+        });
+    }
+
+    /// <summary>
+    /// Join dashboard data updates group for consolidated dashboard data
+    /// </summary>
+    public async Task JoinDashboardUpdates()
+    {
+        await Groups.AddToGroupAsync(Context.ConnectionId, "DashboardUpdates");
+
+        _logger.LogInformation("Client {ConnectionId} joined dashboard data updates", Context.ConnectionId);
+
+        await Clients.Caller.SendAsync("JoinedDashboardUpdates", new {
+            message = "Subscribed to consolidated dashboard updates",
+            timestamp = DateTime.UtcNow
+        });
+    }
+
+    /// <summary>
+    /// Leave dashboard data updates group
+    /// </summary>
+    public async Task LeaveDashboardUpdates()
+    {
+        await Groups.RemoveFromGroupAsync(Context.ConnectionId, "DashboardUpdates");
+
+        _logger.LogInformation("Client {ConnectionId} left dashboard data updates", Context.ConnectionId);
+
+        await Clients.Caller.SendAsync("LeftDashboardUpdates", new {
+            message = "Unsubscribed from dashboard updates",
+            timestamp = DateTime.UtcNow
+        });
+    }
+
+    /// <summary>
+    /// Request immediate dashboard data refresh for a specific time range
+    /// </summary>
+    /// <param name="timeRange">Time range for dashboard data (24h, 7d, 30d, 1h)</param>
+    public async Task RequestDashboardData(string timeRange = "24h")
+    {
+        _logger.LogInformation("Client {ConnectionId} requested immediate dashboard data for time range: {TimeRange}",
+            Context.ConnectionId, timeRange);
+
+        // Note: The actual data fetching and sending will be handled by the DashboardDataBroadcastService
+        // This method just logs the request and could trigger an immediate broadcast if needed
+        await Clients.Caller.SendAsync("DashboardDataRequested", new {
+            timeRange,
+            message = $"Dashboard data requested for {timeRange}",
             timestamp = DateTime.UtcNow
         });
     }

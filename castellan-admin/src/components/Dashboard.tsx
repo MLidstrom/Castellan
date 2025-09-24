@@ -60,7 +60,7 @@ import { YaraSummaryCard } from './YaraSummaryCard';
 
 // Import SignalR context for persistent connection
 import { useSignalRContext } from '../contexts/SignalRContext';
-import { SystemMetricsUpdate } from '../hooks/useSignalR';
+import { SystemMetricsUpdate, ConsolidatedDashboardData, useRealtimeDashboardData } from '../hooks/useSignalR';
 
 // Import Dashboard data caching context
 import { useDashboardDataContext } from '../contexts/DashboardDataContext';
@@ -150,25 +150,70 @@ export const Dashboard = React.memo(() => {
     testBackend();
   }, [authToken]);
 
-  // State for all dashboard data - no caching, fresh API calls
+  // State for consolidated dashboard data - now using SignalR real-time updates
+  const [consolidatedData, setConsolidatedData] = useState<ConsolidatedDashboardData | null>(null);
+  const [dashboardDataLoading, setDashboardDataLoading] = useState(true);
+  const [dashboardDataError, setDashboardDataError] = useState<string | null>(null);
+
+  // Legacy state for backward compatibility with existing components
   const [securityEventsData, setSecurityEventsData] = useState<{ events: SecurityEvent[], total: number }>({ events: [], total: 0 });
-  const [securityEventsLoading, setSecurityEventsLoading] = useState(true);
-  const [securityEventsError, setSecurityEventsError] = useState<string | null>(null);
-
   const [complianceReports, setComplianceReports] = useState<ComplianceReport[]>([]);
-  const [complianceReportsLoading, setComplianceReportsLoading] = useState(true);
-  const [complianceReportsError, setComplianceReportsError] = useState<string | null>(null);
-
   const [systemStatus, setSystemStatus] = useState<SystemStatus[]>([]);
-  const [systemStatusLoading, setSystemStatusLoading] = useState(true);
-  const [systemStatusError, setSystemStatusError] = useState<string | null>(null);
-
   const [threatScanner, setThreatScanner] = useState<ThreatScan[]>([]);
-  const [threatScannerLoading, setThreatScannerLoading] = useState(true);
-  const [threatScannerError, setThreatScannerError] = useState<string | null>(null);
   const [scanInProgress, setScanInProgress] = useState(false);
   const [scanProgress, setScanProgress] = useState<any>(null);
   const [currentScanType, setCurrentScanType] = useState<string>('');
+
+  // Real-time dashboard data hook
+  const { connectionState: dashboardConnectionState, requestDashboardData } = useRealtimeDashboardData(
+    (data: ConsolidatedDashboardData) => {
+      console.log('📡 Received consolidated dashboard data:', data);
+      setConsolidatedData(data);
+      setDashboardDataLoading(false);
+      setDashboardDataError(null);
+
+      // Update legacy state for backward compatibility
+      setSecurityEventsData({
+        events: data.securityEvents.recentEvents.map(event => ({
+          id: event.id,
+          timestamp: event.timestamp,
+          eventType: event.eventType,
+          riskLevel: event.riskLevel as 'critical' | 'high' | 'medium' | 'low',
+          source: event.source,
+          machine: event.machine
+        })),
+        total: data.securityEvents.totalEvents
+      });
+
+      setComplianceReports(data.compliance.recentReports.map(report => ({
+        id: report.id,
+        complianceScore: report.score
+      })));
+
+      setSystemStatus(data.systemStatus.components.map(component => ({
+        id: component.component,
+        component: component.component,
+        status: component.status.toLowerCase(),
+        responseTime: component.responseTime,
+        errorCount: component.status.toLowerCase() === 'healthy' ? 0 : 1,
+        warningCount: 0,
+        lastCheck: component.lastCheck,
+        uptime: '0m',
+        details: component.status
+      })));
+
+      setThreatScanner(data.threatScanner.recentScans.map(scan => ({
+        id: scan.id,
+        status: scan.status.toLowerCase(),
+        threatsFound: scan.threatsFound,
+        timestamp: scan.timestamp
+      })));
+
+      setLastRefresh(new Date());
+      console.log('✅ Dashboard data updated from SignalR');
+    },
+    timeRange
+  );
 
   // Check scan progress function
   const checkScanProgress = async () => {
@@ -318,7 +363,7 @@ export const Dashboard = React.memo(() => {
     triggerSystemUpdate
   } = useSignalRContext();
 
-  // Use dashboard data caching context
+  // Use dashboard data caching context (kept for compatibility with other components)
   const {
     getCachedData,
     setCachedData,
@@ -332,8 +377,8 @@ export const Dashboard = React.memo(() => {
   const [pollingEnabled, setPollingEnabled] = useState(true);
   const [pollingInterval, setPollingInterval] = useState<NodeJS.Timeout | null>(null);
 
-  // Set connection state based on SignalR or polling
-  const isConnected = signalRConnected || pollingEnabled;
+  // Set connection state based on dashboard SignalR connection
+  const isConnected = dashboardConnectionState === 'Connected';
 
   // Update last real-time update when metrics change
   useEffect(() => {
@@ -354,8 +399,6 @@ export const Dashboard = React.memo(() => {
           details: health.details || health.status
         }));
         setSystemStatus(statusArray);
-        setSystemStatusLoading(false);
-        setSystemStatusError(null);
       }
     }
   }, [realtimeMetrics]);
@@ -451,8 +494,6 @@ export const Dashboard = React.memo(() => {
             details: health.details || health.status
           }));
           setSystemStatus(statusArray);
-          setSystemStatusLoading(false);
-          setSystemStatusError(null);
         }
         console.log('✅ Polling update successful');
       } else {
@@ -487,231 +528,112 @@ export const Dashboard = React.memo(() => {
     }
   }, [pollingEnabled, signalRConnected, authToken]);
 
-  // Track previous timeRange to detect changes
-  const prevTimeRangeRef = useRef(timeRange);
-
-  // ⚡ Optimized: Fetch all dashboard data with caching
+  // Fallback to REST API when SignalR is not available
   useEffect(() => {
-    const fetchAllDashboardData = async () => {
-      if (!authToken) return;
+    const fetchFallbackData = async () => {
+      if (!authToken || dashboardConnectionState === 'Connected') return;
 
-      // Clear cache if timeRange changed (new filters need fresh data)
-      if (prevTimeRangeRef.current !== timeRange && timeRange !== 'refresh-trigger') {
-        console.log(`🔄 Time range changed from ${prevTimeRangeRef.current} to ${timeRange} - clearing cache`);
-        clearCache();
-        prevTimeRangeRef.current = timeRange;
-      }
-
-      // Check if we have valid cached data first (only if timeRange didn't change)
-      const cachedData = getCachedData();
-      if (cachedData && isCacheValid(30000) && timeRange !== 'refresh-trigger') { // Cache valid for 30 seconds
-        console.log('📦 Using cached dashboard data');
-
-        // Set data from cache
-        setSecurityEventsData({
-          events: cachedData.securityEvents || [],
-          total: cachedData.securityEvents?.length || 0
-        });
-        setComplianceReports(cachedData.complianceReports || []);
-        setSystemStatus(cachedData.systemStatus || []);
-        setThreatScanner(cachedData.threatScanner || []);
-
-        // Set loading states to false immediately
-        setSecurityEventsLoading(false);
-        setComplianceReportsLoading(false);
-        setSystemStatusLoading(false);
-        setThreatScannerLoading(false);
-        setInitialLoad(false);
-
-        // Clear any previous errors
-        setSecurityEventsError(null);
-        setComplianceReportsError(null);
-        setSystemStatusError(null);
-        setThreatScannerError(null);
-
-        console.log('✅ Dashboard loaded from cache');
-        return;
-      }
-
-      console.log('🚀 Fetching Dashboard Data in Parallel...');
-
-      // Set all loading states to true
-      setSecurityEventsLoading(true);
-      setComplianceReportsLoading(true);
-      setSystemStatusLoading(true);
-      setThreatScannerLoading(true);
-
-      // Clear previous errors
-      setSecurityEventsError(null);
-      setComplianceReportsError(null);
-      setSystemStatusError(null);
-      setThreatScannerError(null);
-
-      const headers = {
-        'Authorization': `Bearer ${authToken}`,
-        'Content-Type': 'application/json'
-      };
+      console.log('🔄 SignalR unavailable, using REST API fallback');
+      setDashboardDataLoading(true);
 
       try {
-        // Execute all API calls in parallel
-        const [
-          securityEventsResponse,
-          complianceReportsResponse,
-          systemStatusResponse,
-          threatScannerResponse
-        ] = await Promise.all([
-          fetch(`${API_URL}/security-events?sort=timestamp&order=desc`, { headers }),
-          fetch(`${API_URL}/compliance-reports?sort=generated&order=desc`, { headers }),
-          fetch(`${API_URL}/system-status`, { headers }),
-          fetch(`${API_URL}/threat-scanner?sort=timestamp&order=desc`, { headers })
-        ]);
-
-        console.log('📡 All API Response Status:', {
-          securityEvents: securityEventsResponse.status,
-          complianceReports: complianceReportsResponse.status,
-          systemStatus: systemStatusResponse.status,
-          threatScanner: threatScannerResponse.status
+        const response = await fetch(`${API_URL}/dashboarddata/consolidated?timeRange=${timeRange}`, {
+          headers: {
+            'Authorization': `Bearer ${authToken}`,
+            'Content-Type': 'application/json'
+          }
         });
 
-        // Initialize data containers for caching
-        let securityEventsResult: any[] = [];
-        let complianceReportsResult: any[] = [];
-        let systemStatusResult: any[] = [];
-        let threatScannerResult: any[] = [];
+        if (response.ok) {
+          const data = await response.json();
+          setConsolidatedData(data);
+          setDashboardDataError(null);
 
-        // Process Security Events
-        try {
-          if (securityEventsResponse.ok) {
-            const securityData = await securityEventsResponse.json();
-            securityEventsResult = securityData.data || securityData || [];
-            const securityResult = {
-              events: securityEventsResult,
-              total: securityData.total || 0
-            };
-            console.log('✅ Security Events loaded:', securityResult.events.length);
-            setSecurityEventsData(securityResult);
-          } else {
-            throw new Error(`Security Events HTTP ${securityEventsResponse.status}`);
-          }
-        } catch (error) {
-          console.error('❌ Security Events Failed:', error);
-          setSecurityEventsError(error instanceof Error ? error.message : 'Failed to fetch');
+          // Update legacy state for backward compatibility
+          setSecurityEventsData({
+            events: data.securityEvents.recentEvents.map((event: any) => ({
+              id: event.id,
+              timestamp: event.timestamp,
+              eventType: event.eventType,
+              riskLevel: event.riskLevel as 'critical' | 'high' | 'medium' | 'low',
+              source: event.source,
+              machine: event.machine
+            })),
+            total: data.securityEvents.totalEvents
+          });
+
+          setComplianceReports(data.compliance.recentReports.map((report: any) => ({
+            id: report.id,
+            complianceScore: report.score
+          })));
+
+          setSystemStatus(data.systemStatus.components.map((component: any) => ({
+            id: component.component,
+            component: component.component,
+            status: component.status.toLowerCase(),
+            responseTime: component.responseTime,
+            errorCount: component.status.toLowerCase() === 'healthy' ? 0 : 1,
+            warningCount: 0,
+            lastCheck: component.lastCheck,
+            uptime: '0m',
+            details: component.status
+          })));
+
+          setThreatScanner(data.threatScanner.recentScans.map((scan: any) => ({
+            id: scan.id,
+            status: scan.status.toLowerCase(),
+            threatsFound: scan.threatsFound,
+            timestamp: scan.timestamp
+          })));
+
+          console.log('✅ Fallback data loaded successfully');
+        } else {
+          throw new Error(`REST API failed: ${response.status}`);
         }
-
-        // Process Compliance Reports
-        try {
-          if (complianceReportsResponse.ok) {
-            const complianceData = await complianceReportsResponse.json();
-            complianceReportsResult = complianceData.data || complianceData || [];
-            console.log('✅ Compliance Reports loaded:', complianceReportsResult.length);
-            setComplianceReports(complianceReportsResult);
-          } else {
-            throw new Error(`Compliance Reports HTTP ${complianceReportsResponse.status}`);
-          }
-        } catch (error) {
-          console.error('❌ Compliance Reports Failed:', error);
-          setComplianceReportsError(error instanceof Error ? error.message : 'Failed to fetch');
-        }
-
-        // Process System Status
-        try {
-          if (systemStatusResponse.ok) {
-            const systemData = await systemStatusResponse.json();
-            systemStatusResult = systemData.data || systemData || [];
-            console.log('✅ System Status loaded:', systemStatusResult.length);
-            setSystemStatus(systemStatusResult);
-          } else {
-            throw new Error(`System Status HTTP ${systemStatusResponse.status}`);
-          }
-        } catch (error) {
-          console.error('❌ System Status Failed:', error);
-          setSystemStatusError(error instanceof Error ? error.message : 'Failed to fetch');
-        }
-
-        // Process Threat Scanner
-        try {
-          if (threatScannerResponse.ok) {
-            const threatData = await threatScannerResponse.json();
-            threatScannerResult = threatData.data || threatData || [];
-            console.log('✅ Threat Scanner loaded:', threatScannerResult.length);
-            setThreatScanner(threatScannerResult);
-          } else {
-            throw new Error(`Threat Scanner HTTP ${threatScannerResponse.status}`);
-          }
-        } catch (error) {
-          console.error('❌ Threat Scanner Failed:', error);
-          setThreatScannerError(error instanceof Error ? error.message : 'Failed to fetch');
-        }
-
-        // Cache the successfully fetched data
-        setCachedData({
-          securityEvents: securityEventsResult,
-          complianceReports: complianceReportsResult,
-          systemStatus: systemStatusResult,
-          threatScanner: threatScannerResult,
-          timestamp: Date.now()
-        });
-        console.log('💾 Dashboard data cached');
-
       } catch (error) {
-        console.error('💥 Dashboard Data Fetch Failed:', error);
-        // Set errors for all failed endpoints
-        const errorMessage = error instanceof Error ? error.message : 'Network error';
-        setSecurityEventsError(errorMessage);
-        setComplianceReportsError(errorMessage);
-        setSystemStatusError(errorMessage);
-        setThreatScannerError(errorMessage);
+        console.error('❌ Fallback data fetch failed:', error);
+        setDashboardDataError(error instanceof Error ? error.message : 'Failed to fetch data');
       } finally {
-        // Set all loading states to false
-        setSecurityEventsLoading(false);
-        setComplianceReportsLoading(false);
-        setSystemStatusLoading(false);
-        setThreatScannerLoading(false);
+        setDashboardDataLoading(false);
         setInitialLoad(false);
-        console.log('⚡ Dashboard loading complete');
       }
     };
 
-    fetchAllDashboardData();
-  }, [authToken, timeRange]);
+    fetchFallbackData();
+  }, [authToken, timeRange, dashboardConnectionState]);
 
   // Extract derived data
   const securityEvents = securityEventsData?.events || [];
   const securityEventsTotal = securityEventsData?.total || 0;
   
-  // Debug logging
+  // Debug logging for consolidated data
   useEffect(() => {
-    console.group('📊 Dashboard Data Status Report');
-    console.log('Security Events:', {
-      hasData: !!securityEventsData && securityEvents.length > 0,
-      loading: securityEventsLoading,
-      error: securityEventsError,
-      count: securityEvents.length
-    });
-    console.log('Compliance Reports:', {
-      hasData: !!complianceReports && complianceReports.length > 0,
-      loading: complianceReportsLoading,
-      error: complianceReportsError,
-      count: complianceReports.length
-    });
-    console.log('System Status:', {
-      hasData: !!systemStatus && systemStatus.length > 0,
-      loading: systemStatusLoading,
-      error: systemStatusError,
-      count: systemStatus.length
-    });
-    console.log('Threat Scanner:', {
-      hasData: !!threatScanner && threatScanner.length > 0,
-      loading: threatScannerLoading,
-      error: threatScannerError,
-      count: threatScanner.length
-    });
-    console.groupEnd();
-  }, [securityEventsData, complianceReports, systemStatus, threatScanner, 
-      securityEventsLoading, complianceReportsLoading, 
-      systemStatusLoading, threatScannerLoading, 
-      securityEventsError, complianceReportsError, 
-      systemStatusError, threatScannerError]);
+    if (consolidatedData) {
+      console.group('📊 Consolidated Dashboard Data Status');
+      console.log('Security Events:', {
+        totalEvents: consolidatedData.securityEvents.totalEvents,
+        recentEventsCount: consolidatedData.securityEvents.recentEvents.length,
+        riskLevelCounts: consolidatedData.securityEvents.riskLevelCounts
+      });
+      console.log('System Status:', {
+        totalComponents: consolidatedData.systemStatus.totalComponents,
+        healthyComponents: consolidatedData.systemStatus.healthyComponents,
+        componentsCount: consolidatedData.systemStatus.components.length
+      });
+      console.log('Compliance:', {
+        totalReports: consolidatedData.compliance.totalReports,
+        averageScore: consolidatedData.compliance.averageScore,
+        recentReportsCount: consolidatedData.compliance.recentReports.length
+      });
+      console.log('Threat Scanner:', {
+        totalScans: consolidatedData.threatScanner.totalScans,
+        activeScans: consolidatedData.threatScanner.activeScans,
+        threatsFound: consolidatedData.threatScanner.threatsFound
+      });
+      console.log('Last Updated:', consolidatedData.lastUpdated);
+      console.groupEnd();
+    }
+  }, [consolidatedData]);
   
   // Analyze data structure (debug)
   useEffect(() => {
@@ -724,35 +646,45 @@ export const Dashboard = React.memo(() => {
     }
   }, [securityEvents]);
 
-  // Refresh all data - now integrated with SignalR and cache clearing
+  // Refresh all data - now uses consolidated SignalR or REST API fallback
   const handleRefresh = async () => {
     setRefreshing(true);
     setLastRefresh(new Date());
 
     try {
-      // Clear cache to force fresh data fetch
-      clearCache();
-      console.log('🗑️ Cleared dashboard cache for fresh data');
-
-      if (isConnected) {
-        // If SignalR is connected, trigger a real-time update
-        console.log('📡 Triggering SignalR system update...');
-        await triggerSystemUpdate();
-        notify('Real-time data refresh triggered', { type: 'info' });
-
-        // Also trigger useEffect to fetch fresh data
-        const currentRange = timeRange;
-        setTimeRange('refresh-trigger');
-        setTimeout(() => setTimeRange(currentRange), 100);
+      if (dashboardConnectionState === 'Connected') {
+        // Request fresh data via SignalR
+        console.log('📡 Requesting fresh dashboard data via SignalR...');
+        await requestDashboardData(timeRange);
+        notify('Dashboard data refreshed via SignalR', { type: 'success' });
       } else {
-        // Fallback to manual API calls when SignalR is not connected
-        console.log('🔄 SignalR disconnected - falling back to manual refresh');
-        notify('Refreshing data manually (real-time unavailable)', { type: 'warning' });
+        // Fallback to REST API
+        console.log('🔄 Refreshing via REST API fallback...');
+        const response = await fetch(`${API_URL}/dashboarddata/refresh`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${authToken}`,
+            'Content-Type': 'application/json'
+          }
+        });
 
-        // Re-trigger the existing useEffect hooks by toggling timeRange briefly
-        const currentRange = timeRange;
-        setTimeRange('refresh-trigger');
-        setTimeout(() => setTimeRange(currentRange), 100);
+        if (response.ok) {
+          // Re-fetch data after cache invalidation
+          const dataResponse = await fetch(`${API_URL}/dashboarddata/consolidated?timeRange=${timeRange}`, {
+            headers: {
+              'Authorization': `Bearer ${authToken}`,
+              'Content-Type': 'application/json'
+            }
+          });
+
+          if (dataResponse.ok) {
+            const data = await dataResponse.json();
+            setConsolidatedData(data);
+            notify('Dashboard data refreshed', { type: 'success' });
+          }
+        } else {
+          throw new Error('Failed to refresh data');
+        }
       }
     } catch (error) {
       console.error('Refresh failed:', error);
@@ -771,22 +703,33 @@ export const Dashboard = React.memo(() => {
     low: '#4caf50'
   };
 
-  // Data processing functions
+  // Data processing functions - now uses consolidated data when available
   const processSecurityEventsForChart = () => {
+    if (consolidatedData?.securityEvents.riskLevelCounts) {
+      return Object.entries(consolidatedData.securityEvents.riskLevelCounts)
+        .map(([name, value]) => ({ name, value }));
+    }
+
+    // Fallback to legacy data processing
     if (!securityEvents || securityEvents.length === 0) return [];
-    
     const riskCounts = securityEvents.reduce((acc: any, event) => {
       const risk = event.riskLevel || event.severity || 'unknown';
       acc[risk] = (acc[risk] || 0) + 1;
       return acc;
     }, {});
-    
     return Object.entries(riskCounts).map(([name, value]) => ({ name, value }));
   };
 
   const processComplianceData = () => {
+    if (consolidatedData?.compliance.recentReports) {
+      return consolidatedData.compliance.recentReports.map((report, index) => ({
+        name: report.title.substring(0, 20) + (report.title.length > 20 ? '...' : ''),
+        score: report.score
+      }));
+    }
+
+    // Fallback to legacy data processing
     if (!complianceReports || complianceReports.length === 0) return [];
-    
     return complianceReports.map((report, index) => ({
       name: `Report ${index + 1}`,
       score: report.complianceScore || report.ComplianceScore || 0
@@ -794,21 +737,39 @@ export const Dashboard = React.memo(() => {
   };
 
   const processSystemHealthData = () => {
+    if (consolidatedData?.systemStatus) {
+      const healthy = consolidatedData.systemStatus.healthyComponents;
+      const total = consolidatedData.systemStatus.totalComponents;
+      const unhealthy = total - healthy;
+
+      const result = [];
+      if (healthy > 0) result.push({ name: 'Healthy', value: healthy });
+      if (unhealthy > 0) result.push({ name: 'Unhealthy', value: unhealthy });
+      return result;
+    }
+
+    // Fallback to legacy data processing
     if (!systemStatus || systemStatus.length === 0) return [];
-    
     const healthData = systemStatus.reduce((acc: any, status) => {
-      const health = status.status === 'healthy' ? 'Healthy' : 
+      const health = status.status === 'healthy' ? 'Healthy' :
                     status.status === 'warning' ? 'Warning' : 'Error';
       acc[health] = (acc[health] || 0) + 1;
       return acc;
     }, {});
-    
     return Object.entries(healthData).map(([name, value]) => ({ name, value }));
   };
 
   const processThreatScanData = () => {
+    if (consolidatedData?.threatScanner.recentScans) {
+      return consolidatedData.threatScanner.recentScans.slice(0, 10).map((scan, index) => ({
+        name: `${scan.scanType} ${index + 1}`,
+        threats: scan.threatsFound,
+        status: scan.status
+      }));
+    }
+
+    // Fallback to legacy data processing
     if (!threatScanner || threatScanner.length === 0) return [];
-    
     return threatScanner.map((scan, index) => ({
       name: `Scan ${index + 1}`,
       threats: scan.threatsFound || 0,
@@ -874,11 +835,11 @@ export const Dashboard = React.memo(() => {
           
           {/* Refresh Button */}
           {/* Connection Status Indicator */}
-          <MuiTooltip title={`Real-time connection: ${connectionState}${lastRealTimeUpdate ? ` | Last update: ${lastRealTimeUpdate.toLocaleTimeString()}` : ''}`}>
+          <MuiTooltip title={`Dashboard real-time: ${dashboardConnectionState}${lastRealTimeUpdate ? ` | Last update: ${lastRealTimeUpdate.toLocaleTimeString()}` : ''}`}>
             <Box display="flex" alignItems="center" gap={1}>
-              {connectionState === 'Connected' ? (
+              {dashboardConnectionState === 'Connected' ? (
                 <ConnectedIcon color="success" fontSize="small" />
-              ) : connectionState === 'Connecting' || connectionState === 'Reconnecting' ? (
+              ) : dashboardConnectionState === 'Connecting' || dashboardConnectionState === 'Reconnecting' ? (
                 <CircularProgress size={16} />
               ) : (
                 <DisconnectedIcon color="error" fontSize="small" />
@@ -915,16 +876,16 @@ export const Dashboard = React.memo(() => {
             titleTypographyProps={{ variant: 'h6' }}
           />
           <CardContent>
-            {securityEventsLoading ? (
+            {dashboardDataLoading ? (
               <CircularProgress size={24} />
-            ) : securityEventsError ? (
+            ) : dashboardDataError ? (
               <Typography color="error" variant="body2">
-                Error: {securityEventsError}
+                Error: {dashboardDataError}
               </Typography>
             ) : (
               <Box>
                 <Typography variant="h4" color="primary">
-                  {securityEventsTotal}
+                  {consolidatedData?.securityEvents.totalEvents || securityEventsData.total}
                 </Typography>
                 <Typography variant="body2" color="text.secondary">
                   Total Events
@@ -942,24 +903,22 @@ export const Dashboard = React.memo(() => {
             titleTypographyProps={{ variant: 'h6' }}
           />
           <CardContent>
-            {systemStatusLoading ? (
+            {dashboardDataLoading ? (
               <CircularProgress size={24} />
-            ) : systemStatusError ? (
+            ) : dashboardDataError ? (
               <Typography color="error" variant="body2">
-                Error: {systemStatusError}
+                Error: {dashboardDataError}
               </Typography>
             ) : (
               <Box>
                 <Typography variant="h4" color="success.main">
-                  {(() => {
-                    const healthyCount = systemStatus.filter(s => s.status && s.status.toLowerCase() === 'healthy').length;
-                    console.log('🔍 System Health Debug:', {
-                      totalServices: systemStatus.length,
-                      healthyCount,
-                      statuses: systemStatus.map(s => s.status)
-                    });
-                    return `${healthyCount}/${systemStatus.length}`;
-                  })()}
+                  {consolidatedData
+                    ? `${consolidatedData.systemStatus.healthyComponents}/${consolidatedData.systemStatus.totalComponents}`
+                    : (() => {
+                        const healthyCount = systemStatus.filter(s => s.status && s.status.toLowerCase() === 'healthy').length;
+                        return `${healthyCount}/${systemStatus.length}`;
+                      })()
+                  }
                 </Typography>
                 <Typography variant="body2" color="text.secondary">
                   Healthy Services
@@ -987,16 +946,16 @@ export const Dashboard = React.memo(() => {
             titleTypographyProps={{ variant: 'h6' }}
           />
           <CardContent>
-            {threatScannerLoading ? (
+            {dashboardDataLoading ? (
               <CircularProgress size={24} />
-            ) : threatScannerError ? (
+            ) : dashboardDataError ? (
               <Typography color="error" variant="body2">
-                Error: {threatScannerError}
+                Error: {dashboardDataError}
               </Typography>
             ) : (
               <Box>
                 <Typography variant="h4" color="warning.main">
-                  {threatScanner.length}
+                  {consolidatedData?.threatScanner.totalScans || threatScanner.length}
                 </Typography>
                 <Typography variant="body2" color="text.secondary">
                   Total Scans
@@ -1050,15 +1009,15 @@ export const Dashboard = React.memo(() => {
         <Card sx={{ flex: 1 }}>
           <CardHeader title="API Diagnostics" />
           <CardContent>
-            <ApiDiagnostic 
+            <ApiDiagnostic
               securityEventsData={securityEvents}
               complianceReportsData={complianceReports}
               systemStatusData={systemStatus}
               threatScannerData={threatScanner}
-              securityEventsError={securityEventsError}
-              complianceReportsError={complianceReportsError}
-              systemStatusError={systemStatusError}
-              threatScannerError={threatScannerError}
+              securityEventsError={dashboardDataError}
+              complianceReportsError={dashboardDataError}
+              systemStatusError={dashboardDataError}
+              threatScannerError={dashboardDataError}
             />
           </CardContent>
         </Card>
@@ -1103,7 +1062,7 @@ export const Dashboard = React.memo(() => {
 
       <Box mb={3}>
         <Card>
-          <CardHeader title="Performance Dashboard" />
+          <CardHeader title="Performance" />
           <CardContent>
             <PerformanceDashboard />
           </CardContent>

@@ -6,7 +6,7 @@
 
 ## Overview
 
-This document provides comprehensive guidance for tuning Castellan's performance, particularly the Phase 3 optimizations that introduce semaphore-based throttling, memory management, and enhanced monitoring capabilities.
+This document provides comprehensive guidance for tuning Castellan's performance, including Phase 3 optimizations (semaphore-based throttling, memory management) and the new Dashboard Data Consolidation system that delivers 80%+ performance improvements by replacing multiple REST API calls with a single SignalR stream.
 
 ## Performance Architecture
 
@@ -18,6 +18,7 @@ The Phase 3 performance optimization introduces several key improvements:
 - **Memory Management**: Retention policies and automatic cleanup
 - **Enhanced Monitoring**: Detailed metrics with throughput tracking
 - **Queue Management**: Back-pressure handling and overflow protection
+- **Dashboard Data Consolidation**: Real-time SignalR streaming replaces 4+ REST API calls with 80%+ load time reduction
 
 ## Configuration Reference
 

@@ -343,25 +343,37 @@ public class EnhancedProgressTrackingService : IEnhancedProgressTrackingService
         {
             _currentProcess.Refresh();
 
+            // Get real performance metrics from the performance monitor
+            var realMetrics = _performanceMonitor.GetCurrentMetrics();
+
             var metrics = new EnhancedPerformanceMetrics
             {
-                CpuUsagePercent = 0.0, // Would need performance counter implementation
+                CpuUsagePercent = realMetrics.System.CpuUsagePercent,
                 MemoryUsageMB = _currentProcess.WorkingSet64 / (1024 * 1024),
                 ThreadCount = _currentProcess.Threads.Count,
-                HandleCount = _currentProcess.HandleCount
-            };
+                HandleCount = _currentProcess.HandleCount,
 
-            // Get event processing statistics from performance monitor
-            if (_performanceMonitor is PerformanceMonitorService perfMon)
-            {
-                // This would be expanded based on actual performance monitor implementation
-                metrics.EventProcessing = new EventProcessingStats
+                // Map real event processing metrics from performance monitor
+                EventProcessing = new EventProcessingStats
                 {
-                    EventsPerSecond = 0, // Placeholder
-                    TotalEventsProcessed = 0, // Placeholder
-                    QueuedEvents = 0 // Placeholder
-                };
-            }
+                    EventsPerSecond = (int)(realMetrics.Pipeline.EventsPerMinute / 60.0), // Convert per minute to per second
+                    TotalEventsProcessed = (int)realMetrics.Pipeline.TotalEventsProcessed,
+                    QueuedEvents = realMetrics.Pipeline.QueueDepth,
+                    FailedEvents = (int)realMetrics.Pipeline.ProcessingErrors,
+                    AverageProcessingTime = TimeSpan.FromMilliseconds(realMetrics.Pipeline.AverageProcessingTimeMs)
+                },
+
+                // Map real vector operation metrics from performance monitor
+                VectorOperations = new VectorOperationStats
+                {
+                    VectorsPerSecond = (int)(realMetrics.VectorStore.TotalVectors > 0 ?
+                        Math.Max(1, realMetrics.VectorStore.TotalVectors / Math.Max(1, realMetrics.Pipeline.UptimeSeconds)) : 0),
+                    AverageEmbeddingTime = TimeSpan.FromMilliseconds(realMetrics.VectorStore.AverageEmbeddingTimeMs),
+                    AverageUpsertTime = TimeSpan.FromMilliseconds(realMetrics.VectorStore.AverageUpsertTimeMs),
+                    AverageSearchTime = TimeSpan.FromMilliseconds(realMetrics.VectorStore.AverageSearchTimeMs),
+                    BatchOperations = (int)realMetrics.VectorStore.LastCleanupVectorCount
+                }
+            };
 
             return metrics;
         }

@@ -150,6 +150,64 @@ export interface ThreatIntelligenceStatusUpdate {
   lastQuery: string;
 }
 
+// Dashboard Data Consolidation Types
+export interface ConsolidatedDashboardData {
+  securityEvents: {
+    totalEvents: number;
+    riskLevelCounts: Record<string, number>;
+    recentEvents: Array<{
+      id: string;
+      eventType: string;
+      timestamp: string;
+      riskLevel: string;
+      source: string;
+      machine: string;
+    }>;
+    lastEventTime: string;
+  };
+  systemStatus: {
+    totalComponents: number;
+    healthyComponents: number;
+    components: Array<{
+      component: string;
+      status: string;
+      responseTime: number;
+      lastCheck: string;
+    }>;
+    componentStatuses: Record<string, string>;
+  };
+  compliance: {
+    totalReports: number;
+    averageScore: number;
+    passingReports: number;
+    failingReports: number;
+    recentReports: Array<{
+      id: string;
+      title: string;
+      score: number;
+      generated: string;
+      status: string;
+    }>;
+  };
+  threatScanner: {
+    totalScans: number;
+    activeScans: number;
+    completedScans: number;
+    threatsFound: number;
+    lastScanTime: string;
+    recentScans: Array<{
+      id: string;
+      scanType: string;
+      timestamp: string;
+      status: string;
+      filesScanned: number;
+      threatsFound: number;
+    }>;
+  };
+  lastUpdated: string;
+  timeRange: string;
+}
+
 interface UseSignalROptions {
   enabled?: boolean;
   onScanProgress?: (update: ScanProgressUpdate) => void;
@@ -157,6 +215,7 @@ interface UseSignalROptions {
   onScanComplete?: (notification: ScanCompleteNotification) => void;
   onScanError?: (notification: ScanErrorNotification) => void;
   onThreatIntelligenceStatus?: (status: ThreatIntelligenceStatusUpdate) => void;
+  onDashboardData?: (data: ConsolidatedDashboardData) => void;
   onConnect?: () => void;
   onDisconnect?: () => void;
   onError?: (error: Error) => void;
@@ -170,6 +229,7 @@ export const useSignalR = (options: UseSignalROptions = {}) => {
     onScanComplete,
     onScanError,
     onThreatIntelligenceStatus,
+    onDashboardData,
     onConnect,
     onDisconnect,
     onError
@@ -190,6 +250,7 @@ export const useSignalR = (options: UseSignalROptions = {}) => {
     onScanComplete,
     onScanError,
     onThreatIntelligenceStatus,
+    onDashboardData,
     onConnect,
     onDisconnect,
     onError
@@ -202,6 +263,7 @@ export const useSignalR = (options: UseSignalROptions = {}) => {
     onScanComplete,
     onScanError,
     onThreatIntelligenceStatus,
+    onDashboardData,
     onConnect,
     onDisconnect,
     onError
@@ -339,6 +401,11 @@ export const useSignalR = (options: UseSignalROptions = {}) => {
       connection.on('ThreatIntelligenceStatus', (status: ThreatIntelligenceStatusUpdate) => {
         console.log('Threat intelligence status:', status);
         callbacksRef.current.onThreatIntelligenceStatus?.(status);
+      });
+
+      connection.on('DashboardDataUpdate', (data: ConsolidatedDashboardData) => {
+        console.log('Dashboard data update received:', data);
+        callbacksRef.current.onDashboardData?.(data);
       });
 
       // Handle connection state changes
@@ -488,6 +555,39 @@ export const useSignalR = (options: UseSignalROptions = {}) => {
     }
   }, []);
 
+  const joinDashboardUpdates = useCallback(async () => {
+    if (connectionRef.current?.state === 'Connected') {
+      try {
+        await connectionRef.current.invoke('JoinDashboardUpdates');
+        console.log('Joined dashboard updates group');
+      } catch (error) {
+        console.error('Failed to join dashboard updates:', error);
+      }
+    }
+  }, []);
+
+  const leaveDashboardUpdates = useCallback(async () => {
+    if (connectionRef.current?.state === 'Connected') {
+      try {
+        await connectionRef.current.invoke('LeaveDashboardUpdates');
+        console.log('Left dashboard updates group');
+      } catch (error) {
+        console.error('Failed to leave dashboard updates:', error);
+      }
+    }
+  }, []);
+
+  const requestDashboardData = useCallback(async (timeRange: string = '24h') => {
+    if (connectionRef.current?.state === 'Connected') {
+      try {
+        await connectionRef.current.invoke('RequestDashboardData', timeRange);
+        console.log(`Requested dashboard data for ${timeRange}`);
+      } catch (error) {
+        console.error('Failed to request dashboard data:', error);
+      }
+    }
+  }, []);
+
   const triggerSystemUpdate = useCallback(async () => {
     if (connectionRef.current?.state === 'Connected') {
       try {
@@ -555,6 +655,9 @@ export const useSignalR = (options: UseSignalROptions = {}) => {
     disconnect,
     joinScanUpdates,
     leaveScanUpdates,
+    joinDashboardUpdates,
+    leaveDashboardUpdates,
+    requestDashboardData,
     triggerSystemUpdate
   };
 };
@@ -589,4 +692,24 @@ export const useRealtimeThreatIntelligence = (onUpdate?: (status: ThreatIntellig
   return useSignalR({
     onThreatIntelligenceStatus: onUpdate
   });
+};
+
+// Hook for consolidated dashboard data updates
+export const useRealtimeDashboardData = (onUpdate?: (data: ConsolidatedDashboardData) => void, timeRange: string = '24h') => {
+  const { connectionState, joinDashboardUpdates, leaveDashboardUpdates, requestDashboardData, isConnected } = useSignalR({
+    onDashboardData: onUpdate
+  });
+
+  useEffect(() => {
+    if (connectionState === 'Connected') {
+      joinDashboardUpdates();
+      // Request immediate data on connection
+      requestDashboardData(timeRange);
+      return () => {
+        leaveDashboardUpdates();
+      };
+    }
+  }, [connectionState, joinDashboardUpdates, leaveDashboardUpdates, requestDashboardData, timeRange]);
+
+  return { connectionState, isConnected, requestDashboardData };
 };
