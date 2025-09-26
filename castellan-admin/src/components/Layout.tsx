@@ -2,6 +2,7 @@ import React from 'react';
 import { Layout as RaLayout, AppBar } from 'react-admin';
 import { Typography, Box, Chip } from '@mui/material';
 import { Security } from '@mui/icons-material';
+import { MenuWithPreloading } from './MenuWithPreloading';
 
 const CustomAppBar = () => (
   <AppBar
@@ -14,9 +15,9 @@ const CustomAppBar = () => (
       }
     }}
   >
-    <Box sx={{ 
-      display: 'flex', 
-      alignItems: 'center', 
+    <Box sx={{
+      display: 'flex',
+      alignItems: 'center',
       width: '100%',
       px: 2,
       py: 1
@@ -25,7 +26,7 @@ const CustomAppBar = () => (
       <Typography variant="h6" component="div" sx={{ mr: 2 }}>
         Castellan
       </Typography>
-      <Chip 
+      <Chip
         label="Free Edition"
         size="small"
         sx={{
@@ -41,5 +42,5 @@ const CustomAppBar = () => (
 );
 
 export const Layout = (props: any) => (
-  <RaLayout {...props} appBar={CustomAppBar} />
+  <RaLayout {...props} appBar={CustomAppBar} menu={MenuWithPreloading} />
 );

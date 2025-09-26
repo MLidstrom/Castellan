@@ -2,6 +2,52 @@ import { useEffect, useRef, useCallback, useState } from 'react';
 import { HubConnection, HubConnectionBuilder, LogLevel } from '@microsoft/signalr';
 import { useNotify } from 'react-admin';
 
+export interface SecurityEventUpdate {
+  id: string;
+  timestamp: string;
+  eventType: string;
+  riskLevel: string;
+  confidence: number;
+  summary: string;
+  eventId?: number;
+  machineName?: string;
+  userName?: string;
+  hasCorrelation: boolean;
+  correlationContext?: string;
+  mitreTechniques?: string[];
+  recommendedActions?: string[];
+}
+
+export interface CorrelationAlertUpdate {
+  id: string;
+  timestamp: string;
+  eventType: string;
+  riskLevel: string;
+  correlationIds: string[];
+  correlationContext: string;
+  summary: string;
+  confidence: number;
+  correlationScore: number;
+  mitreTechniques?: string[];
+  recommendedActions?: string[];
+}
+
+export interface YaraMatchUpdate {
+  id: string;
+  timestamp: string;
+  fileName: string;
+  ruleName: string;
+  severity: string;
+  ruleCategory: string;
+  filePath: string;
+  fileSize: number;
+  fileHash: string;
+  tags: string[];
+  malwareFamily?: string;
+  confidence: number;
+  description: string;
+}
+
 export interface ScanProgressUpdate {
   type: 'progress';
   progress: {
@@ -216,6 +262,9 @@ interface UseSignalROptions {
   onScanError?: (notification: ScanErrorNotification) => void;
   onThreatIntelligenceStatus?: (status: ThreatIntelligenceStatusUpdate) => void;
   onDashboardData?: (data: ConsolidatedDashboardData) => void;
+  onSecurityEvent?: (event: SecurityEventUpdate) => void;
+  onCorrelationAlert?: (alert: CorrelationAlertUpdate) => void;
+  onYaraMatch?: (match: YaraMatchUpdate) => void;
   onConnect?: () => void;
   onDisconnect?: () => void;
   onError?: (error: Error) => void;
@@ -230,6 +279,9 @@ export const useSignalR = (options: UseSignalROptions = {}) => {
     onScanError,
     onThreatIntelligenceStatus,
     onDashboardData,
+    onSecurityEvent,
+    onCorrelationAlert,
+    onYaraMatch,
     onConnect,
     onDisconnect,
     onError
@@ -251,6 +303,9 @@ export const useSignalR = (options: UseSignalROptions = {}) => {
     onScanError,
     onThreatIntelligenceStatus,
     onDashboardData,
+    onSecurityEvent,
+    onCorrelationAlert,
+    onYaraMatch,
     onConnect,
     onDisconnect,
     onError
@@ -264,6 +319,9 @@ export const useSignalR = (options: UseSignalROptions = {}) => {
     onScanError,
     onThreatIntelligenceStatus,
     onDashboardData,
+    onSecurityEvent,
+    onCorrelationAlert,
+    onYaraMatch,
     onConnect,
     onDisconnect,
     onError
@@ -343,6 +401,37 @@ export const useSignalR = (options: UseSignalROptions = {}) => {
         console.log('✅ Joined SystemMetrics group:', data);
       });
 
+      // Dashboard updates response handlers
+      connection.on('JoinedDashboardUpdates', (data) => {
+        console.log('✅ Joined DashboardUpdates group:', data);
+      });
+
+      connection.on('LeftDashboardUpdates', (data) => {
+        console.log('✅ Left DashboardUpdates group:', data);
+      });
+
+      connection.on('DashboardDataRequested', (data) => {
+        console.log('✅ Dashboard data requested:', data);
+      });
+
+      // Security events response handlers
+      connection.on('JoinedSecurityEvents', (data) => {
+        console.log('✅ Joined SecurityEvents group:', data);
+      });
+
+      connection.on('LeftSecurityEvents', (data) => {
+        console.log('✅ Left SecurityEvents group:', data);
+      });
+
+      // Correlation alerts response handlers
+      connection.on('JoinedCorrelationAlerts', (data) => {
+        console.log('✅ Joined CorrelationAlerts group:', data);
+      });
+
+      connection.on('LeftCorrelationAlerts', (data) => {
+        console.log('✅ Left CorrelationAlerts group:', data);
+      });
+
       connection.on('Connected', (data) => {
         console.log('✅ SignalR "Connected" event received:', data);
         setConnectionState('Connected');
@@ -406,6 +495,22 @@ export const useSignalR = (options: UseSignalROptions = {}) => {
       connection.on('DashboardDataUpdate', (data: ConsolidatedDashboardData) => {
         console.log('Dashboard data update received:', data);
         callbacksRef.current.onDashboardData?.(data);
+      });
+
+      // Security Events SignalR handlers
+      connection.on('SecurityEventUpdate', (event: SecurityEventUpdate) => {
+        console.log('🔒 Security event received:', event);
+        callbacksRef.current.onSecurityEvent?.(event);
+      });
+
+      connection.on('CorrelationAlert', (alert: CorrelationAlertUpdate) => {
+        console.log('🔗 Correlation alert received:', alert);
+        callbacksRef.current.onCorrelationAlert?.(alert);
+      });
+
+      connection.on('YaraMatchDetected', (match: YaraMatchUpdate) => {
+        console.log('🎯 YARA match received:', match);
+        callbacksRef.current.onYaraMatch?.(match);
       });
 
       // Handle connection state changes

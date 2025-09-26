@@ -170,6 +170,66 @@ public class ScanProgressHub : Hub
             timestamp = DateTime.UtcNow
         });
     }
+
+    /// <summary>
+    /// Join security events real-time updates group
+    /// </summary>
+    public async Task JoinSecurityEvents()
+    {
+        await Groups.AddToGroupAsync(Context.ConnectionId, "SecurityEvents");
+
+        _logger.LogInformation("Client {ConnectionId} joined security events real-time updates", Context.ConnectionId);
+
+        await Clients.Caller.SendAsync("JoinedSecurityEvents", new {
+            message = "Subscribed to real-time security events",
+            timestamp = DateTime.UtcNow
+        });
+    }
+
+    /// <summary>
+    /// Leave security events real-time updates group
+    /// </summary>
+    public async Task LeaveSecurityEvents()
+    {
+        await Groups.RemoveFromGroupAsync(Context.ConnectionId, "SecurityEvents");
+
+        _logger.LogInformation("Client {ConnectionId} left security events real-time updates", Context.ConnectionId);
+
+        await Clients.Caller.SendAsync("LeftSecurityEvents", new {
+            message = "Unsubscribed from security events",
+            timestamp = DateTime.UtcNow
+        });
+    }
+
+    /// <summary>
+    /// Join correlation alerts group for real-time correlation notifications
+    /// </summary>
+    public async Task JoinCorrelationAlerts()
+    {
+        await Groups.AddToGroupAsync(Context.ConnectionId, "CorrelationAlerts");
+
+        _logger.LogInformation("Client {ConnectionId} joined correlation alerts", Context.ConnectionId);
+
+        await Clients.Caller.SendAsync("JoinedCorrelationAlerts", new {
+            message = "Subscribed to correlation alerts",
+            timestamp = DateTime.UtcNow
+        });
+    }
+
+    /// <summary>
+    /// Leave correlation alerts group
+    /// </summary>
+    public async Task LeaveCorrelationAlerts()
+    {
+        await Groups.RemoveFromGroupAsync(Context.ConnectionId, "CorrelationAlerts");
+
+        _logger.LogInformation("Client {ConnectionId} left correlation alerts", Context.ConnectionId);
+
+        await Clients.Caller.SendAsync("LeftCorrelationAlerts", new {
+            message = "Unsubscribed from correlation alerts",
+            timestamp = DateTime.UtcNow
+        });
+    }
 }
 
 /// <summary>
@@ -182,6 +242,9 @@ public interface IScanProgressBroadcaster
     Task BroadcastScanError(string scanId, string error);
     Task BroadcastSystemMetrics(object metrics);
     Task BroadcastThreatIntelligenceStatus(object status);
+    Task BroadcastSecurityEvent(object securityEvent);
+    Task BroadcastCorrelationAlert(object correlationAlert);
+    Task BroadcastYaraMatch(object yaraMatch);
 }
 
 /// <summary>
@@ -315,6 +378,63 @@ public class ScanProgressBroadcaster : IScanProgressBroadcaster
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error broadcasting threat intelligence status");
+        }
+    }
+
+    /// <summary>
+    /// Broadcast new security event in real-time
+    /// </summary>
+    /// <param name="securityEvent">The security event to broadcast</param>
+    public async Task BroadcastSecurityEvent(object securityEvent)
+    {
+        try
+        {
+            await _hubContext.Clients.Group("SecurityEvents").SendAsync("SecurityEventUpdate", securityEvent);
+
+            _logger.LogDebug("Broadcasted security event update");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error broadcasting security event");
+        }
+    }
+
+    /// <summary>
+    /// Broadcast correlation alert when patterns are detected
+    /// </summary>
+    /// <param name="correlationAlert">The correlation alert to broadcast</param>
+    public async Task BroadcastCorrelationAlert(object correlationAlert)
+    {
+        try
+        {
+            await _hubContext.Clients.Group("CorrelationAlerts").SendAsync("CorrelationAlert", correlationAlert);
+
+            // Also send to security events subscribers for critical correlations
+            await _hubContext.Clients.Group("SecurityEvents").SendAsync("CorrelationAlert", correlationAlert);
+
+            _logger.LogInformation("Broadcasted correlation alert");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error broadcasting correlation alert");
+        }
+    }
+
+    /// <summary>
+    /// Broadcast YARA match detection in real-time
+    /// </summary>
+    /// <param name="yaraMatch">The YARA match to broadcast</param>
+    public async Task BroadcastYaraMatch(object yaraMatch)
+    {
+        try
+        {
+            await _hubContext.Clients.Group("SecurityEvents").SendAsync("YaraMatchDetected", yaraMatch);
+
+            _logger.LogInformation("Broadcasted YARA match detection");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error broadcasting YARA match");
         }
     }
 }

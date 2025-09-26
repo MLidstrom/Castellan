@@ -26,6 +26,8 @@ using Castellan.Worker.Middleware;
 using Castellan.Worker.Services.ConnectionPools;
 using Castellan.Worker.Services.ConnectionPools.Interfaces;
 using Castellan.Worker.Hubs;
+using Castellan.Worker.Options;
+using Castellan.Worker.Infrastructure;
 using Serilog;
 
 // Enable HTTP/2 over cleartext (h2c) for local gRPC (Qdrant 6334)
@@ -186,7 +188,18 @@ else
 builder.Services.AddSingleton<IVectorStore, QdrantPooledVectorStore>();
 builder.Services.AddSingleton<SecurityEventDetector>();
 builder.Services.AddSingleton<RulesEngine>(); // M4: Add RulesEngine for correlation and fusion
-builder.Services.AddSingleton<ISecurityEventStore, FileBasedSecurityEventStore>(); // Persistent store for API access
+
+// Register the base security event store (FileBasedSecurityEventStore)
+builder.Services.AddSingleton<FileBasedSecurityEventStore>();
+// Wrap it with SignalR broadcasting capabilities for real-time updates
+builder.Services.AddSingleton<ISecurityEventStore>(provider =>
+{
+    var baseStore = provider.GetRequiredService<FileBasedSecurityEventStore>();
+    var broadcaster = provider.GetRequiredService<IScanProgressBroadcaster>();
+    var logger = provider.GetRequiredService<ILogger<SignalRSecurityEventStore>>();
+    return new SignalRSecurityEventStore(baseStore, broadcaster, logger);
+});
+
 builder.Services.AddSingleton<IAutomatedResponseService, AutomatedResponseService>(); // Automated threat response
 
 // Register Export Service
@@ -246,6 +259,11 @@ builder.Services.AddScoped<IDashboardDataConsolidationService, DashboardDataCons
 builder.Services.AddSingleton<DashboardDataBroadcastService>();
 builder.Services.AddHostedService<DashboardDataBroadcastService>(provider =>
     provider.GetRequiredService<DashboardDataBroadcastService>());
+
+// Add Windows Event Log Watcher services
+builder.Services.Configure<WindowsEventLogOptions>(builder.Configuration.GetSection("WindowsEventLog"));
+builder.Services.AddScoped<IEventBookmarkStore, DatabaseEventBookmarkStore>();
+builder.Services.AddHostedService<WindowsEventLogWatcherService>();
 
 // Add CORS for frontend and SignalR
 builder.Services.AddCors(options =>

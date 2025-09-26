@@ -1,16 +1,23 @@
 import React, { createContext, useContext, useCallback, useEffect, ReactNode } from 'react';
-import { useSignalR, SystemMetricsUpdate, ScanProgressUpdate, ScanCompleteNotification, ScanErrorNotification, ThreatIntelligenceStatusUpdate } from '../hooks/useSignalR';
+import { useSignalR, SystemMetricsUpdate, ScanProgressUpdate, ScanCompleteNotification, ScanErrorNotification, ThreatIntelligenceStatusUpdate, SecurityEventUpdate, CorrelationAlertUpdate, YaraMatchUpdate, ConsolidatedDashboardData } from '../hooks/useSignalR';
 import { useNotify } from 'react-admin';
 
 interface SignalRContextType {
   connectionState: 'Disconnected' | 'Connecting' | 'Connected' | 'Reconnecting';
   isConnected: boolean;
   realtimeMetrics: SystemMetricsUpdate | null;
+  latestSecurityEvents: SecurityEventUpdate[];
+  latestCorrelationAlerts: CorrelationAlertUpdate[];
+  latestYaraMatches: YaraMatchUpdate[];
+  consolidatedDashboardData: ConsolidatedDashboardData | null;
   connect: () => void;
   disconnect: () => void;
   joinScanUpdates: (scanId: string) => Promise<void>;
   leaveScanUpdates: (scanId: string) => Promise<void>;
   triggerSystemUpdate: () => Promise<void>;
+  joinDashboardUpdates: () => Promise<void>;
+  leaveDashboardUpdates: () => Promise<void>;
+  requestDashboardData: (timeRange: string) => Promise<void>;
 }
 
 const SignalRContext = createContext<SignalRContextType | undefined>(undefined);
@@ -22,6 +29,10 @@ interface SignalRProviderProps {
 export const SignalRProvider: React.FC<SignalRProviderProps> = ({ children }) => {
   const notify = useNotify();
   const [realtimeMetrics, setRealtimeMetrics] = React.useState<SystemMetricsUpdate | null>(null);
+  const [latestSecurityEvents, setLatestSecurityEvents] = React.useState<SecurityEventUpdate[]>([]);
+  const [latestCorrelationAlerts, setLatestCorrelationAlerts] = React.useState<CorrelationAlertUpdate[]>([]);
+  const [latestYaraMatches, setLatestYaraMatches] = React.useState<YaraMatchUpdate[]>([]);
+  const [consolidatedDashboardData, setConsolidatedDashboardData] = React.useState<ConsolidatedDashboardData | null>(null);
 
   const signalROptions = {
     enabled: true,
@@ -29,6 +40,38 @@ export const SignalRProvider: React.FC<SignalRProviderProps> = ({ children }) =>
       console.log('📊 Global SignalR - Received system metrics:', update);
       setRealtimeMetrics(update);
     }, []),
+    onSecurityEvent: useCallback((event: SecurityEventUpdate) => {
+      console.log('🔒 Global SignalR - Received security event:', event);
+      setLatestSecurityEvents(prev => [event, ...prev.slice(0, 99)]);
+
+      const riskIcon = event.riskLevel === 'critical' ? '🚨' :
+                      event.riskLevel === 'high' ? '⚠️' :
+                      event.riskLevel === 'medium' ? '⚡' : '📝';
+
+      notify(`${riskIcon} ${event.summary}`, {
+        type: event.riskLevel === 'critical' || event.riskLevel === 'high' ? 'error' :
+              event.riskLevel === 'medium' ? 'warning' : 'info',
+        autoHideDuration: 10000
+      });
+    }, [notify]),
+    onCorrelationAlert: useCallback((alert: CorrelationAlertUpdate) => {
+      console.log('🔗 Global SignalR - Received correlation alert:', alert);
+      setLatestCorrelationAlerts(prev => [alert, ...prev.slice(0, 49)]);
+
+      notify(`🔗 Correlation Detected: ${alert.summary}`, {
+        type: alert.riskLevel === 'critical' ? 'error' : 'warning',
+        autoHideDuration: 15000
+      });
+    }, [notify]),
+    onYaraMatch: useCallback((match: YaraMatchUpdate) => {
+      console.log('🎯 Global SignalR - Received YARA match:', match);
+      setLatestYaraMatches(prev => [match, ...prev.slice(0, 49)]);
+
+      notify(`🎯 YARA Match: ${match.ruleName} in ${match.fileName}`, {
+        type: match.severity === 'critical' || match.severity === 'high' ? 'error' : 'warning',
+        autoHideDuration: 15000
+      });
+    }, [notify]),
     onScanProgress: useCallback((update: ScanProgressUpdate) => {
       console.log('🔍 Global SignalR - Received scan progress:', update);
       if (update.progress.percentComplete % 25 === 0) {
@@ -71,7 +114,11 @@ export const SignalRProvider: React.FC<SignalRProviderProps> = ({ children }) =>
     onError: useCallback((error: Error) => {
       console.error('❌ Global SignalR - Error:', error);
       notify('Real-time connection error', { type: 'error' });
-    }, [notify])
+    }, [notify]),
+    onDashboardData: useCallback((data: ConsolidatedDashboardData) => {
+      console.log('📊 Global SignalR - Received dashboard data:', data);
+      setConsolidatedDashboardData(data);
+    }, [])
   };
 
   const {
@@ -81,18 +128,28 @@ export const SignalRProvider: React.FC<SignalRProviderProps> = ({ children }) =>
     disconnect,
     joinScanUpdates,
     leaveScanUpdates,
-    triggerSystemUpdate
+    triggerSystemUpdate,
+    joinDashboardUpdates,
+    leaveDashboardUpdates,
+    requestDashboardData
   } = useSignalR(signalROptions);
 
   const contextValue: SignalRContextType = {
     connectionState,
     isConnected,
     realtimeMetrics,
+    latestSecurityEvents,
+    latestCorrelationAlerts,
+    latestYaraMatches,
+    consolidatedDashboardData,
     connect,
     disconnect,
     joinScanUpdates,
     leaveScanUpdates,
-    triggerSystemUpdate
+    triggerSystemUpdate,
+    joinDashboardUpdates,
+    leaveDashboardUpdates,
+    requestDashboardData
   };
 
   return (

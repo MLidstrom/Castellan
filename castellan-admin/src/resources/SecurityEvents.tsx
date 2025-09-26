@@ -550,8 +550,14 @@ export const SecurityEventList = () => {
 
   // Remove cache key logging to prevent render loop
 
-  // SignalR connection for real-time updates
-  const { isConnected: signalRConnected, connectionState } = useSignalRContext();
+  // SignalR connection for real-time updates - now consolidated for all event types
+  const {
+    isConnected,
+    connectionState,
+    latestSecurityEvents,
+    latestCorrelationAlerts,
+    latestYaraMatches
+  } = useSignalRContext();
 
   // Use the advanced search hook with URL synchronization
   const {
@@ -628,19 +634,44 @@ export const SecurityEventList = () => {
         />
       )}
 
-      {/* SignalR Connection Status */}
-      <Tooltip title={`Real-time updates: ${connectionState}`}>
-        <Box sx={{ display: 'flex', alignItems: 'center', ml: 1 }}>
-          {signalRConnected ? (
-            <ConnectedIcon color="success" fontSize="small" />
-          ) : (
-            <DisconnectedIcon color="error" fontSize="small" />
-          )}
-          <Typography variant="caption" sx={{ ml: 0.5, color: signalRConnected ? 'success.main' : 'error.main' }}>
-            {signalRConnected ? 'Live' : 'Offline'}
-          </Typography>
-        </Box>
-      </Tooltip>
+      {/* Real-time Connection Status */}
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, ml: 1 }}>
+        {/* System Metrics SignalR Status */}
+        <Tooltip title={`System metrics: ${connectionState}`}>
+          <Box sx={{ display: 'flex', alignItems: 'center' }}>
+            {isConnected ? (
+              <ConnectedIcon color="success" fontSize="small" />
+            ) : (
+              <DisconnectedIcon color="error" fontSize="small" />
+            )}
+            <Typography variant="caption" sx={{ ml: 0.5, color: isConnected ? 'success.main' : 'error.main' }}>
+              Metrics
+            </Typography>
+          </Box>
+        </Tooltip>
+
+        {/* Security Events SignalR Status */}
+        <Tooltip title={`Security events: ${isConnected ? 'Connected' : 'Disconnected'}`}>
+          <Box sx={{ display: 'flex', alignItems: 'center' }}>
+            {isConnected ? (
+              <SecurityIcon color="success" fontSize="small" />
+            ) : (
+              <SecurityIcon color="error" fontSize="small" />
+            )}
+            <Typography variant="caption" sx={{ ml: 0.5, color: isConnected ? 'success.main' : 'error.main' }}>
+              Events
+            </Typography>
+          </Box>
+        </Tooltip>
+
+        {/* Live Indicator */}
+        <Typography variant="caption" sx={{
+          color: isConnected ? 'success.main' : 'error.main',
+          fontWeight: 'bold'
+        }}>
+          {isConnected ? '🟢 LIVE' : '🔴 OFFLINE'}
+        </Typography>
+      </Box>
     </TopToolbar>
   );
 

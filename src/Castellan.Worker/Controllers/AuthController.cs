@@ -69,7 +69,10 @@ public class AuthController : ControllerBase
                         Username = request.Username,
                         Email = _authOptions.AdminUser.Email,
                         Roles = new[] { "admin" },
-                        Permissions = new[] { "security-events:read", "security-events:write", "compliance-reports:read", "system-status:read" },
+                        Permissions = new[] {
+                            "security.read", "security.write", "analytics.read", "system.read", "compliance.read",
+                            "security-events:read", "security-events:write", "compliance-reports:read", "system-status:read", "role:admin"
+                        },
                         Profile = new UserProfile
                         {
                             FirstName = _authOptions.AdminUser.FirstName,
@@ -209,7 +212,7 @@ public class AuthController : ControllerBase
             new Claim(ClaimTypes.Name, username),
             new Claim(ClaimTypes.Email, _authOptions.AdminUser.Email),
             new Claim(ClaimTypes.Role, "admin"),
-            new Claim("permissions", "security-events:read,security-events:write,compliance-reports:read,system-status:read"),
+            new Claim("permissions", "security.read,security.write,analytics.read,system.read,compliance.read,security-events:read,security-events:write,compliance-reports:read,system-status:read,role:admin"),
             new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()) // Add JTI for blacklisting
         };
 

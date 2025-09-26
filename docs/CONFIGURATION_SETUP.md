@@ -97,6 +97,52 @@ Castellan automatically imports MITRE ATT&CK data by default. You can customize 
 - ✅ Requires internet connectivity for import
 - ✅ No additional configuration needed
 
+### 6. Configure EventLogWatcher (Recommended)
+
+The EventLogWatcher provides real-time Windows Event Log monitoring with sub-second latency. The configuration is already included in the template:
+
+```json
+"WindowsEventLog": {
+  "Enabled": true,
+  "Channels": [
+    {
+      "Name": "Security",
+      "Enabled": true,
+      "XPathFilter": "*[System[(EventID=4624 or EventID=4625 or EventID=4672 or EventID=4688)]]",
+      "BookmarkPersistence": "Database",
+      "MaxQueue": 5000
+    },
+    {
+      "Name": "Microsoft-Windows-Sysmon/Operational",
+      "Enabled": true,
+      "XPathFilter": "*[System[(EventID=1 or EventID=3 or EventID=7 or EventID=10 or EventID=11 or EventID=22 or EventID=23 or EventID=25)]]",
+      "BookmarkPersistence": "Database",
+      "MaxQueue": 10000
+    },
+    {
+      "Name": "Microsoft-Windows-PowerShell/Operational",
+      "Enabled": true,
+      "XPathFilter": "*[System[(EventID=4103 or EventID=4104)]]",
+      "BookmarkPersistence": "Database",
+      "MaxQueue": 2000
+    },
+    {
+      "Name": "Microsoft-Windows-Windows Defender/Operational",
+      "Enabled": false,
+      "XPathFilter": "*[System[(EventID=1116 or EventID=1117 or EventID=1118)]]",
+      "BookmarkPersistence": "Database",
+      "MaxQueue": 3000
+    }
+  ],
+  "DefaultMaxQueue": 5000,
+  "ConsumerConcurrency": 4,
+  "ReconnectBackoffSeconds": [1, 2, 5, 10, 30],
+  "ImmediateDashboardBroadcast": true
+}
+```
+
+**Note**: EventLogWatcher requires the service account to have "Event Log Readers" and "Generate security audits" privileges. See `docs/EVENTLOGWATCHER_SETUP.md` for detailed setup instructions.
+
 **To disable auto-import:**
 ```json
 "Mitre": {

@@ -16,12 +16,14 @@ Castellan processes Windows security events through **enterprise-grade AI/ML ana
 - **🆕 Real-time Monitoring**: SignalR-powered live system health, scan progress, and threat intelligence status
 - **🆕 Dashboard Data Consolidation**: Single SignalR stream replaces 4+ REST API calls with 80%+ performance improvement
 - **🆕 YARA Malware Detection**: Signature-based malware detection with comprehensive rule management and API
+- **🆕 EventLogWatcher**: Real-time Windows Event Log monitoring with sub-second latency and zero event loss
 
 ## System Architecture Diagram
 
 ```mermaid
 flowchart LR
-    A[Windows Event Logs] --> B[Castellan Worker Service]
+    A[Windows Event Logs] --> AA[EventLogWatcher]
+    AA --> B[Castellan Worker Service]
     B --> C[Parallel AI/ML Processing]
     C --> D[Qdrant Vector Database]
     B --> K[SQLite Database]
@@ -48,6 +50,7 @@ flowchart LR
     
     subgraph "Data Collection"
         A
+        AA
     end
     
     subgraph "Core Processing"

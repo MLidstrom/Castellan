@@ -1,9 +1,9 @@
 # SignalR Real-time Integration Guide
 
-**Version**: 2.0
+**Version**: 3.0
 **Created**: September 7, 2025
-**Updated**: September 24, 2025
-**Status**: ✅ **ENHANCED** - Dashboard Data Consolidation Complete
+**Updated**: September 24, 2025 - 22:00
+**Status**: ✅ **COMPLETE** - Dashboard Consolidation + Security Events Real-Time
 
 ## 🎯 Overview
 
@@ -22,17 +22,24 @@ public class ScanProgressHub : Hub
 {
     // Group-based subscriptions for targeted updates
     public async Task JoinScanGroup(string scanId)
-    public async Task LeaveScanGroup(string scanId) 
+    public async Task LeaveScanGroup(string scanId)
     public async Task JoinSystemMetrics()
     public async Task LeaveSystemMetrics()
+    public async Task JoinSecurityEvents()  // NEW: Security events real-time
+    public async Task LeaveSecurityEvents()
+    public async Task JoinCorrelationAlerts()  // NEW: Correlation alerts
+    public async Task LeaveCorrelationAlerts()
 }
 ```
 
 **Features**:
 - JWT-authenticated connections
-- Group-based subscriptions (scan-specific, system-wide)
+- Group-based subscriptions (scan-specific, system-wide, security events)
 - Connection lifecycle management
 - Automatic cleanup on disconnect
+- Real-time security event broadcasting
+- Correlation alert notifications
+- YARA match alerts
 
 #### 2. Enhanced Progress Tracking Service
 **Location**: `src/Castellan.Worker/Services/EnhancedProgressTrackingService.cs`

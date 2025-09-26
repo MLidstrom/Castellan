@@ -237,12 +237,8 @@ export const authProvider: AuthProvider = {
       return Promise.reject(new Error('Token expired'));
     }
 
-    // Return permissions with roles for backward compatibility
-    return Promise.resolve({
-      permissions,
-      roles: user.roles,
-      user
-    });
+    // Return permissions array directly for React Admin usePermissions hook
+    return Promise.resolve(permissions);
   },
 
   // Get user identity

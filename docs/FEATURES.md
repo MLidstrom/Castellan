@@ -1,7 +1,9 @@
 # Castellan Features
 
 ## 🔍 **Intelligent Log Analysis**
-- **Real-time Windows Event Log Collection** - Monitors security, application, and system events
+- **EventLogWatcher Real-time Collection** - Interrupt-driven Windows Event Log monitoring with sub-second latency
+- **Zero Event Loss** - Bookmark-based persistence ensures no missed events across service restarts
+- **Multi-Channel Support** - Security, Sysmon, PowerShell, and Windows Defender event monitoring
 - **AI-Powered Threat Analysis** - LLM-based event classification with external threat intelligence
 - **Vector Search** - Semantic similarity search using Qdrant vector database for correlation
 - **Advanced Correlation Engine** - Background intelligence system with ML.NET-powered pattern detection
@@ -85,13 +87,20 @@
 - **Teams/Slack Integration** - Real-time security alerts in Microsoft Teams and Slack channels
 - **Enhanced Performance Dashboard** - Full-featured performance monitoring with real-time metrics, multi-timeframe analytics (1h-7d), and interactive charts
 - **Threat Intelligence Health Dashboard** - Service status monitoring with API rate limiting, cache efficiency, and automated alerting
-- **React Admin Interface** - Complete management system with:
-  - **Security Events Management** - List, view, edit security events with MITRE integration
+- **React Admin Interface** - Complete management system with all 11 admin pages fully operational:
+  - **Dashboard** - Real-time security monitoring with consolidated SignalR data streaming
+  - **Security Events Management** - List, view, edit security events with MITRE integration and real-time updates
   - **MITRE ATT&CK Techniques** - Browse and search 800+ techniques with statistics
   - **YARA Rules Management** - Full CRUD operations with validation and performance tracking
   - **YARA Matches Analysis** - Detection history with forensic details and correlation
+  - **Timeline Visualization** - Interactive security event timeline with granular time controls
+  - **Trend Analysis** - ML.NET powered forecasting with confidence intervals
   - **System Status Monitoring** - Component health with real-time indicators
-  - **Notification Configuration** - Teams/Slack webhook integration under Configuration tab
+  - **Threat Scanner** - Manual and automated threat scanning capabilities
+  - **Compliance Reports** - Comprehensive compliance reporting and analysis
+  - **Configuration Management** - Teams/Slack webhook integration and system settings
+  - **Enhanced Menu System** - Component preloading with MenuWithPreloading for instant navigation
+  - **Permission-Based Access Control** - Role and permission-based menu visibility and page access
 - **Configuration Management** - Centralized configuration system with tabbed interface
   - **Threat Intelligence Tab** - VirusTotal, MalwareBazaar, AlienVault OTX configuration panels
   - **IP Enrichment Tab** - MaxMind GeoLite2 configuration with automated database downloads

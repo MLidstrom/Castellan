@@ -1,0 +1,271 @@
+using System.Net.Http;
+using System.Text;
+using System.Text.RegularExpressions;
+using Microsoft.Data.Sqlite;
+
+class Program
+{
+    static async Task<int> Main(string[] args)
+    {
+        string category = GetArg(args, "--category") ?? "Community";
+        string source = GetArg(args, "--source") ?? "Community";
+        int limit = int.TryParse(GetArg(args, "--limit"), out var l) ? l : 10;
+
+        Console.WriteLine("YARA Import Tool -> SQLite");
+        Console.WriteLine("Category={0} Source={1} Limit={2}", category, source, limit);
+
+        var repoRoot = GetRepoRoot();
+        var dbDir = Path.Combine(repoRoot, "data");
+        Directory.CreateDirectory(dbDir);
+        var dbPath = Path.Combine(dbDir, "castellan.db");
+
+        EnsureSchema(dbPath);
+
+        var urls = new List<string>
+        {
+            "https://raw.githubusercontent.com/Yara-Rules/rules/master/malware/APT_APT1.yar",
+            "https://raw.githubusercontent.com/Neo23x0/signature-base/master/yara/apt_cobalt_strike.yar",
+            "https://raw.githubusercontent.com/Yara-Rules/rules/master/malware/MALW_Zeus.yar",
+            "https://raw.githubusercontent.com/Neo23x0/signature-base/master/yara/general_clamav_signature_set.yar",
+            "https://raw.githubusercontent.com/Yara-Rules/rules/master/malware/MALW_Ransomware.yar",
+            "https://raw.githubusercontent.com/YARAHQ/yara-rules/main/malware/TrickBot.yar"
+        };
+        if (limit > 0) urls = urls.Take(limit).ToList();
+
+        var tmpDir = Path.Combine(Path.GetTempPath(), "yaratool-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(tmpDir);
+
+        try
+        {
+            using var http = new HttpClient();
+            http.Timeout = TimeSpan.FromSeconds(20);
+            int downloaded = 0;
+            foreach (var url in urls)
+            {
+                try
+                {
+                    var fname = Path.GetFileName(new Uri(url).LocalPath);
+                    if (string.IsNullOrWhiteSpace(fname)) fname = "rule-" + Math.Abs(url.GetHashCode()) + ".yar";
+                    var dest = Path.Combine(tmpDir, fname);
+                    var bytes = await http.GetByteArrayAsync(url);
+                    await File.WriteAllBytesAsync(dest, bytes);
+                    downloaded++;
+                }
+                catch
+                {
+                    Console.WriteLine("WARN: Failed to download {0}", url);
+                }
+            }
+            Console.WriteLine("Downloaded {0} files", downloaded);
+
+            var now = DateTime.UtcNow.ToString("o");
+            var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+            foreach (var file in Directory.EnumerateFiles(tmpDir, "*.yar", SearchOption.TopDirectoryOnly))
+            {
+                var content = await File.ReadAllTextAsync(file);
+                if (string.IsNullOrWhiteSpace(content)) continue;
+
+                var matches = Regex.Matches(content, @"(?ms)^\s*rule\s+([A-Za-z0-9_\-]+)\s*\{.*?\}");
+                foreach (Match m in matches)
+                {
+                    var block = m.Value;
+                    var nameMatch = Regex.Match(block, @"^\s*rule\s+([A-Za-z0-9_\-]+)", RegexOptions.IgnoreCase | RegexOptions.Multiline);
+                    if (!nameMatch.Success) continue;
+                    var name = nameMatch.Groups[1].Value;
+                    if (string.IsNullOrWhiteSpace(name)) continue;
+                    if (!seen.Add(name)) continue;
+
+                    var id = Guid.NewGuid().ToString();
+                    UpsertRule(dbPath, new YaraRow
+                    {
+                        Id = id,
+                        Name = name,
+                        Description = "Imported from community",
+                        RuleContent = block,
+                        Category = category,
+                        Author = source,
+                        CreatedAt = now,
+                        UpdatedAt = now,
+                        IsEnabled = 1,
+                        Priority = 50,
+                        ThreatLevel = "Medium",
+                        HitCount = 0,
+                        FalsePositiveCount = 0,
+                        AverageExecutionTimeMs = 0.0,
+                        MitreTechniques = "[]",
+                        Tags = "[]",
+                        Version = 1,
+                        IsValid = 1,
+                        Source = source
+                    });
+                }
+            }
+
+            // Summary
+            using var conn = new SqliteConnection($"Data Source={dbPath}");
+            conn.Open();
+            using var cmd = conn.CreateCommand();
+            cmd.CommandText = "SELECT COUNT(*) FROM YaraRules";
+            var total = Convert.ToInt32(cmd.ExecuteScalar());
+            Console.WriteLine("Import complete. Total rules in DB: {0}", total);
+            return 0;
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine("ERROR: {0}", ex.Message);
+            return 1;
+        }
+        finally
+        {
+            try { Directory.Delete(tmpDir, true); } catch { }
+        }
+    }
+
+    static void EnsureSchema(string dbPath)
+    {
+        using var conn = new SqliteConnection($"Data Source={dbPath}");
+        conn.Open();
+        using var cmd = conn.CreateCommand();
+        cmd.CommandText = @"CREATE TABLE IF NOT EXISTS YaraRules (
+  Id TEXT PRIMARY KEY,
+  Name TEXT NOT NULL UNIQUE,
+  Description TEXT,
+  RuleContent TEXT NOT NULL,
+  Category TEXT,
+  Author TEXT,
+  CreatedAt TEXT,
+  UpdatedAt TEXT,
+  IsEnabled INTEGER,
+  Priority INTEGER,
+  ThreatLevel TEXT,
+  HitCount INTEGER,
+  FalsePositiveCount INTEGER,
+  AverageExecutionTimeMs REAL,
+  MitreTechniques TEXT,
+  Tags TEXT,
+  Version INTEGER,
+  PreviousVersion TEXT,
+  IsValid INTEGER,
+  ValidationError TEXT,
+  LastValidated TEXT,
+  Source TEXT,
+  SourceUrl TEXT,
+  TestSample TEXT,
+  TestResult INTEGER
+);
+CREATE INDEX IF NOT EXISTS IX_YaraRules_Category ON YaraRules(Category);
+CREATE INDEX IF NOT EXISTS IX_YaraRules_Enabled ON YaraRules(IsEnabled);
+CREATE TABLE IF NOT EXISTS YaraMatches (
+  Id TEXT PRIMARY KEY,
+  RuleId TEXT,
+  RuleName TEXT,
+  MatchTime TEXT,
+  TargetFile TEXT,
+  TargetHash TEXT,
+  MatchedStrings TEXT,
+  Metadata TEXT,
+  ExecutionTimeMs REAL,
+  SecurityEventId TEXT
+);
+CREATE INDEX IF NOT EXISTS IX_YaraMatches_RuleId ON YaraMatches(RuleId);
+CREATE INDEX IF NOT EXISTS IX_YaraMatches_Time ON YaraMatches(MatchTime);";
+        cmd.ExecuteNonQuery();
+    }
+
+    static void UpsertRule(string dbPath, YaraRow r)
+    {
+        using var conn = new SqliteConnection($"Data Source={dbPath}");
+        conn.Open();
+        using var cmd = conn.CreateCommand();
+        cmd.CommandText = @"INSERT INTO YaraRules
+(Id, Name, Description, RuleContent, Category, Author, CreatedAt, UpdatedAt, IsEnabled, Priority, ThreatLevel, HitCount, FalsePositiveCount, AverageExecutionTimeMs, MitreTechniques, Tags, Version, IsValid, Source)
+VALUES
+(@Id, @Name, @Description, @RuleContent, @Category, @Author, @CreatedAt, @UpdatedAt, @IsEnabled, @Priority, @ThreatLevel, @HitCount, @FalsePositiveCount, @AvgMs, @Mitre, @Tags, @Version, @IsValid, @Source)
+ON CONFLICT(Name) DO UPDATE SET
+  Description = excluded.Description,
+  RuleContent = excluded.RuleContent,
+  Category = excluded.Category,
+  Author = excluded.Author,
+  UpdatedAt = excluded.UpdatedAt,
+  IsEnabled = excluded.IsEnabled,
+  Priority = excluded.Priority,
+  ThreatLevel = excluded.ThreatLevel,
+  MitreTechniques = excluded.MitreTechniques,
+  Tags = excluded.Tags,
+  Version = excluded.Version,
+  IsValid = excluded.IsValid,
+  Source = excluded.Source;";
+        cmd.Parameters.AddWithValue("@Id", r.Id);
+        cmd.Parameters.AddWithValue("@Name", r.Name);
+        cmd.Parameters.AddWithValue("@Description", r.Description ?? "");
+        cmd.Parameters.AddWithValue("@RuleContent", r.RuleContent);
+        cmd.Parameters.AddWithValue("@Category", r.Category ?? "General");
+        cmd.Parameters.AddWithValue("@Author", r.Author ?? "System");
+        cmd.Parameters.AddWithValue("@CreatedAt", r.CreatedAt);
+        cmd.Parameters.AddWithValue("@UpdatedAt", r.UpdatedAt);
+        cmd.Parameters.AddWithValue("@IsEnabled", r.IsEnabled);
+        cmd.Parameters.AddWithValue("@Priority", r.Priority);
+        cmd.Parameters.AddWithValue("@ThreatLevel", r.ThreatLevel ?? "Medium");
+        cmd.Parameters.AddWithValue("@HitCount", r.HitCount);
+        cmd.Parameters.AddWithValue("@FalsePositiveCount", r.FalsePositiveCount);
+        cmd.Parameters.AddWithValue("@AvgMs", r.AverageExecutionTimeMs);
+        cmd.Parameters.AddWithValue("@Mitre", r.MitreTechniques ?? "[]");
+        cmd.Parameters.AddWithValue("@Tags", r.Tags ?? "[]");
+        cmd.Parameters.AddWithValue("@Version", r.Version);
+        cmd.Parameters.AddWithValue("@IsValid", r.IsValid);
+        cmd.Parameters.AddWithValue("@Source", r.Source ?? "Import");
+        cmd.ExecuteNonQuery();
+    }
+
+    static string? GetArg(string[] args, string name)
+    {
+        for (int i = 0; i < args.Length; i++)
+        {
+            if (string.Equals(args[i], name, StringComparison.OrdinalIgnoreCase))
+            {
+                if (i + 1 < args.Length) return args[i + 1];
+                return string.Empty;
+            }
+        }
+        return null;
+    }
+
+    static string GetRepoRoot()
+    {
+        // Resolve as two directories up from this project when running via dotnet run, or current working dir fallback
+        try
+        {
+            var exeDir = AppContext.BaseDirectory;
+            // Typically bin/Debug/net8.0 => go up 3 levels to project, then up to repo root
+            var dir = Directory.GetParent(exeDir);
+            for (int i = 0; i < 5 && dir != null; i++) dir = dir!.Parent; // climb a few levels
+            if (dir != null && Directory.Exists(Path.Combine(dir.FullName, "src"))) return dir.FullName;
+        }
+        catch { }
+        return Directory.GetCurrentDirectory();
+    }
+
+    private class YaraRow
+    {
+        public string Id { get; set; } = string.Empty;
+        public string Name { get; set; } = string.Empty;
+        public string? Description { get; set; }
+        public string RuleContent { get; set; } = string.Empty;
+        public string? Category { get; set; }
+        public string? Author { get; set; }
+        public string CreatedAt { get; set; } = string.Empty;
+        public string UpdatedAt { get; set; } = string.Empty;
+        public int IsEnabled { get; set; }
+        public int Priority { get; set; }
+        public string? ThreatLevel { get; set; }
+        public int HitCount { get; set; }
+        public int FalsePositiveCount { get; set; }
+        public double AverageExecutionTimeMs { get; set; }
+        public string? MitreTechniques { get; set; }
+        public string? Tags { get; set; }
+        public int Version { get; set; }
+        public int IsValid { get; set; }
+        public string? Source { get; set; }
+    }
+}

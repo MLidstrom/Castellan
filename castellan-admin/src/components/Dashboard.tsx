@@ -17,6 +17,7 @@ import {
 } from '@mui/material';
 import { useNotify } from 'react-admin';
 import { useNavigate } from 'react-router-dom';
+import PreloadDebugPanel from './PreloadDebugPanel';
 import { 
   XAxis, 
   YAxis, 
@@ -60,7 +61,7 @@ import { YaraSummaryCard } from './YaraSummaryCard';
 
 // Import SignalR context for persistent connection
 import { useSignalRContext } from '../contexts/SignalRContext';
-import { SystemMetricsUpdate, ConsolidatedDashboardData, useRealtimeDashboardData } from '../hooks/useSignalR';
+import { SystemMetricsUpdate, ConsolidatedDashboardData } from '../hooks/useSignalR';
 
 // Import Dashboard data caching context
 import { useDashboardDataContext } from '../contexts/DashboardDataContext';
@@ -122,11 +123,14 @@ export const Dashboard = React.memo(() => {
 
   const authToken = localStorage.getItem('auth_token');
 
-  // Debug authentication
-  console.log('🔐 Auth Token:', authToken ? 'Present (' + authToken.substring(0, 20) + '...)' : 'Missing');
-  
-  if (!authToken) {
-    console.warn('⚠️ No authentication token found! API calls may fail.');
+  // Debug authentication (only on first render)
+  const hasLoggedAuth = useRef(false);
+  if (!hasLoggedAuth.current) {
+    console.log('🔐 Auth Token:', authToken ? 'Present (' + authToken.substring(0, 20) + '...)' : 'Missing');
+    if (!authToken) {
+      console.warn('⚠️ No authentication token found! API calls may fail.');
+    }
+    hasLoggedAuth.current = true;
   }
   
   // Test backend connectivity
@@ -164,17 +168,30 @@ export const Dashboard = React.memo(() => {
   const [scanProgress, setScanProgress] = useState<any>(null);
   const [currentScanType, setCurrentScanType] = useState<string>('');
 
-  // Real-time dashboard data hook
-  const { connectionState: dashboardConnectionState, requestDashboardData } = useRealtimeDashboardData(
-    (data: ConsolidatedDashboardData) => {
-      console.log('📡 Received consolidated dashboard data:', data);
-      setConsolidatedData(data);
+  // Use SignalR context for persistent real-time connection
+  const {
+    connectionState,
+    isConnected,
+    realtimeMetrics,
+    consolidatedDashboardData,
+    triggerSystemUpdate,
+    joinDashboardUpdates,
+    leaveDashboardUpdates,
+    requestDashboardData
+  } = useSignalRContext();
+
+  // Update consolidated data when SignalR provides it
+  useEffect(() => {
+    if (consolidatedDashboardData) {
+      console.log('📡 Received consolidated dashboard data from context:', consolidatedDashboardData);
+      setConsolidatedData(consolidatedDashboardData);
       setDashboardDataLoading(false);
       setDashboardDataError(null);
+      setInitialLoad(false); // Important: Mark initial load as complete
 
       // Update legacy state for backward compatibility
       setSecurityEventsData({
-        events: data.securityEvents.recentEvents.map(event => ({
+        events: consolidatedDashboardData.securityEvents.recentEvents.map(event => ({
           id: event.id,
           timestamp: event.timestamp,
           eventType: event.eventType,
@@ -182,15 +199,15 @@ export const Dashboard = React.memo(() => {
           source: event.source,
           machine: event.machine
         })),
-        total: data.securityEvents.totalEvents
+        total: consolidatedDashboardData.securityEvents.totalEvents
       });
 
-      setComplianceReports(data.compliance.recentReports.map(report => ({
+      setComplianceReports(consolidatedDashboardData.compliance.recentReports.map(report => ({
         id: report.id,
         complianceScore: report.score
       })));
 
-      setSystemStatus(data.systemStatus.components.map(component => ({
+      setSystemStatus(consolidatedDashboardData.systemStatus.components.map(component => ({
         id: component.component,
         component: component.component,
         status: component.status.toLowerCase(),
@@ -202,7 +219,7 @@ export const Dashboard = React.memo(() => {
         details: component.status
       })));
 
-      setThreatScanner(data.threatScanner.recentScans.map(scan => ({
+      setThreatScanner(consolidatedDashboardData.threatScanner.recentScans.map(scan => ({
         id: scan.id,
         status: scan.status.toLowerCase(),
         threatsFound: scan.threatsFound,
@@ -210,25 +227,46 @@ export const Dashboard = React.memo(() => {
       })));
 
       setLastRefresh(new Date());
-      console.log('✅ Dashboard data updated from SignalR');
-    },
-    timeRange
-  );
+      console.log('✅ Dashboard data updated from consolidated SignalR context');
+    }
+  }, [consolidatedDashboardData]);
+
+  // Join dashboard updates on connection and cleanup on unmount
+  useEffect(() => {
+    if (connectionState === 'Connected') {
+      console.log('🔗 Dashboard: Joining dashboard updates and requesting initial data');
+      joinDashboardUpdates();
+      requestDashboardData(timeRange);
+    }
+
+    // Cleanup function runs when component unmounts or dependencies change
+    return () => {
+      if (connectionState === 'Connected') {
+        console.log('🔌 Dashboard: Leaving dashboard updates');
+        leaveDashboardUpdates();
+      }
+    };
+  }, [connectionState, timeRange, joinDashboardUpdates, leaveDashboardUpdates, requestDashboardData]);
 
   // Check scan progress function
   const checkScanProgress = async () => {
     try {
-      console.log('🔍 Checking scan progress...');
+      // Only log when scan is in progress to reduce noise
+      if (scanInProgress) {
+        console.log('🔍 Checking scan progress...');
+      }
       const response = await fetch('http://localhost:5000/api/threat-scanner/progress', {
         headers: {
           'Authorization': `Bearer ${authToken}`,
         },
       });
 
-      console.log('📡 Progress API response status:', response.status);
       if (response.ok) {
         const data = await response.json();
-        console.log('📊 Progress API response data:', data);
+        // Only log progress data when there's actual progress or status changes
+        if (data.progress && scanInProgress) {
+          console.log('📊 Progress API response data:', data);
+        }
 
         if (data.progress) {
           console.log('✅ Progress data found:', data.progress);
@@ -248,7 +286,10 @@ export const Dashboard = React.memo(() => {
           }
           return true; // Continue polling
         } else {
-          console.log('❌ No progress data in response');
+          // Only log when transitioning from in-progress to no-progress
+          if (scanInProgress) {
+            console.log('❌ No progress data in response');
+          }
           setScanInProgress(false);
           setScanProgress(null);
           setCurrentScanType('');
@@ -324,8 +365,6 @@ export const Dashboard = React.memo(() => {
   const [hasCheckedInitialScan, setHasCheckedInitialScan] = useState(false);
 
   useEffect(() => {
-    console.log('🔄 useEffect triggered - scanInProgress:', scanInProgress, 'authToken:', !!authToken);
-
     // Only check for existing scan once on initial load
     if (!hasCheckedInitialScan && !scanInProgress && authToken) {
       console.log('🔍 Initial scan progress check...');
@@ -338,7 +377,6 @@ export const Dashboard = React.memo(() => {
     if (scanInProgress) {
       console.log('⏱️ Starting progress polling (every 2 seconds)...');
       interval = setInterval(async () => {
-        console.log('🔄 Polling scan progress...');
         const shouldContinue = await checkScanProgress();
         if (!shouldContinue && interval) {
           console.log('🛑 Stopping progress polling');
@@ -355,13 +393,6 @@ export const Dashboard = React.memo(() => {
     };
   }, [scanInProgress, authToken, hasCheckedInitialScan]);
 
-  // Use SignalR context for persistent real-time connection
-  const {
-    connectionState,
-    isConnected: signalRConnected,
-    realtimeMetrics,
-    triggerSystemUpdate
-  } = useSignalRContext();
 
   // Use dashboard data caching context (kept for compatibility with other components)
   const {
@@ -377,8 +408,7 @@ export const Dashboard = React.memo(() => {
   const [pollingEnabled, setPollingEnabled] = useState(true);
   const [pollingInterval, setPollingInterval] = useState<NodeJS.Timeout | null>(null);
 
-  // Set connection state based on dashboard SignalR connection
-  const isConnected = dashboardConnectionState === 'Connected';
+  // Connection state is already provided by the consolidated SignalR context
 
   // Update last real-time update when metrics change
   useEffect(() => {
@@ -405,7 +435,7 @@ export const Dashboard = React.memo(() => {
   
   // Enhanced polling system for real-time updates
   const fetchSystemMetrics = useCallback(async () => {
-    if (!authToken || signalRConnected) return; // Skip if no auth or SignalR is working
+    if (!authToken || isConnected) return; // Skip if no auth or SignalR is working
     
     try {
       console.log('🔄 Polling system metrics...');
@@ -502,11 +532,11 @@ export const Dashboard = React.memo(() => {
     } catch (error) {
       console.error('❌ Polling error:', error);
     }
-  }, [authToken, signalRConnected]);
+  }, [authToken, isConnected]);
   
   // Set up polling interval
   useEffect(() => {
-    if (pollingEnabled && !signalRConnected && authToken) {
+    if (pollingEnabled && !isConnected && authToken) {
       console.log('📡 Starting enhanced polling mode (30s interval)');
       
       // Initial fetch
@@ -526,12 +556,12 @@ export const Dashboard = React.memo(() => {
       clearInterval(pollingInterval);
       setPollingInterval(null);
     }
-  }, [pollingEnabled, signalRConnected, authToken]);
+  }, [pollingEnabled, isConnected, authToken]);
 
   // Fallback to REST API when SignalR is not available
   useEffect(() => {
     const fetchFallbackData = async () => {
-      if (!authToken || dashboardConnectionState === 'Connected') return;
+      if (!authToken || connectionState === 'Connected') return;
 
       console.log('🔄 SignalR unavailable, using REST API fallback');
       setDashboardDataLoading(true);
@@ -600,7 +630,7 @@ export const Dashboard = React.memo(() => {
     };
 
     fetchFallbackData();
-  }, [authToken, timeRange, dashboardConnectionState]);
+  }, [authToken, timeRange, connectionState]);
 
   // Extract derived data
   const securityEvents = securityEventsData?.events || [];
@@ -652,7 +682,7 @@ export const Dashboard = React.memo(() => {
     setLastRefresh(new Date());
 
     try {
-      if (dashboardConnectionState === 'Connected') {
+      if (connectionState === 'Connected') {
         // Request fresh data via SignalR
         console.log('📡 Requesting fresh dashboard data via SignalR...');
         await requestDashboardData(timeRange);
@@ -814,6 +844,9 @@ export const Dashboard = React.memo(() => {
 
   return (
     <Box sx={{ flexGrow: 1, p: 3 }}>
+      {/* Preload Debug Panel - Development Only */}
+      <PreloadDebugPanel show={process.env.NODE_ENV === 'development' || new URLSearchParams(window.location.search).get('preload-debug') === 'true'} />
+
       {/* Header */}
       <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
         <Typography variant="h4" component="h1">
@@ -835,11 +868,11 @@ export const Dashboard = React.memo(() => {
           
           {/* Refresh Button */}
           {/* Connection Status Indicator */}
-          <MuiTooltip title={`Dashboard real-time: ${dashboardConnectionState}${lastRealTimeUpdate ? ` | Last update: ${lastRealTimeUpdate.toLocaleTimeString()}` : ''}`}>
+          <MuiTooltip title={`Dashboard real-time: ${connectionState}${lastRealTimeUpdate ? ` | Last update: ${lastRealTimeUpdate.toLocaleTimeString()}` : ''}`}>
             <Box display="flex" alignItems="center" gap={1}>
-              {dashboardConnectionState === 'Connected' ? (
+              {connectionState === 'Connected' ? (
                 <ConnectedIcon color="success" fontSize="small" />
-              ) : dashboardConnectionState === 'Connecting' || dashboardConnectionState === 'Reconnecting' ? (
+              ) : connectionState === 'Connecting' || connectionState === 'Reconnecting' ? (
                 <CircularProgress size={16} />
               ) : (
                 <DisconnectedIcon color="error" fontSize="small" />
