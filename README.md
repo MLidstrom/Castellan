@@ -42,7 +42,7 @@
 - **📋 Timeline Visualization** - Interactive security event timeline with granular analysis
 - **📤 Data Export** - CSV, JSON, PDF export with filtering and background processing
 - **📱 Real-time Dashboard** - React admin interface with persistent SignalR live updates
-- **🏛️ Compliance Reports** - Database-backed reporting for HIPAA, SOX, PCI-DSS, ISO 27001 frameworks
+- **🏛️ Compliance Reports** - 7 frameworks (5 Organization: HIPAA, SOX, PCI-DSS, ISO 27001, SOC2 + 2 hidden Application: CIS Controls, Windows Baselines)
 - **🔒 Enterprise Security** - BCrypt passwords, JWT tokens, audit trails
 
 ## 🖼️ Screenshots

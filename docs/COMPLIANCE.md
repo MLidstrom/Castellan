@@ -183,17 +183,20 @@ Castellan provides comprehensive compliance capabilities for organizations requi
 
 ## 📊 Compliance Reporting
 
-**Status**: Phase 3 Partially Complete - Real Assessment Engine Operational | **Target**: Full Framework Coverage Q1 2025
+**Status**: ✅ Phase 3 Complete - Full Framework Implementation with Scope Separation | **Production Ready**
 
-### **Current Implementation (85% Complete)**
-- ✅ **Database Schema**: ComplianceReport, ComplianceControl, ComplianceAssessmentResult tables
+### **Current Implementation (100% Phase 3 Complete)**
+- ✅ **Database Schema**: ComplianceReport, ComplianceControl, ComplianceAssessmentResult tables with ComplianceScope enum
 - ✅ **Entity Framework**: Full relationships, indexes, constraints, and migrations
-- ✅ **API Endpoints**: Full CRUD operations with real assessment service at `/api/compliance-reports`
-- ✅ **Frontend Interface**: React Admin interface with Material-UI components
+- ✅ **API Endpoints**: Full CRUD operations with visibility filtering at `/api/compliance-reports`
+- ✅ **Frontend Interface**: React Admin interface showing only Organization-scope frameworks
 - ✅ **Assessment Engine**: Real-time compliance assessment based on security events
-- ✅ **Four Operational Frameworks**: HIPAA (17 controls), SOX (11 controls), PCI-DSS (12 controls), ISO 27001 (15 controls)
-- ✅ **Database Seeding**: Automatic control seeding for all 55 compliance controls on startup
-- ✅ **Framework Registration**: Proper dependency injection for all compliance frameworks
+- ✅ **Five Organization Frameworks**: HIPAA (17 controls), SOX (11 controls), PCI-DSS (12 controls), ISO 27001 (15 controls), SOC2 (15 controls)
+- ✅ **Two Application Frameworks**: CIS Controls v8 (13 controls), Windows Security Baselines (12 controls) - Hidden from users
+- ✅ **Visibility Separation**: ComplianceFrameworkService ensures users only see Organization frameworks
+- ✅ **Background Assessment**: ApplicationComplianceBackgroundService runs 6-hour cycles for Application frameworks
+- ✅ **Database Seeding**: Automatic seeding of all 95 controls (70 Organization + 25 Application)
+- ✅ **Framework Registration**: All 7 frameworks properly registered with DI container
 - ✅ **Name Mapping**: Handles UI/backend naming differences (e.g., "ISO27001" → "ISO 27001")
 
 ### **API Endpoints**
@@ -221,16 +224,21 @@ curl "http://localhost:5000/api/system-status" | \
      jq '.data[] | select(.isHealthy == false)'
 ```
 
-### **Operational Frameworks (Fully Implemented)**
+### **Organization-Scope Frameworks (User-Visible)**
 - ✅ **HIPAA**: Health Insurance Portability and Accountability Act (17 controls)
 - ✅ **SOX**: Sarbanes-Oxley Act compliance (11 controls)
 - ✅ **PCI-DSS**: Payment Card Industry Data Security Standard (12 controls)
 - ✅ **ISO 27001**: Information Security Management Systems (15 controls)
+- ✅ **SOC2**: Service Organization Control 2 Type II (15 controls)
 
-### **Planned Frameworks (Future Implementation)**
-- ⏳ **SOC2**: Service Organization Control 2 Type II
+### **Application-Scope Frameworks (Hidden from Users)**
+- ✅ **CIS Controls v8**: Application security baseline assessment (13 controls)
+- ✅ **Windows Security Baselines**: Windows platform compliance (12 controls)
+
+### **Future Frameworks (Phase 4+)**
 - ⏳ **GDPR**: EU General Data Protection Regulation
 - ⏳ **FedRAMP**: Federal Risk and Authorization Management Program
+- ⏳ **NIST 800-53**: Security and Privacy Controls
 
 ### **Evidence Collection**
 - **Security Event Logs**: Structured JSON logs with timestamps

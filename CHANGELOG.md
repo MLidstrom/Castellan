@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added - Compliance Framework Phase 3 (September 28, 2025)
+- Application-scope frameworks (CIS Controls v8, Windows Security Baselines) hidden from users
+- SOC2 Organization-scope framework with 15 Trust Service Criteria controls
+- ComplianceFrameworkService for visibility filtering between Application/Organization scopes
+- ApplicationComplianceBackgroundService for automatic 6-hour assessment cycles
+- Controller validation preventing user access to Application frameworks
+- Total of 7 frameworks with 95 controls (70 Organization + 25 Application)
+
 ### Added
 - **Compliance Framework Implementation**: Four operational compliance frameworks with real assessment engine
   - **SOX Framework**: Complete Sarbanes-Oxley implementation with 11 controls for financial compliance
