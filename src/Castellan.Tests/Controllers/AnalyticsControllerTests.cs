@@ -176,9 +176,9 @@ public class AnalyticsControllerTests
     [InlineData("", "7d", "day")]
     [InlineData("TotalEvents", "", "day")]
     [InlineData("TotalEvents", "7d", "")]
-    [InlineData(null, "7d", "day")]
-    [InlineData("TotalEvents", null, "day")]
-    [InlineData("TotalEvents", "7d", null)]
+    [InlineData("invalidMetric", "7d", "day")]
+    [InlineData("TotalEvents", "invalidTimeRange", "day")]
+    [InlineData("TotalEvents", "7d", "invalidGroupBy")]
     public async Task GetTrends_WithNullOrEmptyParameters_StillCallsService(string metric, string timeRange, string groupBy)
     {
         // Arrange

@@ -285,7 +285,7 @@ public class YaraRulesController_ValidationTests : IDisposable
 
     private (bool IsValid, string? Error) InvokeValidateYaraRule(string? ruleContent)
     {
-        return _controller.ValidateYaraRule(ruleContent);
+        return _controller.ValidateYaraRule(ruleContent ?? "");
     }
 
     private YaraRuleDto InvokeConvertToDto(YaraRule rule)

@@ -189,12 +189,12 @@ builder.Services.AddSingleton<IVectorStore, QdrantPooledVectorStore>();
 builder.Services.AddSingleton<SecurityEventDetector>();
 builder.Services.AddSingleton<RulesEngine>(); // M4: Add RulesEngine for correlation and fusion
 
-// Register the base security event store (FileBasedSecurityEventStore)
-builder.Services.AddSingleton<FileBasedSecurityEventStore>();
+// Register the base security event store (DatabaseSecurityEventStore for database persistence)
+builder.Services.AddScoped<DatabaseSecurityEventStore>();
 // Wrap it with SignalR broadcasting capabilities for real-time updates
-builder.Services.AddSingleton<ISecurityEventStore>(provider =>
+builder.Services.AddScoped<ISecurityEventStore>(provider =>
 {
-    var baseStore = provider.GetRequiredService<FileBasedSecurityEventStore>();
+    var baseStore = provider.GetRequiredService<DatabaseSecurityEventStore>();
     var broadcaster = provider.GetRequiredService<IScanProgressBroadcaster>();
     var logger = provider.GetRequiredService<ILogger<SignalRSecurityEventStore>>();
     return new SignalRSecurityEventStore(baseStore, broadcaster, logger);
@@ -259,6 +259,48 @@ builder.Services.AddScoped<IDashboardDataConsolidationService, DashboardDataCons
 builder.Services.AddSingleton<DashboardDataBroadcastService>();
 builder.Services.AddHostedService<DashboardDataBroadcastService>(provider =>
     provider.GetRequiredService<DashboardDataBroadcastService>());
+
+// Add Compliance Assessment Services - v0.6.0
+builder.Services.AddScoped<Castellan.Worker.Services.Compliance.IComplianceAssessmentService, Castellan.Worker.Services.Compliance.ComplianceAssessmentService>();
+builder.Services.AddScoped<Castellan.Worker.Services.Compliance.IComplianceFrameworkService, Castellan.Worker.Services.Compliance.ComplianceFrameworkService>();
+
+// Register all compliance frameworks
+builder.Services.AddScoped<Castellan.Worker.Services.Compliance.Frameworks.HipaaComplianceFramework>();
+builder.Services.AddScoped<Castellan.Worker.Services.Compliance.Frameworks.SoxComplianceFramework>();
+builder.Services.AddScoped<Castellan.Worker.Services.Compliance.Frameworks.PCIDSSComplianceFramework>();
+builder.Services.AddScoped<Castellan.Worker.Services.Compliance.Frameworks.ISO27001ComplianceFramework>();
+builder.Services.AddScoped<Castellan.Worker.Services.Compliance.Frameworks.SOC2ComplianceFramework>();
+
+// Register frameworks as IComplianceFramework for enumerable injection
+// Organization-scope frameworks (visible to users)
+builder.Services.AddScoped<Castellan.Worker.Services.Compliance.IComplianceFramework, Castellan.Worker.Services.Compliance.Frameworks.HipaaComplianceFramework>();
+builder.Services.AddScoped<Castellan.Worker.Services.Compliance.IComplianceFramework, Castellan.Worker.Services.Compliance.Frameworks.SoxComplianceFramework>();
+builder.Services.AddScoped<Castellan.Worker.Services.Compliance.IComplianceFramework, Castellan.Worker.Services.Compliance.Frameworks.PCIDSSComplianceFramework>();
+builder.Services.AddScoped<Castellan.Worker.Services.Compliance.IComplianceFramework, Castellan.Worker.Services.Compliance.Frameworks.ISO27001ComplianceFramework>();
+builder.Services.AddScoped<Castellan.Worker.Services.Compliance.IComplianceFramework, Castellan.Worker.Services.Compliance.Frameworks.SOC2ComplianceFramework>();
+
+// Application-scope frameworks (hidden from users)
+builder.Services.AddScoped<Castellan.Worker.Services.Compliance.IComplianceFramework, Castellan.Worker.Services.Compliance.Frameworks.CISControlsFramework>();
+builder.Services.AddScoped<Castellan.Worker.Services.Compliance.IComplianceFramework, Castellan.Worker.Services.Compliance.Frameworks.WindowsSecurityBaselinesFramework>();
+
+// Register framework factory to resolve frameworks by name
+builder.Services.AddScoped<Func<string, Castellan.Worker.Services.Compliance.IComplianceFramework>>(serviceProvider => frameworkName =>
+{
+    return frameworkName.ToUpperInvariant() switch
+    {
+        "HIPAA" => serviceProvider.GetRequiredService<Castellan.Worker.Services.Compliance.Frameworks.HipaaComplianceFramework>(),
+        "SOX" => serviceProvider.GetRequiredService<Castellan.Worker.Services.Compliance.Frameworks.SoxComplianceFramework>(),
+        "PCI DSS" => serviceProvider.GetRequiredService<Castellan.Worker.Services.Compliance.Frameworks.PCIDSSComplianceFramework>(),
+        "ISO 27001" => serviceProvider.GetRequiredService<Castellan.Worker.Services.Compliance.Frameworks.ISO27001ComplianceFramework>(),
+        "SOC2" => serviceProvider.GetRequiredService<Castellan.Worker.Services.Compliance.Frameworks.SOC2ComplianceFramework>(),
+        "CIS CONTROLS V8" => serviceProvider.GetRequiredService<Castellan.Worker.Services.Compliance.Frameworks.CISControlsFramework>(),
+        "WINDOWS SECURITY BASELINES" => serviceProvider.GetRequiredService<Castellan.Worker.Services.Compliance.Frameworks.WindowsSecurityBaselinesFramework>(),
+        _ => throw new ArgumentException($"Unknown compliance framework: {frameworkName}")
+    };
+});
+
+builder.Services.AddHostedService<ComplianceDataSeedingService>(); // Seed compliance controls data
+builder.Services.AddHostedService<Castellan.Worker.Services.Compliance.ApplicationComplianceBackgroundService>(); // Background Application compliance assessment
 
 // Add Windows Event Log Watcher services
 builder.Services.Configure<WindowsEventLogOptions>(builder.Configuration.GetSection("WindowsEventLog"));

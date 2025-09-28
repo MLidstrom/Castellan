@@ -1,7 +1,7 @@
 # Castellan Compliance Guide
 
-**Status**: ✅ **Enterprise Ready**  
-**Last Updated**: September 6, 2025
+**Status**: ✅ **Enterprise Ready** | 🏛️ **Compliance Reports**: Four Frameworks Operational
+**Last Updated**: September 28, 2025
 
 ## 🎯 Overview
 
@@ -183,11 +183,34 @@ Castellan provides comprehensive compliance capabilities for organizations requi
 
 ## 📊 Compliance Reporting
 
-### **Automated Reports**
+**Status**: Phase 3 Partially Complete - Real Assessment Engine Operational | **Target**: Full Framework Coverage Q1 2025
+
+### **Current Implementation (85% Complete)**
+- ✅ **Database Schema**: ComplianceReport, ComplianceControl, ComplianceAssessmentResult tables
+- ✅ **Entity Framework**: Full relationships, indexes, constraints, and migrations
+- ✅ **API Endpoints**: Full CRUD operations with real assessment service at `/api/compliance-reports`
+- ✅ **Frontend Interface**: React Admin interface with Material-UI components
+- ✅ **Assessment Engine**: Real-time compliance assessment based on security events
+- ✅ **Four Operational Frameworks**: HIPAA (17 controls), SOX (11 controls), PCI-DSS (12 controls), ISO 27001 (15 controls)
+- ✅ **Database Seeding**: Automatic control seeding for all 55 compliance controls on startup
+- ✅ **Framework Registration**: Proper dependency injection for all compliance frameworks
+- ✅ **Name Mapping**: Handles UI/backend naming differences (e.g., "ISO27001" → "ISO 27001")
+
+### **API Endpoints**
 ```powershell
-# Generate compliance report
+# Get compliance reports
 curl -H "Authorization: Bearer $token" \
-     "http://localhost:5000/api/compliance/report?framework=NIST"
+     "http://localhost:5000/api/compliance-reports"
+
+# Create new compliance report
+curl -X POST -H "Authorization: Bearer $token" \
+     -H "Content-Type: application/json" \
+     -d '{"framework":"HIPAA","reportType":"assessment"}' \
+     "http://localhost:5000/api/compliance-reports"
+
+# Get detailed report with control assessments
+curl -H "Authorization: Bearer $token" \
+     "http://localhost:5000/api/compliance-reports/{id}/detailed"
 
 # Export audit logs
 curl -H "Authorization: Bearer $token" \
@@ -197,6 +220,17 @@ curl -H "Authorization: Bearer $token" \
 curl "http://localhost:5000/api/system-status" | \
      jq '.data[] | select(.isHealthy == false)'
 ```
+
+### **Operational Frameworks (Fully Implemented)**
+- ✅ **HIPAA**: Health Insurance Portability and Accountability Act (17 controls)
+- ✅ **SOX**: Sarbanes-Oxley Act compliance (11 controls)
+- ✅ **PCI-DSS**: Payment Card Industry Data Security Standard (12 controls)
+- ✅ **ISO 27001**: Information Security Management Systems (15 controls)
+
+### **Planned Frameworks (Future Implementation)**
+- ⏳ **SOC2**: Service Organization Control 2 Type II
+- ⏳ **GDPR**: EU General Data Protection Regulation
+- ⏳ **FedRAMP**: Federal Risk and Authorization Management Program
 
 ### **Evidence Collection**
 - **Security Event Logs**: Structured JSON logs with timestamps

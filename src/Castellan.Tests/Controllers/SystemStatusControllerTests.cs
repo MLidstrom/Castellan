@@ -11,7 +11,9 @@ namespace Castellan.Tests.Controllers;
 public class SystemStatusControllerTests : IDisposable
 {
     private readonly Mock<ILogger<SystemStatusController>> _mockLogger;
-    private readonly SystemStatusController _controller;
+#pragma warning disable CS0414 // Field is assigned but its value is never used
+    private readonly SystemStatusController _controller = null!;
+#pragma warning restore CS0414
 
     public SystemStatusControllerTests()
     {

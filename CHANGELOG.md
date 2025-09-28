@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **Compliance Framework Implementation**: Four operational compliance frameworks with real assessment engine
+  - **SOX Framework**: Complete Sarbanes-Oxley implementation with 11 controls for financial compliance
+  - **PCI-DSS Framework**: Payment Card Industry Data Security Standard with 12 controls for payment security
+  - **ISO 27001 Framework**: Information Security Management System with 15 controls for security governance
+  - **Enhanced HIPAA Framework**: Expanded from 17 controls with improved assessment logic
+  - **Database Seeding**: Automatic seeding of all 55 compliance controls across 4 frameworks on startup
+  - **Framework Name Mapping**: Added `NormalizeFrameworkName()` to handle UI/backend naming differences (e.g., "ISO27001" → "ISO 27001")
+  - **Enhanced DI Registration**: Fixed framework injection as `IEnumerable<IComplianceFramework>` for proper service resolution
+  - **Real Assessment Engine**: Security event-based compliance assessment replacing mock scoring system
+  - **Files Updated**: `PCIDSSComplianceFramework.cs`, `ISO27001ComplianceFramework.cs`, `ComplianceAssessmentService.cs`, `Program.cs`
+
 ### Fixed
 - **Admin Menu Components**: Fixed missing menu items issue where only 3 of 11 admin interface pages were visible
   - **Root Cause**: Permission structure mismatch between React Admin and auth provider - `usePermissions()` expected an array but received an object

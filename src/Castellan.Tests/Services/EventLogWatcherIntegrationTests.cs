@@ -7,7 +7,9 @@ using Castellan.Worker.Abstractions;
 using Castellan.Worker.Models;
 using Castellan.Worker.Services;
 using Castellan.Worker.Options;
+using Castellan.Worker.Hubs;
 using System.Collections.Concurrent;
+using System.Diagnostics.Eventing.Reader;
 
 namespace Castellan.Tests.Services;
 
@@ -72,7 +74,8 @@ public class EventLogWatcherIntegrationTests : IClassFixture<TestEnvironmentFixt
         var bookmarkStore = serviceProvider.GetRequiredService<MockEventBookmarkStore>();
         
         // Act & Assert
-        using (var host = serviceProvider.GetRequiredService<IHostedService>())
+        var host = serviceProvider.GetRequiredService<IHostedService>();
+        try
         {
             // Start the service
             await host.StartAsync(CancellationToken.None);
@@ -85,6 +88,11 @@ public class EventLogWatcherIntegrationTests : IClassFixture<TestEnvironmentFixt
             
             // Stop the service
             await host.StopAsync(CancellationToken.None);
+        }
+        finally
+        {
+            if (host is IDisposable disposable)
+                disposable.Dispose();
         }
     }
 
@@ -104,7 +112,7 @@ public class EventLogWatcherIntegrationTests : IClassFixture<TestEnvironmentFixt
             UserName = "TEST\\User",
             Opcode = 0,
             Task = 12544,
-            Keywords = 9223372036854775808,
+            Keywords = unchecked((long)9223372036854775808),
             Message = "An account was successfully logged on.",
             Xml = "<Event><System><EventID>4624</EventID></System></Event>"
         };
@@ -280,6 +288,36 @@ public class MockBroadcaster : IScanProgressBroadcaster
 {
     public List<object> BroadcastedEvents { get; } = new();
 
+    public Task BroadcastScanProgress(ScanProgressUpdate update)
+    {
+        BroadcastedEvents.Add(update);
+        return Task.CompletedTask;
+    }
+
+    public Task BroadcastScanComplete(string scanId, object result)
+    {
+        BroadcastedEvents.Add(new { scanId, result });
+        return Task.CompletedTask;
+    }
+
+    public Task BroadcastScanError(string scanId, string error)
+    {
+        BroadcastedEvents.Add(new { scanId, error });
+        return Task.CompletedTask;
+    }
+
+    public Task BroadcastSystemMetrics(object metrics)
+    {
+        BroadcastedEvents.Add(metrics);
+        return Task.CompletedTask;
+    }
+
+    public Task BroadcastThreatIntelligenceStatus(object status)
+    {
+        BroadcastedEvents.Add(status);
+        return Task.CompletedTask;
+    }
+
     public Task BroadcastSecurityEvent(object securityEvent)
     {
         BroadcastedEvents.Add(securityEvent);
@@ -288,6 +326,13 @@ public class MockBroadcaster : IScanProgressBroadcaster
 
     public Task BroadcastCorrelationAlert(object correlationAlert)
     {
+        BroadcastedEvents.Add(correlationAlert);
+        return Task.CompletedTask;
+    }
+
+    public Task BroadcastYaraMatch(object yaraMatch)
+    {
+        BroadcastedEvents.Add(yaraMatch);
         return Task.CompletedTask;
     }
 }
@@ -299,11 +344,11 @@ public class MockDashboardBroadcast : DashboardDataBroadcastService
 {
     public int TriggerCallCount { get; private set; }
 
-    public MockDashboardBroadcast() : base(null!, null!, null!, null!)
+    public MockDashboardBroadcast() : base(null!, null!, null!)
     {
     }
 
-    public override async Task TriggerImmediateBroadcastWithCacheInvalidation()
+    public new async Task TriggerImmediateBroadcastWithCacheInvalidation()
     {
         TriggerCallCount++;
         await Task.CompletedTask;
@@ -315,7 +360,7 @@ public class MockDashboardBroadcast : DashboardDataBroadcastService
 /// </summary>
 public class MockLogger : ILogger<WindowsEventLogWatcherService>
 {
-    public IDisposable BeginScope<TState>(TState state) => null!;
+    public IDisposable? BeginScope<TState>(TState state) where TState : notnull => null;
     public bool IsEnabled(LogLevel logLevel) => true;
     public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception? exception, Func<TState, Exception?, string> formatter) { }
 }

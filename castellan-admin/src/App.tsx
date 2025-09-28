@@ -133,7 +133,7 @@ const App = () => {
               icon={YaraMatchesIcon}
               recordRepresentation={(record) => `${record.ruleName} - ${record.targetFile}`}
             />
-    
+
             {/* Timeline Resource - Available in CastellanProFree */}
             <Resource
               name="timelines"

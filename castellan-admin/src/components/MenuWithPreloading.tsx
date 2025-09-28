@@ -19,7 +19,7 @@ import {
   Gavel as MitreIcon,
   BugReport as YaraIcon,
   FindInPage as YaraMatchesIcon,
-  Timeline as TimelineIcon,
+  Schedule as TimelineIcon,
   TrendingUp as TrendAnalysisIcon,
   Scanner as ThreatScannerIcon
 } from '@mui/icons-material';
@@ -77,12 +77,13 @@ const PreloadMenuItem: React.FC<PreloadMenuItemProps> = ({
 
 // Menu component mapping to track navigation
 const MENU_COMPONENT_MAPPINGS: Record<string, string> = {
+  '/': 'dashboard',
   '/dashboard': 'dashboard',
   '/security-events': 'security-events',
   '/mitre-techniques': 'mitre-techniques',
   '/yara-rules': 'yara-rules',
   '/yara-matches': 'yara-matches',
-  '/timeline': 'timeline',
+  '/timelines': 'timelines',
   '/trend-analysis': 'trend-analysis',
   '/system-status': 'system-status',
   '/threat-scanner': 'threat-scanner',
@@ -100,7 +101,7 @@ export const MenuWithPreloading: React.FC<MenuProps> = (props) => {
     console.log('[MenuWithPreloading] Initializing component preloading...');
 
     // Track navigation patterns and start preloading
-    const currentPath = window.location.pathname.replace('/#', '') || '/dashboard';
+    const currentPath = window.location.pathname.replace('/#', '') || '/';
     const currentPage = MENU_COMPONENT_MAPPINGS[currentPath] || 'dashboard';
 
     // Preload components based on current navigation
@@ -108,7 +109,7 @@ export const MenuWithPreloading: React.FC<MenuProps> = (props) => {
 
     // Add navigation tracking
     const handleLocationChange = () => {
-      const newPath = window.location.pathname.replace('/#', '') || '/dashboard';
+      const newPath = window.location.pathname.replace('/#', '') || '/';
       const newPage = MENU_COMPONENT_MAPPINGS[newPath] || 'dashboard';
 
       if (newPage !== currentPage) {
@@ -156,7 +157,7 @@ export const MenuWithPreloading: React.FC<MenuProps> = (props) => {
     <ReactAdminMenu {...props}>
       {/* Core Pages - Always visible */}
       <PreloadMenuItem
-        to="/dashboard"
+        to="/"
         componentPath="dashboard"
         primaryText="Dashboard"
         leftIcon={<DashboardIcon />}
@@ -198,11 +199,11 @@ export const MenuWithPreloading: React.FC<MenuProps> = (props) => {
         requiredPermissions={['security.read']}
       />
 
-      {/* Timeline */}
+      {/* Timelines */}
       <PreloadMenuItem
-        to="/timeline"
-        componentPath="timeline"
-        primaryText="Timeline"
+        to="/timelines"
+        componentPath="timelines"
+        primaryText="Timelines"
         leftIcon={<TimelineIcon />}
         requiredPermissions={['security.read']}
       />
@@ -259,7 +260,7 @@ export const MenuWithPreloading: React.FC<MenuProps> = (props) => {
         // Skip resources we've already handled above
         const handledResources = [
           'dashboard', 'security-events', 'mitre-techniques', 'yara-rules',
-          'yara-matches', 'timeline', 'trend-analysis', 'system-status',
+          'yara-matches', 'timelines', 'trend-analysis', 'system-status',
           'threat-scanner', 'compliance-reports', 'configuration'
         ];
 
