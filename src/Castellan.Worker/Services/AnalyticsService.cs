@@ -111,8 +111,8 @@ namespace Castellan.Worker.Services
 
     public class ForecastResult
     {
-        public IEnumerable<HistoricalDataPoint> HistoricalData { get; set; }
-        public IEnumerable<ForecastDataPoint> ForecastedData { get; set; }
+        public IEnumerable<HistoricalDataPoint> HistoricalData { get; set; } = new List<HistoricalDataPoint>();
+        public IEnumerable<ForecastDataPoint> ForecastedData { get; set; } = new List<ForecastDataPoint>();
     }
 
     public class TimeSeriesData
@@ -122,9 +122,9 @@ namespace Castellan.Worker.Services
 
     public class TimeSeriesPrediction
     {
-        public float[] Forecast { get; set; }
-        public float[] LowerBound { get; set; }
-        public float[] UpperBound { get; set; }
+        public float[] Forecast { get; set; } = Array.Empty<float>();
+        public float[] LowerBound { get; set; } = Array.Empty<float>();
+        public float[] UpperBound { get; set; } = Array.Empty<float>();
     }
 }
 

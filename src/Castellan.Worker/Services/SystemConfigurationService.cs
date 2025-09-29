@@ -1,10 +1,11 @@
 using Microsoft.EntityFrameworkCore;
 using Castellan.Worker.Data;
 using Castellan.Worker.Models;
+using Castellan.Worker.Services.Interfaces;
 
 namespace Castellan.Worker.Services;
 
-public class SystemConfigurationService
+public class SystemConfigurationService : ISystemConfigurationService
 {
     private readonly CastellanDbContext _context;
     private readonly ILogger<SystemConfigurationService> _logger;

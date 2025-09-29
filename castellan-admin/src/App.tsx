@@ -53,7 +53,7 @@ const YaraRulesEdit = React.lazy(() => import('./resources/YaraRules').then(modu
 const YaraMatchesList = React.lazy(() => import('./resources/YaraMatches').then(module => ({ default: module.YaraMatchesList })));
 const YaraMatchesShow = React.lazy(() => import('./resources/YaraMatches').then(module => ({ default: module.YaraMatchesShow })));
 
-const TimelineList = React.lazy(() => import('./resources/Timeline').then(module => ({ default: module.TimelineList })));
+const TimelineList = React.lazy(() => import('./resources/Timelines').then(module => ({ default: module.TimelineList })));
 
 const TrendAnalysisPage = React.lazy(() => import('./components/TrendAnalysisPage'));
 

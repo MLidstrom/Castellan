@@ -69,6 +69,7 @@ Welcome to the complete documentation for **Castellan**, the AI-powered Windows 
 - ✅ **Enterprise Scale** - 12K+ events/sec with intelligent caching
 - ✅ **Real-time Notifications** - Teams/Slack with adaptive rate limiting
 - ✅ **Threat Intelligence** - VirusTotal/MalwareBazaar/OTX integration
+- ✅ **Compliance Reporting** - 7 enterprise frameworks with performance optimization and background processing
 
 ## 🚀 Quick Links
 

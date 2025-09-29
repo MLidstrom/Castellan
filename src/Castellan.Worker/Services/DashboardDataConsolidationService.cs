@@ -98,8 +98,13 @@ public class DashboardDataConsolidationService : IDashboardDataConsolidationServ
                 LastUpdated = DateTime.UtcNow
             };
 
-            // Cache the consolidated data
-            _cache.Set(cacheKey, consolidatedData, TimeSpan.FromSeconds(CACHE_DURATION_SECONDS));
+            // Cache the consolidated data with explicit size for memory management
+            var cacheOptions = new MemoryCacheEntryOptions
+            {
+                AbsoluteExpirationRelativeToNow = TimeSpan.FromSeconds(CACHE_DURATION_SECONDS),
+                Size = 1 // Each consolidated data entry counts as 1 unit
+            };
+            _cache.Set(cacheKey, consolidatedData, cacheOptions);
 
             _logger.LogInformation("Successfully consolidated dashboard data in {ElapsedMs}ms. Security Events: {EventCount}, Components: {ComponentCount}, Scans: {ScanCount}",
                 stopwatch.ElapsedMilliseconds, securityEvents.TotalEvents, systemStatus.TotalComponents, threatScanner.TotalScans);

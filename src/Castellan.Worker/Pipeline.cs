@@ -29,7 +29,6 @@ public sealed class Pipeline(
     IYaraScanService yaraScanService,
     IYaraRuleStore yaraRuleStore,
     IOptionsMonitor<YaraScanningOptions> yaraScanningOptions,
-    IServiceProvider serviceProvider,
     ILogger<Pipeline> log
 ) : BackgroundService
 {

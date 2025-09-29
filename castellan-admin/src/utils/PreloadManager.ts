@@ -47,7 +47,7 @@ class PreloadManager {
     ['system-status', () => import('../resources/SystemStatus')],
     ['threat-scanner', () => import('../resources/ThreatScanner')],
     ['compliance-reports', () => import('../resources/ComplianceReports')],
-    ['timeline', () => import('../resources/Timeline')],
+    ['timelines', () => import('../resources/Timelines')],
     ['configuration', () => import('../resources/Configuration')],
     ['trend-analysis', () => import('../components/TrendAnalysisPage')],
   ]);
@@ -88,7 +88,7 @@ class PreloadManager {
     // Medium priority - load on idle
     const mediumPriorityComponents: PreloadConfig[] = [
       { componentPath: 'threat-scanner', priority: 'medium' },
-      { componentPath: 'timeline', priority: 'medium' },
+      { componentPath: 'timelines', priority: 'medium' },
       { componentPath: 'trend-analysis', priority: 'medium' },
     ];
 

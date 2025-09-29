@@ -86,6 +86,9 @@ public class ComplianceDataSeedingService : IHostedService
                 Description = "Implement procedures for authorizing access to electronic protected health information.",
                 Category = "Administrative Safeguards",
                 Priority = "High",
+                IsUserVisible = true,
+                Scope = ComplianceScope.Organization,
+                ApplicableSectors = "Healthcare",
                 IsActive = true,
                 CreatedAt = DateTime.UtcNow
             },
@@ -97,6 +100,9 @@ public class ComplianceDataSeedingService : IHostedService
                 Description = "Implement procedures for granting access to electronic protected health information.",
                 Category = "Administrative Safeguards",
                 Priority = "High",
+                IsUserVisible = true,
+                Scope = ComplianceScope.Organization,
+                ApplicableSectors = "Healthcare",
                 IsActive = true,
                 CreatedAt = DateTime.UtcNow
             },
@@ -108,6 +114,9 @@ public class ComplianceDataSeedingService : IHostedService
                 Description = "Implement security awareness and training programs for all workforce members.",
                 Category = "Administrative Safeguards",
                 Priority = "Medium",
+                IsUserVisible = true,
+                Scope = ComplianceScope.Organization,
+                ApplicableSectors = "Healthcare",
                 IsActive = true,
                 CreatedAt = DateTime.UtcNow
             },
@@ -121,6 +130,9 @@ public class ComplianceDataSeedingService : IHostedService
                 Description = "Implement procedures to limit physical access to electronic systems and equipment.",
                 Category = "Physical Safeguards",
                 Priority = "High",
+                IsUserVisible = true,
+                Scope = ComplianceScope.Organization,
+                ApplicableSectors = "Healthcare",
                 IsActive = true,
                 CreatedAt = DateTime.UtcNow
             },
@@ -132,6 +144,9 @@ public class ComplianceDataSeedingService : IHostedService
                 Description = "Implement procedures for workstation access and use.",
                 Category = "Physical Safeguards",
                 Priority = "Medium",
+                IsUserVisible = true,
+                Scope = ComplianceScope.Organization,
+                ApplicableSectors = "Healthcare",
                 IsActive = true,
                 CreatedAt = DateTime.UtcNow
             },
@@ -143,6 +158,9 @@ public class ComplianceDataSeedingService : IHostedService
                 Description = "Implement procedures for receipt and removal of hardware and electronic media.",
                 Category = "Physical Safeguards",
                 Priority = "Medium",
+                IsUserVisible = true,
+                Scope = ComplianceScope.Organization,
+                ApplicableSectors = "Healthcare",
                 IsActive = true,
                 CreatedAt = DateTime.UtcNow
             },
@@ -156,6 +174,9 @@ public class ComplianceDataSeedingService : IHostedService
                 Description = "Assign a unique name and/or number for identifying and tracking user identity.",
                 Category = "Technical Safeguards",
                 Priority = "High",
+                IsUserVisible = true,
+                Scope = ComplianceScope.Organization,
+                ApplicableSectors = "Healthcare",
                 IsActive = true,
                 CreatedAt = DateTime.UtcNow
             },
@@ -167,6 +188,9 @@ public class ComplianceDataSeedingService : IHostedService
                 Description = "Implement procedures for terminating an electronic session after a predetermined time of inactivity.",
                 Category = "Technical Safeguards",
                 Priority = "Medium",
+                IsUserVisible = true,
+                Scope = ComplianceScope.Organization,
+                ApplicableSectors = "Healthcare",
                 IsActive = true,
                 CreatedAt = DateTime.UtcNow
             },
@@ -178,6 +202,9 @@ public class ComplianceDataSeedingService : IHostedService
                 Description = "Implement hardware, software, and/or procedural mechanisms for recording access to electronic protected health information.",
                 Category = "Technical Safeguards",
                 Priority = "High",
+                IsUserVisible = true,
+                Scope = ComplianceScope.Organization,
+                ApplicableSectors = "Healthcare",
                 IsActive = true,
                 CreatedAt = DateTime.UtcNow
             },
@@ -189,6 +216,9 @@ public class ComplianceDataSeedingService : IHostedService
                 Description = "Implement procedures to ensure electronic protected health information is not improperly altered or destroyed.",
                 Category = "Technical Safeguards",
                 Priority = "High",
+                IsUserVisible = true,
+                Scope = ComplianceScope.Organization,
+                ApplicableSectors = "Healthcare",
                 IsActive = true,
                 CreatedAt = DateTime.UtcNow
             },
@@ -200,6 +230,9 @@ public class ComplianceDataSeedingService : IHostedService
                 Description = "Implement procedures to verify that a person seeking access is the one claimed.",
                 Category = "Technical Safeguards",
                 Priority = "High",
+                IsUserVisible = true,
+                Scope = ComplianceScope.Organization,
+                ApplicableSectors = "Healthcare",
                 IsActive = true,
                 CreatedAt = DateTime.UtcNow
             },
@@ -211,6 +244,9 @@ public class ComplianceDataSeedingService : IHostedService
                 Description = "Implement procedures to guard against unauthorized access to electronic protected health information being transmitted.",
                 Category = "Technical Safeguards",
                 Priority = "High",
+                IsUserVisible = true,
+                Scope = ComplianceScope.Organization,
+                ApplicableSectors = "Healthcare",
                 IsActive = true,
                 CreatedAt = DateTime.UtcNow
             },
@@ -224,6 +260,9 @@ public class ComplianceDataSeedingService : IHostedService
                 Description = "Implement procedures to address security incidents.",
                 Category = "Administrative Safeguards",
                 Priority = "High",
+                IsUserVisible = true,
+                Scope = ComplianceScope.Organization,
+                ApplicableSectors = "Healthcare",
                 IsActive = true,
                 CreatedAt = DateTime.UtcNow
             },
@@ -235,6 +274,9 @@ public class ComplianceDataSeedingService : IHostedService
                 Description = "Establish procedures for responding to an emergency or other occurrence.",
                 Category = "Administrative Safeguards",
                 Priority = "High",
+                IsUserVisible = true,
+                Scope = ComplianceScope.Organization,
+                ApplicableSectors = "Healthcare",
                 IsActive = true,
                 CreatedAt = DateTime.UtcNow
             },
@@ -246,6 +288,9 @@ public class ComplianceDataSeedingService : IHostedService
                 Description = "Perform a periodic technical and nontechnical evaluation of the effectiveness of security controls.",
                 Category = "Administrative Safeguards",
                 Priority = "Medium",
+                IsUserVisible = true,
+                Scope = ComplianceScope.Organization,
+                ApplicableSectors = "Healthcare",
                 IsActive = true,
                 CreatedAt = DateTime.UtcNow
             },
@@ -257,6 +302,9 @@ public class ComplianceDataSeedingService : IHostedService
                 Description = "Implement mechanisms to encrypt and decrypt electronic protected health information.",
                 Category = "Technical Safeguards",
                 Priority = "High",
+                IsUserVisible = true,
+                Scope = ComplianceScope.Organization,
+                ApplicableSectors = "Healthcare",
                 IsActive = true,
                 CreatedAt = DateTime.UtcNow
             }
@@ -293,6 +341,9 @@ public class ComplianceDataSeedingService : IHostedService
                 Description = "Procedures for accurate financial reporting and disclosure controls",
                 Category = "Financial Reporting",
                 Priority = "High",
+                IsUserVisible = true,
+                Scope = ComplianceScope.Organization,
+                ApplicableSectors = "Financial",
                 IsActive = true,
                 CreatedAt = DateTime.UtcNow
             },

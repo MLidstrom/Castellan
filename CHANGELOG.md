@@ -7,6 +7,43 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed - Compliance Framework & UI Fixes (September 29, 2025)
+- **SOC2 Framework Activation**: Moved SOC2ComplianceFramework from disabled to active frameworks folder and fixed compilation errors
+- **React UI Framework Correction**: Updated hardcoded framework choices in ComplianceReports.tsx to show correct organizational frameworks (HIPAA, SOX, PCI DSS, ISO 27001, SOC2)
+- **Comprehensive Framework Verification**: All 5 organizational compliance frameworks now have 100% functional report creation success
+- **PreloadManager Timelines Fix**: Resolved "No import mapping for component: timelines" error by correcting component path to import from Timelines resource
+- **Framework Database Consistency**: Ensured all organizational frameworks are properly visible via API and React Admin interface
+
+### Added - Compliance Framework Phase 4 Week 2 (September 29, 2025)
+- **Enhanced Report Generation**: Comprehensive ComplianceReportGenerationService with advanced reporting capabilities
+- **Multiple Report Formats**: Support for JSON, HTML, PDF, CSV, and Markdown export formats
+- **Audience-Specific Templates**: Report templates tailored for Executive, Technical, Auditor, and Operations audiences
+- **Professional PDF Generation**: iTextSharp integration with formatted tables, charts, and professional layouts
+- **Advanced Report Sections**: Executive Summary, Compliance Overview, Control Assessment, Risk Analysis, Recommendations, and Trend Analysis
+- **New API Controller**: ComplianceReportGenerationController with 6 comprehensive endpoints:
+  - `POST /api/compliance-report-generation/comprehensive/{framework}` - Generate full framework reports
+  - `POST /api/compliance-report-generation/executive-summary` - Multi-framework executive summaries
+  - `POST /api/compliance-report-generation/comparison` - Framework comparison reports
+  - `POST /api/compliance-report-generation/trend/{framework}` - Historical trend analysis reports
+  - `GET /api/compliance-report-generation/formats` - List supported export formats
+  - `GET /api/compliance-report-generation/audiences` - List supported report audiences
+- **Report Customization**: Configurable report sections, audience targeting, and format selection
+- **Organizational Scope Enforcement**: Strict filtering to prevent access to application-level frameworks
+- **Build System Enhancement**: Zero compilation errors and warnings with optimized dependencies
+
+### Added - Compliance Framework Phase 4 Week 1 (September 29, 2025)
+- **Compliance Posture API**: New CompliancePostureController with 5 endpoints for organizational framework monitoring
+  - `GET /api/compliance-posture/summary` - Overall compliance health across all frameworks
+  - `GET /api/compliance-posture/framework/{framework}` - Detailed posture for specific framework
+  - `POST /api/compliance-posture/compare` - Compare multiple frameworks side-by-side
+  - `GET /api/compliance-posture/trends` - Historical compliance trend analysis (7/30/90 days)
+  - `GET /api/compliance-posture/actions` - Prioritized action recommendations with urgency scoring
+- **Risk Analysis**: Advanced risk level calculations (Critical/High/Medium/Low/Minimal)
+- **Trend Analysis**: Historical compliance tracking with configurable time ranges
+- **Action Prioritization**: Smart recommendations based on implementation percentage and risk scores
+- **Framework Comparison**: Multi-framework analysis for comprehensive compliance overview
+- **Build Optimization**: Achieved zero build warnings through targeted fixes and suppressions
+
 ### Added - Compliance Framework Phase 3 (September 28, 2025)
 - Application-scope frameworks (CIS Controls v8, Windows Security Baselines) hidden from users
 - SOC2 Organization-scope framework with 15 Trust Service Criteria controls

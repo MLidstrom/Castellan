@@ -153,7 +153,7 @@ public class ExportController : ControllerBase
     /// Get export statistics
     /// </summary>
     [HttpGet("stats")]
-    public async Task<IActionResult> GetExportStats(
+    public Task<IActionResult> GetExportStats(
         [FromQuery] DateTime? startDate = null,
         [FromQuery] DateTime? endDate = null,
         [FromQuery] string? riskLevels = null,
@@ -204,12 +204,12 @@ public class ExportController : ControllerBase
                 correlationBasedEvents = eventsList.Count(e => e.IsCorrelationBased)
             };
 
-            return Ok(new { data = stats });
+            return Task.FromResult<IActionResult>(Ok(new { data = stats }));
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error getting export statistics");
-            return StatusCode(500, new { message = "Internal server error" });
+            return Task.FromResult<IActionResult>(StatusCode(500, new { message = "Internal server error" }));
         }
     }
 

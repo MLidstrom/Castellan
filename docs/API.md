@@ -1,8 +1,8 @@
 # Castellan API Documentation
 
 **Status**: ✅ **Production Ready**
-**Last Updated**: September 20, 2025
-**API Version**: v1.1
+**Last Updated**: September 29, 2025
+**API Version**: v1.2 - Phase 4 Week 3 Compliance Performance APIs
 
 ## 🎯 Overview
 
@@ -2400,6 +2400,104 @@ X-RateLimit-Reset: 1693958400
 - **JavaScript/TypeScript**: NPM package available
 - **Python**: PyPI package for integration
 - **PowerShell Module**: Gallery module for automation
+
+## 🏛️ Compliance API
+
+### Compliance Reports
+```http
+GET /api/compliance-reports
+Authorization: Bearer {token}
+```
+
+**Response:**
+```json
+{
+  "data": [
+    {
+      "id": "comp-123",
+      "framework": "HIPAA",
+      "reportType": "assessment",
+      "overallScore": 85.4,
+      "controlsPassed": 14,
+      "controlsFailed": 3,
+      "generatedAt": "2025-09-29T10:30:00Z"
+    }
+  ]
+}
+```
+
+### Compliance Posture (Phase 4 - NEW)
+```http
+GET /api/compliance-posture/summary
+Authorization: Bearer {token}
+```
+
+**Response:**
+```json
+{
+  "overallPosture": "Good",
+  "averageScore": 82.5,
+  "frameworks": [
+    {
+      "framework": "HIPAA",
+      "score": 85.4,
+      "trend": "improving",
+      "lastAssessed": "2025-09-29T10:30:00Z"
+    }
+  ]
+}
+```
+
+### Background Report Generation (Phase 4 Week 3 - NEW)
+```http
+POST /api/background-compliance-reports/queue
+Authorization: Bearer {token}
+Content-Type: application/json
+
+{
+  "framework": "HIPAA",
+  "format": "Pdf",
+  "audience": "Executive"
+}
+```
+
+**Response:**
+```json
+{
+  "jobId": "job-abc123",
+  "status": "Queued",
+  "estimatedCompletion": "2025-09-29T10:35:00Z"
+}
+```
+
+### Compliance Performance Monitoring (Phase 4 Week 3 - NEW)
+```http
+GET /api/compliance-performance/metrics
+Authorization: Bearer {token}
+```
+
+**Response:**
+```json
+{
+  "data": {
+    "totalReportsGenerated": 156,
+    "averageReportGenerationTime": "00:00:02.340",
+    "averagePdfGenerationTime": "00:00:01.875",
+    "cacheHitRate": 0.72,
+    "reportsByFramework": {
+      "HIPAA": 45,
+      "SOX": 38,
+      "PCI-DSS": 32
+    }
+  },
+  "summary": {
+    "total_reports": 156,
+    "cache_hit_rate": "72.00%",
+    "avg_report_time_ms": 2340,
+    "most_popular_framework": "HIPAA"
+  }
+}
+```
 
 ### Integration Examples
 - **SIEM Integration**: Splunk, QRadar, Sentinel connectors

@@ -4,6 +4,12 @@ using System.ComponentModel.DataAnnotations.Schema;
 
 namespace Castellan.Worker.Models.Compliance;
 
+public enum ComplianceScope
+{
+    Organization = 0,  // User-visible frameworks (HIPAA, SOX, PCI-DSS, ISO 27001, SOC2)
+    Application = 1    // Hidden frameworks (CIS Controls, Windows Security Baselines)
+}
+
 public class ComplianceControl
 {
     [Key]
@@ -35,6 +41,15 @@ public class ComplianceControl
     public string? ValidationQuery { get; set; } // SQL or logic for validation
 
     public bool IsActive { get; set; } = true;
+
+    // Scope determines visibility: Organization (user-visible) vs Application (hidden)
+    public ComplianceScope Scope { get; set; } = ComplianceScope.Organization;
+
+    // Determines if control is visible to users (Organization scope = true, Application scope = false)
+    public bool IsUserVisible { get; set; } = true;
+
+    [MaxLength(200)]
+    public string? ApplicableSectors { get; set; }
 
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 }

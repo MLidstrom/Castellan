@@ -46,9 +46,10 @@ const FrameworkField = ({ source }: any) => {
   const getFrameworkIcon = (framework: string) => {
     switch (framework?.toUpperCase?.() || '') {
       case 'HIPAA': return <HealthIcon fontSize="small" />;
-      case 'FEDRAMP': return <GovIcon fontSize="small" />;
+      case 'SOX': return <GovIcon fontSize="small" />;
+      case 'PCI DSS': return <SecurityIcon fontSize="small" />;
       case 'SOC2': return <BusinessIcon fontSize="small" />;
-      case 'GDPR': return <SecurityIcon fontSize="small" />;
+      case 'ISO 27001': return <ReportIcon fontSize="small" />;
       case 'ISO27001': return <ReportIcon fontSize="small" />;
       default: return <ReportIcon fontSize="small" />;
     }
@@ -57,9 +58,10 @@ const FrameworkField = ({ source }: any) => {
   const getFrameworkColor = (framework: string) => {
     switch (framework?.toUpperCase?.() || '') {
       case 'HIPAA': return 'success';
-      case 'FEDRAMP': return 'primary';
+      case 'SOX': return 'primary';
+      case 'PCI DSS': return 'warning';
       case 'SOC2': return 'info';
-      case 'GDPR': return 'warning';
+      case 'ISO 27001': return 'secondary';
       case 'ISO27001': return 'secondary';
       default: return 'default';
     }
@@ -171,10 +173,10 @@ const ComplianceReportFilters = [
     label="Framework"
     choices={[
       { id: 'HIPAA', name: 'HIPAA' },
-      { id: 'FedRAMP', name: 'FedRAMP' },
-      { id: 'SOC2', name: 'SOC 2' },
-      { id: 'GDPR', name: 'GDPR' },
-      { id: 'ISO27001', name: 'ISO 27001' },
+      { id: 'SOX', name: 'SOX' },
+      { id: 'PCI DSS', name: 'PCI DSS' },
+      { id: 'ISO 27001', name: 'ISO 27001' },
+      { id: 'SOC2', name: 'SOC2' },
     ]}
     alwaysOn
   />,
@@ -278,10 +280,10 @@ export const ComplianceReportCreate = () => (
         validate={required()}
         choices={[
           { id: 'HIPAA', name: 'HIPAA - Health Insurance Portability and Accountability Act' },
-          { id: 'FedRAMP', name: 'FedRAMP - Federal Risk and Authorization Management Program' },
-          { id: 'SOC2', name: 'SOC 2 - System and Organization Controls 2' },
-          { id: 'GDPR', name: 'GDPR - General Data Protection Regulation' },
-          { id: 'ISO27001', name: 'ISO 27001 - Information Security Management' },
+          { id: 'SOX', name: 'SOX - Sarbanes-Oxley Act' },
+          { id: 'PCI DSS', name: 'PCI DSS - Payment Card Industry Data Security Standard' },
+          { id: 'ISO 27001', name: 'ISO 27001 - Information Security Management' },
+          { id: 'SOC2', name: 'SOC2 - System and Organization Controls 2' },
         ]}
         sx={{ width: '100%' }}
       />

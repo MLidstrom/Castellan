@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using Castellan.Worker.Data;
 using Castellan.Worker.Models.Compliance;
 using Castellan.Worker.Abstractions;
+using Castellan.Worker.Services.Interfaces;
 
 namespace Castellan.Worker.Services.Compliance.Frameworks;
 
