@@ -142,8 +142,8 @@ public class YaraConfigurationController : ControllerBase
             // Load configuration
             var config = await LoadConfigurationAsync();
 
-            // Count rules before import
-            var dbPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "data", "castellan.db");
+            // Count rules before import - use central database
+            var dbPath = GetCentralDatabasePath();
             int rulesBeforeImport = 0;
 
             if (System.IO.File.Exists(dbPath))
@@ -158,12 +158,13 @@ public class YaraConfigurationController : ControllerBase
             _logger.LogInformation("Starting YARA import process. Current rules in database: {RulesCount}", rulesBeforeImport);
 
             // Call the import tool
-            var importToolPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "..", "..", "..", "..", "Tools", "YaraImportTool");
+            var repoRoot = GetRepositoryRoot();
+            var importToolPath = Path.Combine(repoRoot, "src", "Tools", "YaraImportTool");
             var processStartInfo = new System.Diagnostics.ProcessStartInfo
             {
                 FileName = "dotnet",
                 Arguments = $"run --project \"{importToolPath}\" -- --limit {config.Sources.MaxRulesPerSource}",
-                WorkingDirectory = AppDomain.CurrentDomain.BaseDirectory,
+                WorkingDirectory = repoRoot,
                 RedirectStandardOutput = true,
                 RedirectStandardError = true,
                 UseShellExecute = false,
@@ -191,13 +192,7 @@ public class YaraConfigurationController : ControllerBase
                 return StatusCode(500, new { message = "Failed to start import process" });
             }
 
-            // Copy database to runtime location
-            var sourceDb = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "..", "..", "..", "..", "..", "data", "castellan.db");
-            if (System.IO.File.Exists(sourceDb))
-            {
-                System.IO.File.Copy(sourceDb, dbPath, overwrite: true);
-                _logger.LogInformation("Updated YARA rules database copied to runtime location");
-            }
+            // No need to copy database - we're using the central one directly
 
             // Count rules after import
             int rulesAfterImport = 0;
@@ -346,6 +341,32 @@ public class YaraConfigurationController : ControllerBase
         });
 
         await System.IO.File.WriteAllTextAsync(_configPath, json);
+    }
+
+    private static string GetCentralDatabasePath()
+    {
+        // Use the single central database at repository root
+        var repoRoot = GetRepositoryRoot();
+        return Path.Combine(repoRoot, "data", "castellan.db");
+    }
+
+    private static string GetRepositoryRoot()
+    {
+        // Fixed repository root path
+        var repoRoot = @"C:\Users\matsl\Castellan";
+        if (Directory.Exists(repoRoot))
+        {
+            return repoRoot;
+        }
+
+        // Fallback: Navigate up from current directory
+        var dir = new DirectoryInfo(AppDomain.CurrentDomain.BaseDirectory);
+        while (dir != null && !Directory.Exists(Path.Combine(dir.FullName, "src")))
+        {
+            dir = dir.Parent;
+        }
+
+        return dir?.FullName ?? AppDomain.CurrentDomain.BaseDirectory;
     }
 
     private static YaraConfigurationModel GetDefaultConfiguration()

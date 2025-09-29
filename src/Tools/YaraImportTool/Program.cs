@@ -233,16 +233,30 @@ ON CONFLICT(Name) DO UPDATE SET
 
     static string GetRepoRoot()
     {
-        // Resolve as two directories up from this project when running via dotnet run, or current working dir fallback
+        // Always use the fixed repository root path
+        var repoRoot = @"C:\Users\matsl\Castellan";
+        if (Directory.Exists(repoRoot))
+        {
+            return repoRoot;
+        }
+
+        // Fallback: Try to find repository root by looking for "src" directory
         try
         {
             var exeDir = AppContext.BaseDirectory;
-            // Typically bin/Debug/net8.0 => go up 3 levels to project, then up to repo root
             var dir = Directory.GetParent(exeDir);
-            for (int i = 0; i < 5 && dir != null; i++) dir = dir!.Parent; // climb a few levels
-            if (dir != null && Directory.Exists(Path.Combine(dir.FullName, "src"))) return dir.FullName;
+            for (int i = 0; i < 5 && dir != null; i++)
+            {
+                if (Directory.Exists(Path.Combine(dir.FullName, "src")))
+                {
+                    return dir.FullName;
+                }
+                dir = dir.Parent;
+            }
         }
         catch { }
+
+        // Last resort
         return Directory.GetCurrentDirectory();
     }
 

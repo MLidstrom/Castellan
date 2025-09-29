@@ -24,9 +24,39 @@ public class DatabaseYaraRuleStore : IYaraRuleStore
     public DatabaseYaraRuleStore(ILogger<DatabaseYaraRuleStore> logger)
     {
         _logger = logger;
-        _dbPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "data", "castellan.db");
+        // Use the single central database at repository root
+        _dbPath = GetCentralDatabasePath();
         Directory.CreateDirectory(Path.GetDirectoryName(_dbPath)!);
         EnsureSchema();
+    }
+
+    private static string GetCentralDatabasePath()
+    {
+        // Navigate up from the Worker executable to find repository root
+        var baseDir = AppDomain.CurrentDomain.BaseDirectory;
+        var dir = new DirectoryInfo(baseDir);
+
+        // Look for repository root by finding the "src" directory
+        while (dir != null && !Directory.Exists(Path.Combine(dir.FullName, "src")))
+        {
+            dir = dir.Parent;
+        }
+
+        // If we found the repository root, use data/castellan.db there
+        if (dir != null)
+        {
+            return Path.Combine(dir.FullName, "data", "castellan.db");
+        }
+
+        // Fallback to C:\Users\matsl\Castellan\data\castellan.db
+        var fallbackPath = @"C:\Users\matsl\Castellan\data\castellan.db";
+        if (File.Exists(fallbackPath) || Directory.Exists(Path.GetDirectoryName(fallbackPath)))
+        {
+            return fallbackPath;
+        }
+
+        // Last resort: use runtime directory
+        return Path.Combine(baseDir, "data", "castellan.db");
     }
 
     private SqliteConnection OpenConnection()
@@ -72,6 +102,9 @@ CREATE TABLE IF NOT EXISTS YaraRules (
 );
 CREATE INDEX IF NOT EXISTS IX_YaraRules_Category ON YaraRules(Category);
 CREATE INDEX IF NOT EXISTS IX_YaraRules_Enabled ON YaraRules(IsEnabled);
+CREATE INDEX IF NOT EXISTS IX_YaraRules_Name ON YaraRules(Name);
+CREATE INDEX IF NOT EXISTS IX_YaraRules_Priority ON YaraRules(Priority);
+CREATE INDEX IF NOT EXISTS IX_YaraRules_UpdatedAt ON YaraRules(UpdatedAt);
 
 CREATE TABLE IF NOT EXISTS YaraMatches (
   Id TEXT PRIMARY KEY,
@@ -103,6 +136,53 @@ CREATE INDEX IF NOT EXISTS IX_YaraMatches_Time ON YaraMatches(MatchTime);
     public Task<IEnumerable<YaraRule>> GetAllRulesAsync()
     {
         return Task.FromResult(QueryRules("SELECT * FROM YaraRules ORDER BY Name"));
+    }
+
+    public Task<(IEnumerable<YaraRule> Rules, int TotalCount)> GetRulesPagedAsync(int page = 1, int limit = 25, string? category = null, string? tag = null, string? mitreTechnique = null, bool? enabled = null)
+    {
+        // Build WHERE clause and parameters based on filters
+        var whereConditions = new List<string>();
+        var parameters = new List<(string Name, object Value)>();
+
+        if (!string.IsNullOrEmpty(category))
+        {
+            whereConditions.Add("Category = @Category");
+            parameters.Add(("@Category", category));
+        }
+
+        if (!string.IsNullOrEmpty(tag))
+        {
+            whereConditions.Add("Tags LIKE @Tag");
+            parameters.Add(("@Tag", "%" + tag + "%"));
+        }
+
+        if (!string.IsNullOrEmpty(mitreTechnique))
+        {
+            whereConditions.Add("MitreTechniques LIKE @MitreTechnique");
+            parameters.Add(("@MitreTechnique", "%" + mitreTechnique + "%"));
+        }
+
+        if (enabled.HasValue)
+        {
+            whereConditions.Add("IsEnabled = @Enabled");
+            parameters.Add(("@Enabled", enabled.Value ? 1 : 0));
+        }
+
+        string whereClause = whereConditions.Count > 0 ? "WHERE " + string.Join(" AND ", whereConditions) : "";
+
+        // Get total count for pagination
+        string countSql = $"SELECT COUNT(*) FROM YaraRules {whereClause}";
+        int totalCount = QueryCount(countSql, parameters.ToArray());
+
+        // Get paginated results
+        int offset = (page - 1) * limit;
+        string dataSql = $"SELECT * FROM YaraRules {whereClause} ORDER BY Name LIMIT @Limit OFFSET @Offset";
+        parameters.Add(("@Limit", limit));
+        parameters.Add(("@Offset", offset));
+
+        var rules = QueryRules(dataSql, parameters.ToArray());
+
+        return Task.FromResult((rules, totalCount));
     }
 
     public Task<IEnumerable<YaraRule>> GetEnabledRulesAsync()
@@ -321,6 +401,15 @@ ON CONFLICT(Id) DO UPDATE SET
         cmd.Parameters.AddWithValue("@TestSample", (object?)r.TestSample ?? DBNull.Value);
         cmd.Parameters.AddWithValue("@TestResult", r.TestResult.HasValue ? (r.TestResult.Value ? 1 : 0) : (object)DBNull.Value);
         cmd.ExecuteNonQuery();
+    }
+
+    private int QueryCount(string sql, params (string Name, object Value)[] parameters)
+    {
+        using var conn = OpenConnection();
+        using var cmd = conn.CreateCommand();
+        cmd.CommandText = sql;
+        foreach (var p in parameters) cmd.Parameters.AddWithValue(p.Name, p.Value);
+        return Convert.ToInt32(cmd.ExecuteScalar());
     }
 
     private IEnumerable<YaraRule> QueryRules(string sql, params (string Name, object Value)[] parameters)

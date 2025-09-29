@@ -24,7 +24,7 @@
 
 **Castellan** is a **100% open source**, enterprise-grade security monitoring platform that transforms Windows event logs into actionable security intelligence using AI-powered analysis, vector search, and real-time threat correlation.
 
-🚀 **Enterprise Features**: 12K+ events/sec processing • Vector similarity search • Advanced correlation engine • Real-time Teams/Slack alerts • 800+ MITRE ATT&CK techniques • VirusTotal/MalwareBazaar integration • Complete YARA malware detection • Trend forecasting • Timeline visualization • Compliance reporting • Export capabilities • Centralized configuration management
+🚀 **Enterprise Features**: 12K+ events/sec processing • Vector similarity search • Advanced correlation engine • Real-time Teams/Slack alerts • 800+ MITRE ATT&CK techniques • VirusTotal/MalwareBazaar integration • Complete YARA malware detection with auto-updates • Trend forecasting • Timeline visualization • Compliance reporting • Export capabilities • Centralized configuration management • Single consolidated database architecture
 
 ⚡ **5-Minute Setup**: `.\scripts\start.ps1` → Open `http://localhost:8080` → Start monitoring (All 11 admin interface pages fully operational)
 
@@ -37,11 +37,11 @@
 - **🔔 Smart Notifications** - Rich Teams/Slack alerts with adaptive rate limiting
 - **🎯 MITRE Integration** - Auto-updated 800+ ATT&CK techniques with threat mapping
 - **🔍 Threat Intelligence** - VirusTotal, MalwareBazaar, AlienVault OTX with configuration UI
-- **⚡ YARA Malware Detection** - Complete signature-based detection with editable rule source configuration
+- **⚡ YARA Malware Detection** - Complete signature-based detection with automatic rule updates and deduplication
 - **📈 AI Trend Analysis** - ML.NET forecasting with predictions and confidence intervals
 - **📋 Timeline Visualization** - Interactive security event timeline with granular analysis
 - **📤 Data Export** - CSV, JSON, PDF export with filtering and background processing
-- **📱 Real-time Dashboard** - React admin interface with persistent SignalR live updates
+- **📱 Real-time Dashboard** - React admin interface with instant page loading and persistent SignalR live updates
 - **🏛️ Compliance Reports** - 5 operational frameworks (HIPAA, SOX, PCI DSS, ISO 27001, SOC2) with enhanced PDF reporting, performance optimization, background processing, and comprehensive monitoring
 - **🔒 Enterprise Security** - BCrypt passwords, JWT tokens, audit trails
 
@@ -99,7 +99,7 @@
 ### 🎆 **Production-Ready Enterprise Platform**
 - **MIT Licensed** - 100% open source with complete transparency
 - **5-Minute Setup** - From clone to monitoring in minutes
-- **Enterprise Scale** - 12K+ events/sec with optimized performance
+- **Enterprise Scale** - 12K+ events/sec with instant page loading (sub-150ms)
 - **AI-First** - Vector search + LLM analysis built-in
 - **Zero Vendor Lock-in** - Fork, modify, deploy anywhere
 

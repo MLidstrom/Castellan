@@ -97,7 +97,34 @@ Castellan automatically imports MITRE ATT&CK data by default. You can customize 
 - ✅ Requires internet connectivity for import
 - ✅ No additional configuration needed
 
-### 6. Configure EventLogWatcher (Recommended)
+### 6. Configure YARA Malware Detection (Automatic)
+
+Castellan includes a comprehensive YARA malware detection system that works automatically with minimal configuration:
+
+**Default Setup:**
+- ✅ 70 active YARA rules imported automatically
+- ✅ Single centralized database at `/data/castellan.db`
+- ✅ Automatic rule updates via web UI configuration
+- ✅ Deduplication prevents duplicate rules
+- ✅ Performance metrics preserved across updates
+
+**Automatic Updates Configuration:**
+Access the Configuration page in the web UI (`http://localhost:8080/#/configuration`) and navigate to the "YARA Rules" tab to:
+- Enable/disable automatic rule updates
+- Set update frequency (1-365 days)
+- Configure rule source URLs
+- Monitor import statistics
+- Trigger manual imports
+
+**Database Architecture:**
+- **Single Database**: All components use `/data/castellan.db`
+- **UPSERT Logic**: Prevents duplicates using `ON CONFLICT(Name) DO UPDATE`
+- **Performance**: Database-level pagination for fast loading
+- **Persistence**: User preferences and metrics maintained
+
+**DailyRefreshHostedService** automatically checks for updates every 24 hours when enabled.
+
+### 7. Configure EventLogWatcher (Recommended)
 
 The EventLogWatcher provides real-time Windows Event Log monitoring with sub-second latency. The configuration is already included in the template:
 

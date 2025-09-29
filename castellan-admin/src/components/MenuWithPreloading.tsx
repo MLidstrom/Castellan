@@ -1,99 +1,117 @@
-import React, { useCallback, useEffect } from 'react';
-import { usePermissions } from 'react-admin';
+import * as React from 'react';
+import { useEffect } from 'react';
+import { Menu, useDataProvider, usePermissions, useResourceDefinitions } from 'react-admin';
+import { useQueryClient } from '@tanstack/react-query';
 import {
-  Menu as ReactAdminMenu,
-  MenuProps,
-  MenuItemLink,
-  MenuItemLinkProps,
-  useResourceDefinitions
-} from 'react-admin';
-import {
-  Dashboard as DashboardIcon,
-  Security as SecurityIcon,
-  Assessment as ComplianceIcon,
-  Computer as SystemIcon,
-  Settings as SettingsIcon,
-  People as UsersIcon,
-  Report as ReportsIcon,
-  Analytics as AnalyticsIcon,
-  Gavel as MitreIcon,
-  BugReport as YaraIcon,
-  FindInPage as YaraMatchesIcon,
-  Schedule as TimelineIcon,
-  TrendingUp as TrendAnalysisIcon,
-  Scanner as ThreatScannerIcon
-} from '@mui/icons-material';
-import PreloadManager from '../utils/PreloadManager';
+  preloadMap,
+  onIdle,
+  bundleStrategy,
+  performanceMonitor,
+  predictNextPages,
+  canPreload
+} from '../utils/preload';
+import DashboardIcon from '@mui/icons-material/Dashboard';
+import SecurityIcon from '@mui/icons-material/Security';
+import BugReportIcon from '@mui/icons-material/BugReport';
+import RuleIcon from '@mui/icons-material/Rule';
+import FindInPageIcon from '@mui/icons-material/FindInPage';
+import TimelineIcon from '@mui/icons-material/Timeline';
+import TrendingUpIcon from '@mui/icons-material/TrendingUp';
+import AssessmentIcon from '@mui/icons-material/Assessment';
+import MonitorHeartIcon from '@mui/icons-material/MonitorHeart';
+import RadarIcon from '@mui/icons-material/Radar';
+import SettingsIcon from '@mui/icons-material/Settings';
 
-interface PreloadMenuItemProps extends Omit<MenuItemLinkProps, 'to'> {
-  to: string;
-  componentPath: string;
-  requiredPermissions?: string[];
-  requiredRoles?: string[];
-  primaryText: string;
-  leftIcon?: React.ReactElement;
-}
-
-const PreloadMenuItem: React.FC<PreloadMenuItemProps> = ({
-  to,
-  componentPath,
-  requiredPermissions = [],
-  requiredRoles = [],
-  primaryText,
-  leftIcon,
-  ...props
-}) => {
-  const { permissions } = usePermissions();
-  const preloadManager = PreloadManager.getInstance();
-
-  // Handle hover preloading - must be called before conditional returns
-  const handleMouseEnter = useCallback(() => {
-    preloadManager.preloadOnHover(componentPath);
-  }, [componentPath, preloadManager]);
-
-  // Check if user has required permissions
-  const hasRequiredPermissions = requiredPermissions.length === 0 ||
-    (Array.isArray(permissions) && requiredPermissions.every(permission => permissions.includes(permission)));
-
-  // Check if user has required roles
-  const hasRequiredRoles = requiredRoles.length === 0 ||
-    (Array.isArray(permissions) && requiredRoles.some(role => permissions.includes(`role:${role}`)));
-
-  // Don't render if user doesn't have access
-  if (!hasRequiredPermissions || !hasRequiredRoles) {
-    return null;
-  }
-
-  return (
-    <MenuItemLink
-      to={to}
-      primaryText={primaryText}
-      leftIcon={leftIcon}
-      onMouseEnter={handleMouseEnter}
-      {...props}
-    />
-  );
+// Data prefetchers for each page - optimized queries
+const dataPrefetchers: Record<string, (q: ReturnType<typeof useQueryClient>, dp: any) => void> = {
+  'dashboard': (q, dp) => {
+    q.prefetchQuery({
+      queryKey: ['dashboard', 'summary'],
+      queryFn: () => dp.custom('dashboard/summary', { method: 'GET' }),
+      staleTime: 30000, // 30 seconds
+    });
+  },
+  'security-events': (q, dp) => {
+    q.prefetchQuery({
+      queryKey: ['events', 'list', { page: 1, perPage: 25 }],
+      queryFn: () => dp.getList('security-events', {
+        pagination: { page: 1, perPage: 25 },
+        sort: { field: 'timestamp', order: 'DESC' },
+        filter: {}
+      }),
+      staleTime: 15000, // 15 seconds
+    });
+  },
+  'yara-rules': (q, dp) => {
+    q.prefetchQuery({
+      queryKey: ['yara-rules', 'list', { page: 1, perPage: 25 }],
+      queryFn: () => dp.getList('yara-rules', {
+        pagination: { page: 1, perPage: 25 },
+        sort: { field: 'updatedAt', order: 'DESC' },
+        filter: {}
+      }),
+      staleTime: 60000, // 60 seconds
+    });
+  },
+  'system-status': (q, dp) => {
+    q.prefetchQuery({
+      queryKey: ['system-status'],
+      queryFn: () => dp.custom('system-status', { method: 'GET' }),
+      staleTime: 10000, // 10 seconds
+    });
+  },
+  'mitre/techniques': (q, dp) => {
+    q.prefetchQuery({
+      queryKey: ['mitre/techniques', 'list', { page: 1, perPage: 25 }],
+      queryFn: () => dp.getList('mitre/techniques', {
+        pagination: { page: 1, perPage: 25 },
+        sort: { field: 'techniqueId', order: 'ASC' },
+        filter: {}
+      }),
+      staleTime: 120000, // 2 minutes - rarely changes
+    });
+  },
+  'yara-matches': (q, dp) => {
+    q.prefetchQuery({
+      queryKey: ['yara-matches', 'list', { page: 1, perPage: 25 }],
+      queryFn: () => dp.getList('yara-matches', {
+        pagination: { page: 1, perPage: 25 },
+        sort: { field: 'detectedAt', order: 'DESC' },
+        filter: {}
+      }),
+      staleTime: 20000, // 20 seconds
+    });
+  },
+  'compliance-reports': (q, dp) => {
+    q.prefetchQuery({
+      queryKey: ['compliance-reports', 'list', { page: 1, perPage: 25 }],
+      queryFn: () => dp.getList('compliance-reports', {
+        pagination: { page: 1, perPage: 25 },
+        sort: { field: 'createdAt', order: 'DESC' },
+        filter: {}
+      }),
+      staleTime: 60000, // 60 seconds
+    });
+  },
+  'threat-scanner': (q, dp) => {
+    q.prefetchQuery({
+      queryKey: ['threat-scanner', 'status'],
+      queryFn: () => dp.custom('threat-scanner/status', { method: 'GET' }),
+      staleTime: 5000, // 5 seconds - real-time updates
+    });
+  },
+  'configuration': (q, dp) => {
+    q.prefetchQuery({
+      queryKey: ['configuration'],
+      queryFn: () => dp.custom('configuration', { method: 'GET' }),
+      staleTime: 300000, // 5 minutes - rarely changes
+    });
+  },
 };
 
-// Menu component mapping to track navigation
-const MENU_COMPONENT_MAPPINGS: Record<string, string> = {
-  '/': 'dashboard',
-  '/dashboard': 'dashboard',
-  '/security-events': 'security-events',
-  '/mitre-techniques': 'mitre-techniques',
-  '/yara-rules': 'yara-rules',
-  '/yara-matches': 'yara-matches',
-  '/timelines': 'timelines',
-  '/trend-analysis': 'trend-analysis',
-  '/system-status': 'system-status',
-  '/threat-scanner': 'threat-scanner',
-  '/compliance-reports': 'compliance-reports',
-  '/configuration': 'configuration',
-};
-
-export const MenuWithPreloading: React.FC<MenuProps> = (props) => {
-  const { permissions } = usePermissions();
-  const resources = useResourceDefinitions();
+export const MenuWithPreloading: React.FC = () => {
+  const queryClient = useQueryClient();
+  const dataProvider = useDataProvider();
   const preloadManager = PreloadManager.getInstance();
 
   // Initialize preloading on menu mount
@@ -102,193 +120,206 @@ export const MenuWithPreloading: React.FC<MenuProps> = (props) => {
 
     // Track navigation patterns and start preloading
     const currentPath = window.location.pathname.replace('/#', '') || '/';
-    const currentPage = MENU_COMPONENT_MAPPINGS[currentPath] || 'dashboard';
+    preloadManager.trackNavigation(currentPath);
 
-    // Preload components based on current navigation
-    preloadManager.preloadForNavigation(currentPage);
-
-    // Add navigation tracking
-    const handleLocationChange = () => {
-      const newPath = window.location.pathname.replace('/#', '') || '/';
-      const newPage = MENU_COMPONENT_MAPPINGS[newPath] || 'dashboard';
-
-      if (newPage !== currentPage) {
-        console.log(`[MenuWithPreloading] Navigation: ${currentPage} → ${newPage}`);
-        preloadManager.updateNavigationPatterns(currentPage, newPage);
-        preloadManager.preloadForNavigation(newPage);
-      }
-    };
-
-    // Listen for navigation changes
-    window.addEventListener('hashchange', handleLocationChange);
-    window.addEventListener('popstate', handleLocationChange);
-
-    return () => {
-      window.removeEventListener('hashchange', handleLocationChange);
-      window.removeEventListener('popstate', handleLocationChange);
-    };
-  }, [preloadManager]);
-
-  // Helper function to check if user can access a resource
-  const canAccessResource = (resourceName: string) => {
-    const resource = resources[resourceName];
-    if (!resource) return false;
-
-    // Check if resource has access control requirements
-    const requiredPermissions = resource.options?.requiredPermissions || [];
-    const requiredRoles = resource.options?.requiredRoles || [];
-
-    if (requiredPermissions.length === 0 && requiredRoles.length === 0) {
-      return true; // No restrictions
+    // Only preload if conditions are favorable
+    if (!canPreload()) {
+      console.log('[MenuWithPreloading] Preloading disabled due to network/memory conditions');
+      return;
     }
 
-    // Check permissions
-    const hasPermissions = requiredPermissions.length === 0 ||
-      requiredPermissions.every((permission: string) => permissions?.includes(permission));
+    // Warm critical pages after app settles
+    onIdle(() => {
+      console.log('[MenuWithPreloading] Starting idle preload of critical pages...');
 
-    // Check roles
-    const hasRoles = requiredRoles.length === 0 ||
-      requiredRoles.some((role: string) => permissions?.includes(`role:${role}`));
+      bundleStrategy.immediate.forEach(pageId => {
+        const preloader = preloadMap[pageId];
+        if (preloader) {
+          preloader()
+            .then(() => performanceMonitor.trackPreloadSuccess(pageId))
+            .catch(err => console.error(`Failed to preload ${pageId}:`, err));
+        }
 
-    return hasPermissions && hasRoles;
+        // Prefetch data for immediate pages
+        const dataPrefetcher = dataPrefetchers[pageId];
+        if (dataPrefetcher) {
+          try {
+            dataPrefetcher(queryClient, dataProvider);
+          } catch (err) {
+            console.error(`Failed to prefetch data for ${pageId}:`, err);
+          }
+        }
+      });
+    }, 1200);
+
+    // Preload predicted pages based on current page
+    const predictedPages = predictNextPages(currentPath.substring(1));
+    predictedPages.forEach((pageId, index) => {
+      // Stagger preloading to avoid overwhelming the browser
+      setTimeout(() => {
+        const preloader = preloadMap[pageId];
+        if (preloader && canPreload()) {
+          preloader()
+            .then(() => console.log(`[MenuWithPreloading] Predictively preloaded ${pageId}`))
+            .catch(err => console.error(`Failed to predictively preload ${pageId}:`, err));
+        }
+      }, 2000 + (index * 500)); // Start after 2s, then 500ms apart
+    });
+
+    return () => {
+      preloadManager.cleanup();
+    };
+  }, [queryClient, dataProvider, preloadManager]);
+
+  const handleHover = (pageId: string) => {
+    if (!canPreload()) return;
+
+    performanceMonitor.trackHoverPreload(pageId);
+
+    // Preload component
+    const preloader = preloadMap[pageId];
+    if (preloader) {
+      preloader().catch(err => console.error(`Hover preload failed for ${pageId}:`, err));
+    }
+
+    // Prefetch data
+    const dataPrefetcher = dataPrefetchers[pageId];
+    if (dataPrefetcher) {
+      try {
+        dataPrefetcher(queryClient, dataProvider);
+      } catch (err) {
+        console.error(`Hover data prefetch failed for ${pageId}:`, err);
+      }
+    }
+
+    // Track hover for predictive preloading
+    preloadManager.trackHover(pageId);
   };
 
   return (
-    <ReactAdminMenu {...props}>
-      {/* Core Pages - Always visible */}
-      <PreloadMenuItem
+    <Menu>
+      <Menu.Item
         to="/"
-        componentPath="dashboard"
         primaryText="Dashboard"
         leftIcon={<DashboardIcon />}
+        onMouseEnter={() => handleHover('dashboard')}
       />
-
-      {/* Security Events */}
-      <PreloadMenuItem
+      <Menu.Item
         to="/security-events"
-        componentPath="security-events"
         primaryText="Security Events"
         leftIcon={<SecurityIcon />}
-        requiredPermissions={['security.read']}
+        onMouseEnter={() => handleHover('security-events')}
       />
-
-      {/* MITRE Techniques */}
-      <PreloadMenuItem
+      <Menu.Item
         to="/mitre-techniques"
-        componentPath="mitre-techniques"
         primaryText="MITRE Techniques"
-        leftIcon={<MitreIcon />}
-        requiredPermissions={['security.read']}
+        leftIcon={<BugReportIcon />}
+        onMouseEnter={() => handleHover('mitre/techniques')}
       />
-
-      {/* YARA Rules */}
-      <PreloadMenuItem
+      <Menu.Item
         to="/yara-rules"
-        componentPath="yara-rules"
         primaryText="YARA Rules"
-        leftIcon={<YaraIcon />}
-        requiredPermissions={['security.read']}
+        leftIcon={<RuleIcon />}
+        onMouseEnter={() => handleHover('yara-rules')}
       />
-
-      {/* YARA Matches */}
-      <PreloadMenuItem
+      <Menu.Item
         to="/yara-matches"
-        componentPath="yara-matches"
         primaryText="YARA Matches"
-        leftIcon={<YaraMatchesIcon />}
-        requiredPermissions={['security.read']}
+        leftIcon={<FindInPageIcon />}
+        onMouseEnter={() => handleHover('yara-matches')}
       />
-
-      {/* Timelines */}
-      <PreloadMenuItem
+      <Menu.Item
         to="/timelines"
-        componentPath="timelines"
-        primaryText="Timelines"
+        primaryText="Timeline"
         leftIcon={<TimelineIcon />}
-        requiredPermissions={['security.read']}
+        onMouseEnter={() => handleHover('timelines')}
       />
-
-      {/* Trend Analysis */}
-      <PreloadMenuItem
+      <Menu.Item
         to="/trend-analysis"
-        componentPath="trend-analysis"
         primaryText="Trend Analysis"
-        leftIcon={<TrendAnalysisIcon />}
-        requiredPermissions={['analytics.read']}
+        leftIcon={<TrendingUpIcon />}
+        onMouseEnter={() => handleHover('trend-analysis')}
       />
-
-      {/* System Status */}
-      <PreloadMenuItem
-        to="/system-status"
-        componentPath="system-status"
-        primaryText="System Status"
-        leftIcon={<SystemIcon />}
-        requiredPermissions={['system.read']}
-      />
-
-      {/* Threat Scanner */}
-      <PreloadMenuItem
-        to="/threat-scanner"
-        componentPath="threat-scanner"
-        primaryText="Threat Scanner"
-        leftIcon={<ThreatScannerIcon />}
-        requiredPermissions={['security.read']}
-      />
-
-      {/* Compliance Reports */}
-      <PreloadMenuItem
+      <Menu.Item
         to="/compliance-reports"
-        componentPath="compliance-reports"
         primaryText="Compliance Reports"
-        leftIcon={<ComplianceIcon />}
-        requiredPermissions={['compliance.read']}
+        leftIcon={<AssessmentIcon />}
+        onMouseEnter={() => handleHover('compliance-reports')}
       />
-
-      {/* Configuration */}
-      <PreloadMenuItem
+      <Menu.Item
+        to="/system-status"
+        primaryText="System Status"
+        leftIcon={<MonitorHeartIcon />}
+        onMouseEnter={() => handleHover('system-status')}
+      />
+      <Menu.Item
+        to="/threat-scanner"
+        primaryText="Threat Scanner"
+        leftIcon={<RadarIcon />}
+        onMouseEnter={() => handleHover('threat-scanner')}
+      />
+      <Menu.Item
         to="/configuration"
-        componentPath="configuration"
         primaryText="Configuration"
         leftIcon={<SettingsIcon />}
-        requiredRoles={['admin']}
+        onMouseEnter={() => handleHover('configuration')}
       />
-
-      {/* Dynamically render other protected resources */}
-      {Object.keys(resources).map(resourceName => {
-        const resource = resources[resourceName];
-
-        // Skip resources we've already handled above
-        const handledResources = [
-          'dashboard', 'security-events', 'mitre-techniques', 'yara-rules',
-          'yara-matches', 'timelines', 'trend-analysis', 'system-status',
-          'threat-scanner', 'compliance-reports', 'configuration'
-        ];
-
-        if (handledResources.includes(resourceName)) {
-          return null;
-        }
-
-        // Check if user can access this resource
-        if (!canAccessResource(resourceName)) {
-          return null;
-        }
-
-        // Use a generic component path for dynamic resources
-        const componentPath = resourceName;
-
-        return (
-          <PreloadMenuItem
-            key={resourceName}
-            to={`/${resourceName}`}
-            componentPath={componentPath}
-            primaryText={resource.options?.label || resourceName}
-            leftIcon={resource.icon ? React.createElement(resource.icon) : undefined}
-          />
-        );
-      })}
-    </ReactAdminMenu>
+    </Menu>
   );
 };
 
-// Only use named export to avoid confusion
-// export default MenuWithPreloading;
+// Singleton preload manager for tracking navigation patterns and optimizing preloading
+class PreloadManager {
+  private static instance: PreloadManager;
+  private navigationHistory: string[] = [];
+  private hoverHistory: Map<string, number> = new Map();
+  private preloadedComponents: Set<string> = new Set();
+
+  private constructor() {}
+
+  public static getInstance(): PreloadManager {
+    if (!PreloadManager.instance) {
+      PreloadManager.instance = new PreloadManager();
+    }
+    return PreloadManager.instance;
+  }
+
+  public trackNavigation(path: string) {
+    this.navigationHistory.push(path);
+    // Keep only last 20 navigations
+    if (this.navigationHistory.length > 20) {
+      this.navigationHistory.shift();
+    }
+  }
+
+  public trackHover(pageId: string) {
+    const count = this.hoverHistory.get(pageId) || 0;
+    this.hoverHistory.set(pageId, count + 1);
+
+    // If hovered multiple times, add to preload queue
+    if (count >= 2 && !this.preloadedComponents.has(pageId)) {
+      this.preloadedComponents.add(pageId);
+      console.log(`[PreloadManager] Adding ${pageId} to priority preload due to frequent hovers`);
+    }
+  }
+
+  public getNavigationPatterns(): Record<string, number> {
+    const patterns: Record<string, number> = {};
+
+    for (let i = 0; i < this.navigationHistory.length - 1; i++) {
+      const from = this.navigationHistory[i];
+      const to = this.navigationHistory[i + 1];
+      const key = `${from}->${to}`;
+      patterns[key] = (patterns[key] || 0) + 1;
+    }
+
+    return patterns;
+  }
+
+  public cleanup() {
+    // Clean up old entries
+    this.navigationHistory = this.navigationHistory.slice(-10);
+  }
+}
+
+export default MenuWithPreloading;

@@ -1,14 +1,26 @@
 # Castellan Performance Tuning Guide
 
-**Document Version**: 1.0  
-**Created**: January 2025  
-**Phase**: 3 Performance Optimization Implementation  
+**Document Version**: 1.1
+**Created**: January 2025
+**Updated**: September 2025
+**Phase**: 4 Performance Optimization Implementation
 
 ## Overview
 
-This document provides comprehensive guidance for tuning Castellan's performance, including Phase 3 optimizations (semaphore-based throttling, memory management) and the new Dashboard Data Consolidation system that delivers 80%+ performance improvements by replacing multiple REST API calls with a single SignalR stream.
+This document provides comprehensive guidance for tuning Castellan's performance, including Phase 3 optimizations (semaphore-based throttling, memory management), Phase 4 instant page loading capabilities, and the new Dashboard Data Consolidation system that delivers 80%+ performance improvements by replacing multiple REST API calls with a single SignalR stream.
 
 ## Performance Architecture
+
+### Phase 4 Instant Page Loading (Latest)
+
+The Phase 4 instant page loading optimization delivers sub-150ms page transitions:
+
+- **Smart Preloading System**: Network and memory-aware component loading
+- **Hover Preloading**: Components and data load on menu hover interaction
+- **Predictive Loading**: Navigation pattern learning with intelligent prediction
+- **Enhanced Data Provider**: Cache-first strategy with 80%+ hit rate
+- **Background Refresh**: Stale data refreshed without blocking UI
+- **Minimal Bundle Impact**: Only +2KB for 81% page load improvement
 
 ### Phase 3 Enhancements
 
@@ -19,6 +31,34 @@ The Phase 3 performance optimization introduces several key improvements:
 - **Enhanced Monitoring**: Detailed metrics with throughput tracking
 - **Queue Management**: Back-pressure handling and overflow protection
 - **Dashboard Data Consolidation**: Real-time SignalR streaming replaces 4+ REST API calls with 80%+ load time reduction
+
+## Instant Page Loading Configuration
+
+### Frontend Performance Settings
+
+The instant page loading system can be configured through environment variables and component settings:
+
+#### Preloading Configuration
+- **Bundle Strategy**: Immediate (Dashboard, Security Events, YARA Rules), Hover (MITRE, System Status), Lazy (Others)
+- **Cache TTL**: 5s (real-time) to 5m (static content) based on resource type
+- **Network Awareness**: Automatically disables on slow-2g/2g or data saver mode
+- **Memory Threshold**: Stops preloading if heap usage exceeds 80%
+
+#### Data Provider Cache Settings
+```typescript
+// Resource-specific TTL configuration (milliseconds)
+{
+  'security-events': 15000,      // 15 seconds
+  'yara-matches': 20000,          // 20 seconds
+  'dashboard': 30000,             // 30 seconds
+  'system-status': 10000,         // 10 seconds
+  'threat-scanner': 5000,         // 5 seconds
+  'yara-rules': 60000,            // 1 minute
+  'compliance-reports': 60000,    // 1 minute
+  'mitre-techniques': 120000,     // 2 minutes
+  'configuration': 300000,        // 5 minutes
+}
+```
 
 ## Configuration Reference
 

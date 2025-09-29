@@ -1,4 +1,4 @@
-import React, { useEffect, Suspense } from 'react';
+import React, { Suspense } from 'react';
 import { Admin, Resource } from 'react-admin';
 import { Box, CircularProgress, Typography } from '@mui/material';
 import {
@@ -15,51 +15,52 @@ import {
 } from '@mui/icons-material';
 // Using production providers with real backend API
 import { enhancedCastellanDataProvider } from './dataProvider/castellanDataProvider';
+import { createEnhancedDataProvider } from './dataProvider/enhancedDataProvider';
 import { enhancedAuthProvider } from './auth/authProvider';
 import { Layout } from './components/Layout';
 import { SignalRProvider } from './contexts/SignalRContext';
 import { DashboardDataProvider } from './contexts/DashboardDataContext';
 
-// Lazy load Dashboard for better performance
-const Dashboard = React.lazy(() => import('./components/Dashboard').then(module => ({ default: module.Dashboard })));
+// Lazy load Dashboard with webpack prefetch for better performance
+const Dashboard = React.lazy(() => import(/* webpackPrefetch: true */ './components/Dashboard').then(module => ({ default: module.Dashboard })));
 
-// Import custom Login component
-const Login = React.lazy(() => import('./components/Login').then(module => ({ default: module.Login })));
+// Import custom Login component with prefetch
+const Login = React.lazy(() => import(/* webpackPrefetch: true */ './components/Login').then(module => ({ default: module.Login })));
 
-// Lazy-loaded resource imports for better performance and code splitting
-const SecurityEventList = React.lazy(() => import('./resources/SecurityEvents').then(module => ({ default: module.SecurityEventList })));
-const SecurityEventShow = React.lazy(() => import('./resources/SecurityEvents').then(module => ({ default: module.SecurityEventShow })));
-const SecurityEventEdit = React.lazy(() => import('./resources/SecurityEvents').then(module => ({ default: module.SecurityEventEdit })));
-const SecurityEventCreate = React.lazy(() => import('./resources/SecurityEvents').then(module => ({ default: module.SecurityEventCreate })));
+// Lazy-loaded resource imports with webpack prefetch for instant loading
+const SecurityEventList = React.lazy(() => import(/* webpackPrefetch: true */ './resources/SecurityEvents').then(module => ({ default: module.SecurityEventList })));
+const SecurityEventShow = React.lazy(() => import(/* webpackPrefetch: true */ './resources/SecurityEvents').then(module => ({ default: module.SecurityEventShow })));
+const SecurityEventEdit = React.lazy(() => import(/* webpackPrefetch: true */ './resources/SecurityEvents').then(module => ({ default: module.SecurityEventEdit })));
+const SecurityEventCreate = React.lazy(() => import(/* webpackPrefetch: true */ './resources/SecurityEvents').then(module => ({ default: module.SecurityEventCreate })));
 
-const SystemStatusList = React.lazy(() => import('./resources/SystemStatus').then(module => ({ default: module.SystemStatusList })));
-const SystemStatusShow = React.lazy(() => import('./resources/SystemStatus').then(module => ({ default: module.SystemStatusShow })));
+const SystemStatusList = React.lazy(() => import(/* webpackPrefetch: true */ './resources/SystemStatus').then(module => ({ default: module.SystemStatusList })));
+const SystemStatusShow = React.lazy(() => import(/* webpackPrefetch: true */ './resources/SystemStatus').then(module => ({ default: module.SystemStatusShow })));
 
-const ComplianceReportList = React.lazy(() => import('./resources/ComplianceReports').then(module => ({ default: module.ComplianceReportList })));
-const ComplianceReportShow = React.lazy(() => import('./resources/ComplianceReports').then(module => ({ default: module.ComplianceReportShow })));
-const ComplianceReportCreate = React.lazy(() => import('./resources/ComplianceReports').then(module => ({ default: module.ComplianceReportCreate })));
+const ComplianceReportList = React.lazy(() => import(/* webpackPrefetch: true */ './resources/ComplianceReports').then(module => ({ default: module.ComplianceReportList })));
+const ComplianceReportShow = React.lazy(() => import(/* webpackPrefetch: true */ './resources/ComplianceReports').then(module => ({ default: module.ComplianceReportShow })));
+const ComplianceReportCreate = React.lazy(() => import(/* webpackPrefetch: true */ './resources/ComplianceReports').then(module => ({ default: module.ComplianceReportCreate })));
 
-const ThreatScannerList = React.lazy(() => import('./resources/ThreatScanner').then(module => ({ default: module.ThreatScannerList })));
-const ThreatScannerShow = React.lazy(() => import('./resources/ThreatScanner').then(module => ({ default: module.ThreatScannerShow })));
+const ThreatScannerList = React.lazy(() => import(/* webpackPrefetch: true */ './resources/ThreatScanner').then(module => ({ default: module.ThreatScannerList })));
+const ThreatScannerShow = React.lazy(() => import(/* webpackPrefetch: true */ './resources/ThreatScanner').then(module => ({ default: module.ThreatScannerShow })));
 
-const MitreTechniquesList = React.lazy(() => import('./resources/MitreTechniques').then(module => ({ default: module.MitreTechniquesList })));
-const MitreTechniquesShow = React.lazy(() => import('./resources/MitreTechniques').then(module => ({ default: module.MitreTechniquesShow })));
+const MitreTechniquesList = React.lazy(() => import(/* webpackPrefetch: true */ './resources/MitreTechniques').then(module => ({ default: module.MitreTechniquesList })));
+const MitreTechniquesShow = React.lazy(() => import(/* webpackPrefetch: true */ './resources/MitreTechniques').then(module => ({ default: module.MitreTechniquesShow })));
 
-const YaraRulesList = React.lazy(() => import('./resources/YaraRules').then(module => ({ default: module.YaraRulesList })));
-const YaraRulesShow = React.lazy(() => import('./resources/YaraRules').then(module => ({ default: module.YaraRulesShow })));
-const YaraRulesCreate = React.lazy(() => import('./resources/YaraRules').then(module => ({ default: module.YaraRulesCreate })));
-const YaraRulesEdit = React.lazy(() => import('./resources/YaraRules').then(module => ({ default: module.YaraRulesEdit })));
+const YaraRulesList = React.lazy(() => import(/* webpackPrefetch: true */ './resources/YaraRules').then(module => ({ default: module.YaraRulesList })));
+const YaraRulesShow = React.lazy(() => import(/* webpackPrefetch: true */ './resources/YaraRules').then(module => ({ default: module.YaraRulesShow })));
+const YaraRulesCreate = React.lazy(() => import(/* webpackPrefetch: true */ './resources/YaraRules').then(module => ({ default: module.YaraRulesCreate })));
+const YaraRulesEdit = React.lazy(() => import(/* webpackPrefetch: true */ './resources/YaraRules').then(module => ({ default: module.YaraRulesEdit })));
 
-const YaraMatchesList = React.lazy(() => import('./resources/YaraMatches').then(module => ({ default: module.YaraMatchesList })));
-const YaraMatchesShow = React.lazy(() => import('./resources/YaraMatches').then(module => ({ default: module.YaraMatchesShow })));
+const YaraMatchesList = React.lazy(() => import(/* webpackPrefetch: true */ './resources/YaraMatches').then(module => ({ default: module.YaraMatchesList })));
+const YaraMatchesShow = React.lazy(() => import(/* webpackPrefetch: true */ './resources/YaraMatches').then(module => ({ default: module.YaraMatchesShow })));
 
-const TimelineList = React.lazy(() => import('./resources/Timelines').then(module => ({ default: module.TimelineList })));
+const TimelineList = React.lazy(() => import(/* webpackPrefetch: true */ './resources/Timelines').then(module => ({ default: module.TimelineList })));
 
-const TrendAnalysisPage = React.lazy(() => import('./components/TrendAnalysisPage'));
+const TrendAnalysisPage = React.lazy(() => import(/* webpackPrefetch: true */ './components/TrendAnalysisPage'));
 
 
-const ConfigurationList = React.lazy(() => import('./resources/Configuration').then(module => ({ default: module.ConfigurationList })));
-const ConfigurationShow = React.lazy(() => import('./resources/Configuration').then(module => ({ default: module.ConfigurationShow })));
+const ConfigurationList = React.lazy(() => import(/* webpackPrefetch: true */ './resources/Configuration').then(module => ({ default: module.ConfigurationList })));
+const ConfigurationShow = React.lazy(() => import(/* webpackPrefetch: true */ './resources/Configuration').then(module => ({ default: module.ConfigurationShow })));
 
 // CastellanProFree - No edition detection needed
 
@@ -88,7 +89,7 @@ const App = () => {
       <SignalRProvider>
         <DashboardDataProvider>
           <Admin
-            dataProvider={enhancedCastellanDataProvider}
+            dataProvider={createEnhancedDataProvider(enhancedCastellanDataProvider)}
             authProvider={enhancedAuthProvider}
             layout={Layout}
             dashboard={Dashboard}

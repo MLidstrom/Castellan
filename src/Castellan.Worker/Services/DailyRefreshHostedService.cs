@@ -113,12 +113,13 @@ public class DailyRefreshHostedService : BackgroundService
                 _logger.LogInformation("Starting automatic YARA rules import...");
 
                 // Call the import tool
-                var importToolPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "..", "..", "..", "..", "Tools", "YaraImportTool");
+                var repoRoot = GetRepositoryRoot();
+                var importToolPath = Path.Combine(repoRoot, "src", "Tools", "YaraImportTool");
                 var processStartInfo = new System.Diagnostics.ProcessStartInfo
                 {
                     FileName = "dotnet",
                     Arguments = $"run --project \"{importToolPath}\" -- --limit {config.Sources.MaxRulesPerSource}",
-                    WorkingDirectory = AppDomain.CurrentDomain.BaseDirectory,
+                    WorkingDirectory = repoRoot,
                     RedirectStandardOutput = true,
                     RedirectStandardError = true,
                     UseShellExecute = false,
@@ -161,15 +162,8 @@ public class DailyRefreshHostedService : BackgroundService
                             });
                         await File.WriteAllTextAsync(configPath, updatedConfigJson, stoppingToken);
 
-                        // Copy database to runtime location if needed
-                        var sourceDb = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "..", "..", "..", "..", "..", "data", "castellan.db");
-                        var targetDb = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "data", "castellan.db");
-
-                        if (File.Exists(sourceDb))
-                        {
-                            File.Copy(sourceDb, targetDb, overwrite: true);
-                            _logger.LogInformation("Updated YARA rules database copied to runtime location");
-                        }
+                        // No need to copy database - we're using the central one directly
+                        _logger.LogInformation("YARA rules database updated in central location");
                     }
                     else
                     {
@@ -186,6 +180,25 @@ public class DailyRefreshHostedService : BackgroundService
         {
             _logger.LogError(ex, "Error during YARA rules auto-update check");
         }
+    }
+
+    private static string GetRepositoryRoot()
+    {
+        // Fixed repository root path
+        var repoRoot = @"C:\Users\matsl\Castellan";
+        if (Directory.Exists(repoRoot))
+        {
+            return repoRoot;
+        }
+
+        // Fallback: Navigate up from current directory
+        var dir = new DirectoryInfo(AppDomain.CurrentDomain.BaseDirectory);
+        while (dir != null && !Directory.Exists(Path.Combine(dir.FullName, "src")))
+        {
+            dir = dir.Parent;
+        }
+
+        return dir?.FullName ?? AppDomain.CurrentDomain.BaseDirectory;
     }
 }
 

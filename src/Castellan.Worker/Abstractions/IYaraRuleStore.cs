@@ -13,6 +13,11 @@ public interface IYaraRuleStore
     /// Get all YARA rules
     /// </summary>
     Task<IEnumerable<YaraRule>> GetAllRulesAsync();
+
+    /// <summary>
+    /// Get YARA rules with pagination
+    /// </summary>
+    Task<(IEnumerable<YaraRule> Rules, int TotalCount)> GetRulesPagedAsync(int page = 1, int limit = 25, string? category = null, string? tag = null, string? mitreTechnique = null, bool? enabled = null);
     
     /// <summary>
     /// Get enabled YARA rules

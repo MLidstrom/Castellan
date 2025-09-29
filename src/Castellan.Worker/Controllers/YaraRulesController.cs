@@ -43,46 +43,18 @@ public class YaraRulesController : ControllerBase
     {
         try
         {
-            _logger.LogInformation("Getting YARA rules - category: {Category}, tag: {Tag}, enabled: {Enabled}", 
-                category, tag, enabled);
-            
-            IEnumerable<YaraRule> rules;
-            
-            // Apply filters
-            if (!string.IsNullOrEmpty(category))
-            {
-                rules = await _ruleStore.GetRulesByCategoryAsync(category);
-            }
-            else if (!string.IsNullOrEmpty(tag))
-            {
-                rules = await _ruleStore.GetRulesByTagAsync(tag);
-            }
-            else if (!string.IsNullOrEmpty(mitreTechnique))
-            {
-                rules = await _ruleStore.GetRulesByMitreTechniqueAsync(mitreTechnique);
-            }
-            else if (enabled.HasValue && enabled.Value)
-            {
-                rules = await _ruleStore.GetEnabledRulesAsync();
-            }
-            else
-            {
-                rules = await _ruleStore.GetAllRulesAsync();
-            }
-            
+            _logger.LogInformation("Getting YARA rules - page: {Page}, limit: {Limit}, category: {Category}, tag: {Tag}, enabled: {Enabled}",
+                page, limit, category, tag, enabled);
+
+            // Use the new paginated method that handles filtering and pagination at the database level
+            var (rules, totalCount) = await _ruleStore.GetRulesPagedAsync(page, limit, category, tag, mitreTechnique, enabled);
+
             // Convert to DTOs
             var ruleDtos = rules.Select(ConvertToDto).ToList();
-            
-            // Apply pagination
-            var totalCount = ruleDtos.Count;
-            var pagedRules = ruleDtos
-                .Skip((page - 1) * limit)
-                .Take(limit)
-                .ToList();
-            
+
             return Ok(new
             {
-                data = pagedRules,
+                data = ruleDtos,
                 total = totalCount,
                 page,
                 perPage = limit

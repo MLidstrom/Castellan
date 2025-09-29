@@ -51,6 +51,39 @@ public class FileBasedYaraRuleStore : IYaraRuleStore
             return Task.FromResult<IEnumerable<YaraRule>>(rules);
         }
     }
+
+    public Task<(IEnumerable<YaraRule> Rules, int TotalCount)> GetRulesPagedAsync(int page = 1, int limit = 25, string? category = null, string? tag = null, string? mitreTechnique = null, bool? enabled = null)
+    {
+        lock (_lock)
+        {
+            var allRules = LoadRules().AsQueryable();
+
+            // Apply filters
+            if (!string.IsNullOrEmpty(category))
+                allRules = allRules.Where(r => r.Category == category);
+
+            if (!string.IsNullOrEmpty(tag))
+                allRules = allRules.Where(r => r.Tags.Contains(tag));
+
+            if (!string.IsNullOrEmpty(mitreTechnique))
+                allRules = allRules.Where(r => r.MitreTechniques.Contains(mitreTechnique));
+
+            if (enabled.HasValue)
+                allRules = allRules.Where(r => r.IsEnabled == enabled.Value);
+
+            // Get total count
+            var totalCount = allRules.Count();
+
+            // Apply pagination
+            var rules = allRules
+                .OrderBy(r => r.Name)
+                .Skip((page - 1) * limit)
+                .Take(limit)
+                .ToList();
+
+            return Task.FromResult<(IEnumerable<YaraRule>, int)>((rules, totalCount));
+        }
+    }
     
     public Task<IEnumerable<YaraRule>> GetEnabledRulesAsync()
     {
