@@ -203,7 +203,7 @@ public class EnhancedProgressTrackingService : IEnhancedProgressTrackingService
 {
     private readonly ILogger<EnhancedProgressTrackingService> _logger;
     private readonly IScanProgressBroadcaster _broadcaster;
-    private readonly IThreatScanner _threatScanner;
+    private readonly IServiceScopeFactory _serviceScopeFactory;
     private readonly SystemHealthService _systemHealth;
     private readonly IPerformanceMonitor _performanceMonitor;
     private readonly IVirusTotalService _virusTotalService;
@@ -216,7 +216,7 @@ public class EnhancedProgressTrackingService : IEnhancedProgressTrackingService
     public EnhancedProgressTrackingService(
         ILogger<EnhancedProgressTrackingService> logger,
         IScanProgressBroadcaster broadcaster,
-        IThreatScanner threatScanner,
+        IServiceScopeFactory serviceScopeFactory,
         SystemHealthService systemHealth,
         IPerformanceMonitor performanceMonitor,
         IVirusTotalService virusTotalService,
@@ -226,7 +226,7 @@ public class EnhancedProgressTrackingService : IEnhancedProgressTrackingService
     {
         _logger = logger;
         _broadcaster = broadcaster;
-        _threatScanner = threatScanner;
+        _serviceScopeFactory = serviceScopeFactory;
         _systemHealth = systemHealth;
         _performanceMonitor = performanceMonitor;
         _virusTotalService = virusTotalService;
@@ -474,8 +474,10 @@ public class EnhancedProgressTrackingService : IEnhancedProgressTrackingService
     {
         try
         {
-            var currentProgress = await _threatScanner.GetScanProgressAsync();
-            var recentScans = await _threatScanner.GetScanHistoryAsync(5);
+            using var scope = _serviceScopeFactory.CreateScope();
+            var threatScanner = scope.ServiceProvider.GetRequiredService<IThreatScanner>();
+            var currentProgress = await threatScanner.GetScanProgressAsync();
+            var recentScans = await threatScanner.GetScanHistoryAsync(5);
 
             return new ScanStatus
             {

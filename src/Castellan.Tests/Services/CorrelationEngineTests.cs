@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.DependencyInjection;
 using Moq;
 using Xunit;
 using Castellan.Worker.Services;
@@ -14,6 +15,7 @@ namespace Castellan.Tests.Services;
 public class CorrelationEngineTests
 {
     private readonly Mock<ILogger<CorrelationEngine>> _mockLogger;
+    private readonly Mock<IServiceScopeFactory> _mockServiceScopeFactory;
     private readonly Mock<ISecurityEventStore> _mockEventStore;
     private readonly CorrelationEngine _correlationEngine;
 
@@ -21,7 +23,17 @@ public class CorrelationEngineTests
     {
         _mockLogger = new Mock<ILogger<CorrelationEngine>>();
         _mockEventStore = new Mock<ISecurityEventStore>();
-        _correlationEngine = new CorrelationEngine(_mockLogger.Object, _mockEventStore.Object);
+
+        // Setup mock service scope factory
+        var mockServiceScope = new Mock<IServiceScope>();
+        var mockServiceProvider = new Mock<IServiceProvider>();
+        mockServiceProvider.Setup(x => x.GetService(typeof(ISecurityEventStore))).Returns(_mockEventStore.Object);
+        mockServiceScope.Setup(x => x.ServiceProvider).Returns(mockServiceProvider.Object);
+
+        _mockServiceScopeFactory = new Mock<IServiceScopeFactory>();
+        _mockServiceScopeFactory.Setup(x => x.CreateScope()).Returns(mockServiceScope.Object);
+
+        _correlationEngine = new CorrelationEngine(_mockLogger.Object, _mockServiceScopeFactory.Object);
     }
 
     [Fact]

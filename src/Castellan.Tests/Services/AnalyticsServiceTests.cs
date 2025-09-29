@@ -1,6 +1,7 @@
 using FluentAssertions;
 using Castellan.Worker.Abstractions;
 using Castellan.Worker.Services;
+using Microsoft.Extensions.DependencyInjection;
 using Moq;
 using Xunit;
 
@@ -9,13 +10,24 @@ namespace Castellan.Tests.Services;
 [Trait("Category", "Unit")]
 public class AnalyticsServiceTests
 {
+    private readonly Mock<IServiceScopeFactory> _mockServiceScopeFactory;
     private readonly Mock<ISecurityEventStore> _mockSecurityEventStore;
     private readonly AnalyticsService _service;
 
     public AnalyticsServiceTests()
     {
         _mockSecurityEventStore = new Mock<ISecurityEventStore>();
-        _service = new AnalyticsService(_mockSecurityEventStore.Object);
+
+        // Setup mock service scope factory
+        var mockServiceScope = new Mock<IServiceScope>();
+        var mockServiceProvider = new Mock<IServiceProvider>();
+        mockServiceProvider.Setup(x => x.GetService(typeof(ISecurityEventStore))).Returns(_mockSecurityEventStore.Object);
+        mockServiceScope.Setup(x => x.ServiceProvider).Returns(mockServiceProvider.Object);
+
+        _mockServiceScopeFactory = new Mock<IServiceScopeFactory>();
+        _mockServiceScopeFactory.Setup(x => x.CreateScope()).Returns(mockServiceScope.Object);
+
+        _service = new AnalyticsService(_mockServiceScopeFactory.Object);
     }
 
     [Fact]

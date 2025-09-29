@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using Microsoft.ML;
 using Microsoft.ML.Data;
+using Microsoft.Extensions.DependencyInjection;
 using Castellan.Worker.Abstractions;
 using Castellan.Worker.Models;
 using System.Diagnostics;
@@ -18,7 +19,7 @@ namespace Castellan.Worker.Services;
 public class CorrelationEngine : ICorrelationEngine
 {
     private readonly ILogger<CorrelationEngine> _logger;
-    private readonly ISecurityEventStore _eventStore;
+    private readonly IServiceScopeFactory _serviceScopeFactory;
     private readonly ConcurrentDictionary<string, EventCorrelation> _correlations = new();
     private readonly ConcurrentDictionary<string, List<SecurityEvent>> _eventCache = new();
     private readonly List<CorrelationRule> _rules;
@@ -28,10 +29,10 @@ public class CorrelationEngine : ICorrelationEngine
 
     public CorrelationEngine(
         ILogger<CorrelationEngine> logger,
-        ISecurityEventStore eventStore)
+        IServiceScopeFactory serviceScopeFactory)
     {
         _logger = logger;
-        _eventStore = eventStore;
+        _serviceScopeFactory = serviceScopeFactory;
         _mlContext = new MLContext(seed: 42);
         _rules = InitializeCorrelationRules();
     }
@@ -358,7 +359,9 @@ public class CorrelationEngine : ICorrelationEngine
                 ["StartTime"] = cutoff,
                 ["EndTime"] = DateTime.UtcNow
             };
-            var storeEvents = _eventStore.GetSecurityEvents(1, 1000, filterDict);
+            using var scope = _serviceScopeFactory.CreateScope();
+            var eventStore = scope.ServiceProvider.GetRequiredService<ISecurityEventStore>();
+            var storeEvents = eventStore.GetSecurityEvents(1, 1000, filterDict);
             events.AddRange(storeEvents);
         }
 

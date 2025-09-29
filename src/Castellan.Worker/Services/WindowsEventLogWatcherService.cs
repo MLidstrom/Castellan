@@ -14,29 +14,26 @@ namespace Castellan.Worker.Services;
 public class WindowsEventLogWatcherService : BackgroundService
 {
     private readonly WindowsEventLogOptions _options;
-    private readonly IEventBookmarkStore _bookmarkStore;
-    private readonly ISecurityEventStore _securityEventStore;
+    private readonly IServiceScopeFactory _serviceScopeFactory;
     private readonly IScanProgressBroadcaster _broadcaster;
     private readonly DashboardDataBroadcastService _dashboardBroadcast;
     private readonly ILogger<WindowsEventLogWatcherService> _logger;
     private readonly IServiceProvider _serviceProvider;
-    
+
     private readonly Channel<RawEvent> _eventQueue;
     private readonly List<WindowsEventChannelWatcher> _watchers = new();
     private readonly CancellationTokenSource _cancellationTokenSource = new();
 
     public WindowsEventLogWatcherService(
         IOptions<WindowsEventLogOptions> options,
-        IEventBookmarkStore bookmarkStore,
-        ISecurityEventStore securityEventStore,
+        IServiceScopeFactory serviceScopeFactory,
         IScanProgressBroadcaster broadcaster,
         DashboardDataBroadcastService dashboardBroadcast,
         ILogger<WindowsEventLogWatcherService> logger,
         IServiceProvider serviceProvider)
     {
         _options = options.Value;
-        _bookmarkStore = bookmarkStore;
-        _securityEventStore = securityEventStore;
+        _serviceScopeFactory = serviceScopeFactory;
         _broadcaster = broadcaster;
         _dashboardBroadcast = dashboardBroadcast;
         _logger = logger;
@@ -112,9 +109,11 @@ public class WindowsEventLogWatcherService : BackgroundService
                 _logger.LogInformation("Starting watcher for channel: {ChannelName} with filter: {XPathFilter}",
                     channelConfig.Name, channelConfig.XPathFilter);
 
+                using var scope = _serviceScopeFactory.CreateScope();
+                var bookmarkStore = scope.ServiceProvider.GetRequiredService<IEventBookmarkStore>();
                 var watcher = new WindowsEventChannelWatcher(
                     channelConfig,
-                    _bookmarkStore,
+                    bookmarkStore,
                     _eventQueue.Writer,
                     _serviceProvider.GetRequiredService<ILogger<WindowsEventChannelWatcher>>());
 
@@ -204,7 +203,9 @@ public class WindowsEventLogWatcherService : BackgroundService
 
         // Store in security event store (single source of truth for memory + database)
         // This automatically triggers SignalR broadcasting via SignalRSecurityEventStore
-        _securityEventStore.AddSecurityEvent(securityEvent);
+        using var scope = _serviceScopeFactory.CreateScope();
+        var securityEventStore = scope.ServiceProvider.GetRequiredService<ISecurityEventStore>();
+        securityEventStore.AddSecurityEvent(securityEvent);
 
         // Trigger immediate dashboard broadcast if enabled
         if (_options.ImmediateDashboardBroadcast)

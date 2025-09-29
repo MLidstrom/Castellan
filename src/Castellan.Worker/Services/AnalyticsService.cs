@@ -6,17 +6,18 @@ using Castellan.Worker.Models;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace Castellan.Worker.Services
 {
     public class AnalyticsService
     {
-        private readonly ISecurityEventStore _securityEventStore;
+        private readonly IServiceScopeFactory _serviceScopeFactory;
         private readonly MLContext _mlContext;
 
-        public AnalyticsService(ISecurityEventStore securityEventStore)
+        public AnalyticsService(IServiceScopeFactory serviceScopeFactory)
         {
-            _securityEventStore = securityEventStore;
+            _serviceScopeFactory = serviceScopeFactory;
             _mlContext = new MLContext();
         }
 
