@@ -111,7 +111,7 @@ const THREAT_LEVELS = [
 ];
 
 // Custom field to display rule validation status
-const ValidationStatusField = () => {
+const ValidationStatusField = React.memo(() => {
   const record = useRecordContext();
   if (!record) return null;
 
@@ -135,10 +135,10 @@ const ValidationStatusField = () => {
       )}
     </Box>
   );
-};
+});
 
 // Custom field to display threat level with color coding
-const ThreatLevelField = () => {
+const ThreatLevelField = React.memo(() => {
   const record = useRecordContext();
   if (!record) return null;
 
@@ -159,10 +159,10 @@ const ThreatLevelField = () => {
       size="small"
     />
   );
-};
+});
 
 // Bulk Enable Button
-const BulkEnableButton = () => {
+const BulkEnableButton = React.memo(() => {
   const { selectedIds, onUnselectItems } = useListContext();
   const dataProvider = useDataProvider();
   const notify = useNotify();
@@ -200,10 +200,10 @@ const BulkEnableButton = () => {
       Enable ({selectedIds.length})
     </Button>
   );
-};
+});
 
 // Bulk Disable Button
-const BulkDisableButton = () => {
+const BulkDisableButton = React.memo(() => {
   const { selectedIds, onUnselectItems } = useListContext();
   const dataProvider = useDataProvider();
   const notify = useNotify();
@@ -241,10 +241,10 @@ const BulkDisableButton = () => {
       Disable ({selectedIds.length})
     </Button>
   );
-};
+});
 
 // Bulk Validate Button
-const BulkValidateButton = () => {
+const BulkValidateButton = React.memo(() => {
   const { selectedIds, onUnselectItems } = useListContext();
   const dataProvider = useDataProvider();
   const notify = useNotify();
@@ -282,10 +282,10 @@ const BulkValidateButton = () => {
       Validate ({selectedIds.length})
     </Button>
   );
-};
+});
 
 // Custom Bulk Actions
-const YaraBulkActions = () => (
+const YaraBulkActions = React.memo(() => (
   <>
     <BulkEnableButton />
     <BulkDisableButton />
@@ -293,7 +293,7 @@ const YaraBulkActions = () => (
     <BulkDeleteButton />
     <BulkExportButton />
   </>
-);
+));
 
 // Import Dialog Component
 const ImportDialog = ({ open, onClose }: { open: boolean; onClose: () => void }) => {
@@ -733,7 +733,7 @@ const ManualScanDialog = ({ open, onClose }: { open: boolean; onClose: () => voi
 };
 
 // Custom field to display MITRE techniques
-const MitreTechniquesField = () => {
+const MitreTechniquesField = React.memo(() => {
   const record = useRecordContext();
   if (!record || !record.mitreTechniques) return null;
 
@@ -750,7 +750,7 @@ const MitreTechniquesField = () => {
       ))}
     </Box>
   );
-};
+});
 
 // List view for YARA rules
 export const YaraRulesList = () => (
@@ -801,7 +801,7 @@ export const YaraRulesList = () => (
 );
 
 // False Positive Button for Show View
-const FalsePositiveButton = () => {
+const FalsePositiveButton = React.memo(() => {
   const record = useRecordContext();
   const dataProvider = useDataProvider();
   const notify = useNotify();
@@ -843,10 +843,10 @@ const FalsePositiveButton = () => {
       />
     </>
   );
-};
+});
 
 // Enhanced Show Actions
-const YaraShowActions = () => {
+const YaraShowActions = React.memo(() => {
   const record = useRecordContext();
   const exportRules = useExportRules();
 
@@ -864,7 +864,7 @@ const YaraShowActions = () => {
       <FalsePositiveButton />
     </TopToolbar>
   );
-};
+});
 
 // Show view for individual YARA rule
 export const YaraRulesShow = () => (

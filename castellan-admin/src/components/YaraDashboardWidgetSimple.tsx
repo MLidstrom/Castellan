@@ -22,7 +22,7 @@ import {
 } from '@mui/icons-material';
 
 // Simple YARA Dashboard Widget with minimal dependencies
-export const YaraDashboardWidgetSimple = () => {
+export const YaraDashboardWidgetSimple = React.memo(() => {
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [lastRefresh, setLastRefresh] = useState(new Date());
@@ -36,8 +36,9 @@ export const YaraDashboardWidgetSimple = () => {
       }
 
       // Direct API calls without data provider
+      // Fetch all rules for accurate counts (use a high limit to get all rules)
       const [rulesResponse, statusResponse] = await Promise.all([
-        fetch('http://localhost:5000/api/yara-rules', {
+        fetch('http://localhost:5000/api/yara-rules?limit=1000', {
           headers: {
             'Authorization': `Bearer ${authToken}`,
             'Content-Type': 'application/json'
@@ -60,9 +61,9 @@ export const YaraDashboardWidgetSimple = () => {
 
       const rulesData = await rulesResponse.json();
       const statusData = await statusResponse.json();
-      
+
       const rules = rulesData.data || [];
-      
+
       setData({
         totalRules: rules.length,
         enabledRules: rules.filter((r: any) => r.isEnabled).length,
@@ -231,4 +232,4 @@ export const YaraDashboardWidgetSimple = () => {
       </CardContent>
     </Card>
   );
-};
+});

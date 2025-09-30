@@ -7,7 +7,7 @@ import {
   Box
 } from '@mui/material';
 
-export const ThreatIntelligenceHealthDashboard: React.FC = () => {
+export const ThreatIntelligenceHealthDashboard: React.FC = React.memo(() => {
   return (
     <Card sx={{ width: '100%' }}>
       <CardHeader title="Threat Intelligence Health" />
@@ -20,6 +20,6 @@ export const ThreatIntelligenceHealthDashboard: React.FC = () => {
       </CardContent>
     </Card>
   );
-};
+});
 
 export default ThreatIntelligenceHealthDashboard;

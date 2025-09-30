@@ -157,4 +157,58 @@ public class MitreService
             .OrderBy(t => t.TechniqueId)
             .ToListAsync();
     }
+
+    /// <summary>
+    /// Gets paginated MITRE techniques with filtering and sorting applied at database level
+    /// </summary>
+    public async Task<(List<MitreTechnique> Techniques, int TotalCount)> GetTechniquesPagedAsync(
+        int page = 1,
+        int pageSize = 50,
+        string? sort = null,
+        bool descending = false,
+        string? tactic = null,
+        string? search = null)
+    {
+        var query = _context.MitreTechniques.AsQueryable();
+
+        // Apply filters at database level
+        if (!string.IsNullOrEmpty(tactic))
+        {
+            query = query.Where(t => t.Tactic == tactic);
+        }
+
+        if (!string.IsNullOrEmpty(search))
+        {
+            query = query.Where(t => t.Name.Contains(search) ||
+                                   t.Description!.Contains(search) ||
+                                   t.TechniqueId.Contains(search));
+        }
+
+        // Get total count before pagination
+        var totalCount = await query.CountAsync();
+
+        // Apply sorting at database level
+        query = (sort?.ToLowerInvariant()) switch
+        {
+            "techniqueid" => descending ? query.OrderByDescending(t => t.TechniqueId)
+                                        : query.OrderBy(t => t.TechniqueId),
+            "name" => descending ? query.OrderByDescending(t => t.Name)
+                                 : query.OrderBy(t => t.Name),
+            "tactic" => descending ? query.OrderByDescending(t => t.Tactic)
+                                   : query.OrderBy(t => t.Tactic),
+            "platform" => descending ? query.OrderByDescending(t => t.Platform)
+                                     : query.OrderBy(t => t.Platform),
+            "createdat" => descending ? query.OrderByDescending(t => t.CreatedAt)
+                                      : query.OrderBy(t => t.CreatedAt),
+            _ => query.OrderBy(t => t.TechniqueId)
+        };
+
+        // Apply pagination at database level
+        var techniques = await query
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
+            .ToListAsync();
+
+        return (techniques, totalCount);
+    }
 }

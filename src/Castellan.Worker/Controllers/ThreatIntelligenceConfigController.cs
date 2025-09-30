@@ -82,8 +82,12 @@ public class ThreatIntelligenceConfigController : ControllerBase
                 return BadRequest(validationResult);
             }
 
-            // Save to file
-            var json = JsonSerializer.Serialize(config, new JsonSerializerOptions { WriteIndented = true });
+            // Save to file with camelCase naming
+            var json = JsonSerializer.Serialize(config, new JsonSerializerOptions
+            {
+                WriteIndented = true,
+                PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+            });
             await System.IO.File.WriteAllTextAsync(_configFilePath, json);
 
             _logger.LogInformation("Threat intelligence configuration updated successfully");

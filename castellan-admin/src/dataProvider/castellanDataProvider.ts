@@ -61,6 +61,7 @@ const RESOURCE_MAP: Record<string, string> = {
     'correlation/analyze': 'correlation/analyze',
     'correlation/attack-chains': 'correlation/attack-chains',
     // MITRE ATT&CK resource mappings
+    'mitre-techniques': 'mitre/techniques',
     'mitre/techniques': 'mitre/techniques',
     'mitre/tactics': 'mitre/tactics',
     'mitre/groups': 'mitre/groups',
@@ -116,18 +117,45 @@ const transformFilters = (filters: any) => {
 // Transform backend response to react-admin format
 const transformResponse = (resource: string, response: any) => {
     // Handle MITRE-specific response formats
-    if (resource.startsWith('mitre/')) {
-        const resourceType = resource.split('/')[1]; // 'techniques', 'tactics', 'groups', 'software'
-        
-        // MITRE endpoints return { techniques: [...] } or { tactics: [...] } etc.
-        if (response[resourceType]) {
-            return {
-                data: response[resourceType],
-                total: response.totalCount || response[resourceType].length
-            };
+    if (resource.startsWith('mitre-') || resource.startsWith('mitre/')) {
+        // Extract resource type from either 'mitre-techniques' or 'mitre/techniques'
+        let resourceType: string;
+        if (resource.includes('/')) {
+            resourceType = resource.split('/')[1]; // 'techniques', 'tactics', etc.
+        } else {
+            // For 'mitre-techniques', extract 'technique' and add 's'
+            const baseName = resource.replace('mitre-', '').replace(/s$/, ''); // Remove trailing 's' if present
+            resourceType = baseName + 's'; // Add 's' back: 'techniques', 'tactics', etc.
         }
+
+        // MITRE endpoints return { techniques: [...], totalCount: 823 }
+        let data = response[resourceType] || response.data || [];
+
+        // Ensure data is an array
+        if (!Array.isArray(data)) {
+            console.warn('[transformResponse] MITRE data is not an array:', data);
+            data = [];
+        }
+
+        console.log('[transformResponse] MITRE data before transform:', data.slice(0, 2));
+
+        // Ensure MITRE records have an 'id' field (React Admin requirement)
+        // Use techniqueId as the ID since the backend API expects it
+        data = data.map((item: any) => {
+            return {
+                ...item,
+                id: item.techniqueId || item.tacticId || item.groupId || item.softwareId || item.id
+            };
+        });
+
+        console.log('[transformResponse] MITRE data after transform:', data.slice(0, 2));
+
+        return {
+            data: data,
+            total: response.totalCount || data.length
+        };
     }
-    
+
     // Handle standard response formats
     if (response.data) {
         return {
@@ -135,7 +163,7 @@ const transformResponse = (resource: string, response: any) => {
             total: response.total || response.data.length
         };
     }
-    
+
     // Handle array responses
     if (Array.isArray(response)) {
         return {
@@ -143,7 +171,7 @@ const transformResponse = (resource: string, response: any) => {
             total: response.length
         };
     }
-    
+
     // Handle single object responses
     return {
         data: [response],
@@ -234,16 +262,44 @@ export const castellanDataProvider: DataProvider = {
                 try {
                     const { json } = await httpClient(url);
                     console.log('[DataProvider] Configuration loaded from backend:', json);
-                    return { data: json.data || json };
+
+                    // Backend returns nested in { data: ... }
+                    const backendData = json.data || json;
+
+                    // Helper to convert PascalCase object to camelCase
+                    const toCamelCase = (obj: any) => {
+                        if (!obj || typeof obj !== 'object') return obj;
+
+                        const result: any = {};
+                        for (const key in obj) {
+                            const camelKey = key.charAt(0).toLowerCase() + key.slice(1);
+                            result[camelKey] = obj[key];
+                        }
+                        return result;
+                    };
+
+                    // Transform the entire config object
+                    const frontendData = {
+                        id: backendData.Id || backendData.id || 'threat-intelligence',
+                        virusTotal: backendData.VirusTotal ? toCamelCase(backendData.VirusTotal) :
+                            backendData.virusTotal || { enabled: false, apiKey: '', rateLimitPerMinute: 4, cacheEnabled: true, cacheTtlMinutes: 60 },
+                        malwareBazaar: backendData.MalwareBazaar ? toCamelCase(backendData.MalwareBazaar) :
+                            backendData.malwareBazaar || { enabled: false, rateLimitPerMinute: 10, cacheEnabled: true, cacheTtlMinutes: 30 },
+                        alienVaultOtx: backendData.AlienVaultOtx ? toCamelCase(backendData.AlienVaultOtx) :
+                            backendData.alienVaultOtx || { enabled: false, apiKey: '', rateLimitPerMinute: 10, cacheEnabled: true, cacheTtlMinutes: 60 }
+                    };
+
+                    console.log('[DataProvider] Transformed to frontend format:', frontendData);
+                    return { data: frontendData };
                 } catch (error) {
                     console.error('[DataProvider] Error loading configuration from backend:', error);
                     // Return defaults on error
                     return {
                         data: {
                             id: 'threat-intelligence',
-                            virusTotal: { enabled: false },
-                            malwareBazaar: { enabled: false },
-                            alienVaultOtx: { enabled: false }
+                            virusTotal: { enabled: false, apiKey: '', rateLimitPerMinute: 4, cacheEnabled: true, cacheTtlMinutes: 60 },
+                            malwareBazaar: { enabled: false, rateLimitPerMinute: 10, cacheEnabled: true, cacheTtlMinutes: 30 },
+                            alienVaultOtx: { enabled: false, apiKey: '', rateLimitPerMinute: 10, cacheEnabled: true, cacheTtlMinutes: 60 }
                         }
                     };
                 }
@@ -302,16 +358,33 @@ export const castellanDataProvider: DataProvider = {
 
         const backendResource = RESOURCE_MAP[resource] || resource;
         const url = `${API_URL}/${backendResource}/${params.id}`;
-        
+
+        console.log(`[DataProvider.getOne] Fetching ${resource} with ID ${params.id} from ${url}`);
+
         try {
             const { json } = await httpClient(url);
+            console.log(`[DataProvider.getOne] Raw response:`, json);
+
             // Backend returns { data: { id: "1", ... } }, we need to extract the nested data
-            return { data: json.data || json };
+            let data = json.data || json;
+
+            // Handle MITRE resources - ensure they use techniqueId as the id
+            if (resource.startsWith('mitre-') || resource.startsWith('mitre/')) {
+                console.log(`[DataProvider.getOne] MITRE data before transform:`, data);
+                // Always use techniqueId as id to match what we send in the request
+                data = {
+                    ...data,
+                    id: data.techniqueId || data.tacticId || data.groupId || data.softwareId || params.id
+                };
+                console.log(`[DataProvider.getOne] MITRE data after transform:`, data);
+            }
+
+            return { data };
         } catch (error) {
             // Enhanced error handling for specific cases
             if (error instanceof HttpError && error.status === 404) {
-                if (resource === 'mitre/techniques') {
-                    console.warn(`MITRE technique ${params.id} not found in database - may need to import MITRE data`);
+                if (resource.startsWith('mitre-') || resource.startsWith('mitre/')) {
+                    console.warn(`MITRE resource ${params.id} not found in database - may need to import MITRE data`);
                 } else {
                     console.warn(`${resource} with ID ${params.id} not found`);
                 }
@@ -455,21 +528,56 @@ export const castellanDataProvider: DataProvider = {
                 const backendResource = RESOURCE_MAP[resource] || resource;
                 const url = `${API_URL}/${backendResource}`;
 
+                // Transform camelCase to PascalCase for backend
+                const backendData = {
+                    Id: params.data.id || 'threat-intelligence',
+                    VirusTotal: params.data.virusTotal ? {
+                        Enabled: params.data.virusTotal.enabled,
+                        ApiKey: params.data.virusTotal.apiKey,
+                        RateLimitPerMinute: params.data.virusTotal.rateLimitPerMinute,
+                        CacheEnabled: params.data.virusTotal.cacheEnabled,
+                        CacheTtlMinutes: params.data.virusTotal.cacheTtlMinutes
+                    } : undefined,
+                    MalwareBazaar: params.data.malwareBazaar ? {
+                        Enabled: params.data.malwareBazaar.enabled,
+                        RateLimitPerMinute: params.data.malwareBazaar.rateLimitPerMinute,
+                        CacheEnabled: params.data.malwareBazaar.cacheEnabled,
+                        CacheTtlMinutes: params.data.malwareBazaar.cacheTtlMinutes
+                    } : undefined,
+                    AlienVaultOtx: params.data.alienVaultOtx ? {
+                        Enabled: params.data.alienVaultOtx.enabled,
+                        ApiKey: params.data.alienVaultOtx.apiKey,
+                        RateLimitPerMinute: params.data.alienVaultOtx.rateLimitPerMinute,
+                        CacheEnabled: params.data.alienVaultOtx.cacheEnabled,
+                        CacheTtlMinutes: params.data.alienVaultOtx.cacheTtlMinutes
+                    } : undefined
+                };
+
                 try {
                     const { json } = await httpClient(url, {
                         method: 'PUT',
-                        body: JSON.stringify(params.data),
+                        body: JSON.stringify(backendData),
                     });
 
                     console.log('[DataProvider] Configuration saved to backend:', json);
-                    return { data: json.data || json };
+
+                    // Just return the data we sent, since the backend save was successful
+                    // The backend returns the same data we sent, so we can just use params.data
+                    return {
+                        data: {
+                            id: 'threat-intelligence',
+                            ...params.data
+                        }
+                    };
                 } catch (error) {
                     console.error('[DataProvider] Error saving configuration to backend:', error);
                     throw error;
                 }
             } else if (params.id === 'notifications') {
                 console.log('[DataProvider] Saving notification configuration:', params.data);
-                const url = `${API_URL}/notifications/config`;
+
+                // The notifications endpoint expects the ID in the URL path
+                const url = `${API_URL}/notifications/config/${params.data.id || params.id}`;
 
                 try {
                     const { json } = await httpClient(url, {
@@ -478,7 +586,13 @@ export const castellanDataProvider: DataProvider = {
                     });
 
                     console.log('[DataProvider] Notification configuration saved:', json);
-                    return { data: { id: 'notifications', ...json.data || json } };
+                    // Return the data we sent since save was successful
+                    return {
+                        data: {
+                            id: params.id,
+                            ...params.data
+                        }
+                    };
                 } catch (error) {
                     console.error('[DataProvider] Error saving notification configuration:', error);
                     throw error;
@@ -494,7 +608,13 @@ export const castellanDataProvider: DataProvider = {
                     });
 
                     console.log('[DataProvider] IP enrichment configuration saved:', json);
-                    return { data: { id: 'ip-enrichment', ...json.data || json } };
+                    // Return the data we sent since save was successful
+                    return {
+                        data: {
+                            id: 'ip-enrichment',
+                            ...params.data
+                        }
+                    };
                 } catch (error) {
                     console.error('[DataProvider] Error saving IP enrichment configuration:', error);
                     throw error;
@@ -771,14 +891,18 @@ const baseEnhancedCastellanDataProvider = {
 
     // Custom method for generic API calls (used by MITRE components)
     custom: async ({ url, method = 'GET', body }: { url: string; method?: string; body?: any }) => {
+        if (!url) {
+            throw new Error('URL is required for custom API call');
+        }
+
         const fullUrl = url.startsWith('http') ? url : `${API_URL}/${url}`;
-        
+
         try {
             const options: fetchUtils.Options = { method };
             if (body) {
                 options.body = JSON.stringify(body);
             }
-            
+
             const { json } = await httpClient(fullUrl, options);
             return { data: json };
         } catch (error) {
@@ -807,8 +931,16 @@ const baseEnhancedCastellanDataProvider = {
         try {
             console.log(`[TimelineDataProvider] Getting timeline data: ${url}`);
             const { json } = await httpClient(url);
+            console.log(`[TimelineDataProvider] Response received:`, json);
+
+            // Handle empty or null response (204 No Content)
+            if (!json || (Array.isArray(json) && json.length === 0)) {
+                console.log(`[TimelineDataProvider] No data returned, returning empty array`);
+                return { data: [], total: 0 };
+            }
+
             return {
-                data: json.data || json,
+                data: json.data || json || [],
                 total: json.total || (json.data ? json.data.length : 0)
             };
         } catch (error) {
@@ -880,12 +1012,20 @@ const baseEnhancedCastellanDataProvider = {
         const query = new URLSearchParams();
         if (params?.from) query.set('from', params.from);
         if (params?.to) query.set('to', params.to);
-        
+
         const url = `${API_URL}/timeline/stats?${query.toString()}`;
         
         try {
             console.log(`[TimelineDataProvider] Getting timeline stats: ${url}`);
             const { json } = await httpClient(url);
+            console.log(`[TimelineDataProvider] Stats response:`, json);
+
+            // Handle empty response
+            if (!json) {
+                console.log(`[TimelineDataProvider] No stats data returned`);
+                return { data: { totalEvents: 0, highRisk: 0, mediumRisk: 0, lowRisk: 0 } };
+            }
+
             return {
                 data: json.data || json
             };

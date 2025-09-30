@@ -221,10 +221,23 @@ public class BackgroundComplianceReportService : BackgroundService, IBackgroundC
 
     public override void Dispose()
     {
-        _shutdownTokenSource?.Cancel();
-        _shutdownTokenSource?.Dispose();
-        _semaphore?.Dispose();
-        base.Dispose();
+        try
+        {
+            if (_shutdownTokenSource != null && !_shutdownTokenSource.IsCancellationRequested)
+            {
+                _shutdownTokenSource.Cancel();
+            }
+        }
+        catch (ObjectDisposedException)
+        {
+            // Already disposed, ignore
+        }
+        finally
+        {
+            _shutdownTokenSource?.Dispose();
+            _semaphore?.Dispose();
+            base.Dispose();
+        }
     }
 }
 

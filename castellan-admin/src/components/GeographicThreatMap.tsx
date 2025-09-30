@@ -34,7 +34,7 @@ interface GeographicThreat {
   events: any[];
 }
 
-export const GeographicThreatMap: React.FC = () => {
+export const GeographicThreatMap: React.FC = React.memo(() => {
   const [selectedCountry, setSelectedCountry] = useState<string>('');
 
   // Fetch security events
@@ -355,4 +355,4 @@ export const GeographicThreatMap: React.FC = () => {
       </CardContent>
     </Card>
   );
-};
+});

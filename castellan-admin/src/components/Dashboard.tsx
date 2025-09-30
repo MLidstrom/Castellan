@@ -17,7 +17,6 @@ import {
 } from '@mui/material';
 import { useNotify } from 'react-admin';
 import { useNavigate } from 'react-router-dom';
-import PreloadDebugPanel from './PreloadDebugPanel';
 import { 
   XAxis, 
   YAxis, 
@@ -56,7 +55,6 @@ import { GeographicThreatMap } from './GeographicThreatMap';
 import { PerformanceDashboard } from './PerformanceDashboard';
 import { ThreatIntelligenceHealthDashboard } from './ThreatIntelligenceHealthDashboard';
 import { ApiDiagnostic } from './ApiDiagnostic';
-import { YaraDashboardWidgetSimple } from './YaraDashboardWidgetSimple';
 import { YaraSummaryCard } from './YaraSummaryCard';
 
 // Import SignalR context for persistent connection
@@ -844,9 +842,6 @@ export const Dashboard = React.memo(() => {
 
   return (
     <Box sx={{ flexGrow: 1, p: 3 }}>
-      {/* Preload Debug Panel - Development Only */}
-      <PreloadDebugPanel show={process.env.NODE_ENV === 'development' || new URLSearchParams(window.location.search).get('preload-debug') === 'true'} />
-
       {/* Header */}
       <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
         <Typography variant="h4" component="h1">
@@ -1055,7 +1050,17 @@ export const Dashboard = React.memo(() => {
           </CardContent>
         </Card>
 
-        <Card sx={{ flex: 1 }}>
+        <Card
+          sx={{
+            flex: 1,
+            cursor: 'pointer',
+            '&:hover': {
+              boxShadow: 3,
+              backgroundColor: 'action.hover'
+            }
+          }}
+          onClick={() => navigate('/yara-rules')}
+        >
           <CardHeader title="YARA Summary" />
           <CardContent>
             <YaraSummaryCard />
@@ -1111,14 +1116,6 @@ export const Dashboard = React.memo(() => {
         </Card>
       </Box>
 
-      <Box mb={3}>
-        <Card>
-          <CardHeader title="YARA Dashboard" />
-          <CardContent>
-            <YaraDashboardWidgetSimple />
-          </CardContent>
-        </Card>
-      </Box>
     </Box>
   );
 });

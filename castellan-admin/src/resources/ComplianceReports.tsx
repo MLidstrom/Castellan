@@ -31,17 +31,17 @@ import {
 } from '@mui/icons-material';
 
 // Custom header component with shield icon
-const ComplianceReportsHeader = () => (
+const ComplianceReportsHeader = React.memo(() => (
   <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
     <SecurityIcon sx={{ mr: 1, color: 'primary.main' }} />
     <Typography variant="h4" component="h1">
       Compliance Reports
     </Typography>
   </Box>
-);
+));
 
 // Custom component for compliance framework with icons
-const FrameworkField = ({ source }: any) => {
+const FrameworkField = React.memo(({ source }: any) => {
   const record = useRecordContext();
   const getFrameworkIcon = (framework: string) => {
     switch (framework?.toUpperCase?.() || '') {
@@ -79,10 +79,10 @@ const FrameworkField = ({ source }: any) => {
       variant="outlined"
     />
   );
-};
+});
 
 // Custom component for implementation percentage with progress bar
-const ImplementationField = ({ source }: any) => {
+const ImplementationField = React.memo(({ source }: any) => {
   const record = useRecordContext();
   // Try multiple possible field names for implementation percentage
   const percentage = record?.implementationPercentage || record?.complianceScore || record?.ComplianceScore || 0;
@@ -110,10 +110,10 @@ const ImplementationField = ({ source }: any) => {
       </Typography>
     </Box>
   );
-};
+});
 
 // Custom component for report status
-const StatusField = ({ source }: any) => {
+const StatusField = React.memo(({ source }: any) => {
   const record = useRecordContext();
   const getStatusColor = (status: string) => {
     switch (status?.toLowerCase()) {
@@ -134,10 +134,10 @@ const StatusField = ({ source }: any) => {
       size="small"
     />
   );
-};
+});
 
 // Custom download button for reports
-const DownloadReportButton = () => {
+const DownloadReportButton = React.memo(() => {
   const record = useRecordContext();
   
   const handleDownload = () => {
@@ -164,7 +164,7 @@ const DownloadReportButton = () => {
       size="small"
     />
   );
-};
+});
 
 // Filters for the list view
 const ComplianceReportFilters = [
@@ -204,12 +204,12 @@ const ComplianceReportFilters = [
 ];
 
 // Custom list actions with generate report button
-const ComplianceReportListActions = () => (
+const ComplianceReportListActions = React.memo(() => (
   <TopToolbar>
     <CreateButton label="Generate Report" />
     <ExportButton />
   </TopToolbar>
-);
+));
 
 export const ComplianceReportList = () => (
   <Box>

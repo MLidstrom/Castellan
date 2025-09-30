@@ -26,10 +26,10 @@ interface YaraSummary {
   engineStatus: 'healthy' | 'warning' | 'error';
 }
 
-export const YaraSummaryCard = () => {
+export const YaraSummaryCard = React.memo(() => {
   const [summary, setSummary] = useState<YaraSummary | null>(null);
   const [loading, setLoading] = useState(true);
-  
+
   const dataProvider = useDataProvider();
 
   const loadYaraSummary = async () => {
@@ -172,4 +172,4 @@ export const YaraSummaryCard = () => {
       </CardContent>
     </Card>
   );
-};
+});

@@ -5,6 +5,7 @@ using System.Linq;
 using System.Text.Json;
 using System.Threading.Tasks;
 using Castellan.Worker.Abstractions;
+using Castellan.Worker.Configuration;
 using Castellan.Worker.Models;
 using Microsoft.Data.Sqlite;
 using Microsoft.Extensions.Logging;
@@ -21,42 +22,14 @@ public class DatabaseYaraRuleStore : IYaraRuleStore
     private readonly string _dbPath;
     private readonly object _lock = new object();
 
-    public DatabaseYaraRuleStore(ILogger<DatabaseYaraRuleStore> logger)
+    public DatabaseYaraRuleStore(
+        ILogger<DatabaseYaraRuleStore> logger,
+        DatabaseConfiguration dbConfig)
     {
         _logger = logger;
-        // Use the single central database at repository root
-        _dbPath = GetCentralDatabasePath();
+        _dbPath = dbConfig.Path;
         Directory.CreateDirectory(Path.GetDirectoryName(_dbPath)!);
         EnsureSchema();
-    }
-
-    private static string GetCentralDatabasePath()
-    {
-        // Navigate up from the Worker executable to find repository root
-        var baseDir = AppDomain.CurrentDomain.BaseDirectory;
-        var dir = new DirectoryInfo(baseDir);
-
-        // Look for repository root by finding the "src" directory
-        while (dir != null && !Directory.Exists(Path.Combine(dir.FullName, "src")))
-        {
-            dir = dir.Parent;
-        }
-
-        // If we found the repository root, use data/castellan.db there
-        if (dir != null)
-        {
-            return Path.Combine(dir.FullName, "data", "castellan.db");
-        }
-
-        // Fallback to C:\Users\matsl\Castellan\data\castellan.db
-        var fallbackPath = @"C:\Users\matsl\Castellan\data\castellan.db";
-        if (File.Exists(fallbackPath) || Directory.Exists(Path.GetDirectoryName(fallbackPath)))
-        {
-            return fallbackPath;
-        }
-
-        // Last resort: use runtime directory
-        return Path.Combine(baseDir, "data", "castellan.db");
     }
 
     private SqliteConnection OpenConnection()

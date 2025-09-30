@@ -32,6 +32,9 @@ public class TimelineController : ControllerBase
     {
         try
         {
+            _logger.LogInformation("Timeline endpoint called: granularity={Granularity}, from={From}, to={To}",
+                granularity, from, to);
+
             // Parse granularity string to enum
             var granularityEnum = granularity.ToLowerInvariant() switch
             {
@@ -52,8 +55,10 @@ public class TimelineController : ControllerBase
                 EventTypes = eventTypes?.ToList() ?? new List<string>()
             };
 
+            _logger.LogInformation("Calling timeline service...");
             var result = await _timelineService.GetTimelineDataAsync(request);
-            
+            _logger.LogInformation("Timeline service returned {DataPointCount} data points", result.DataPoints.Count);
+
             // Transform to format expected by frontend
             var timelineData = result.DataPoints.Select(dp => new
             {
@@ -61,12 +66,13 @@ public class TimelineController : ControllerBase
                 count = dp.Count
             }).ToList();
 
+            _logger.LogInformation("Returning {DataCount} timeline data points", timelineData.Count);
             return Ok(new { data = timelineData, total = timelineData.Count });
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error retrieving timeline data");
-            return StatusCode(500, new { message = "Internal server error while retrieving timeline data" });
+            _logger.LogError(ex, "Error retrieving timeline data: {Message}", ex.Message);
+            return StatusCode(500, new { message = "Internal server error while retrieving timeline data", error = ex.Message });
         }
     }
 

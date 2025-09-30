@@ -47,66 +47,66 @@ import {
 } from '@mui/icons-material';
 
 // Custom header component with security icon
-const MitreTechniquesHeader = () => (
+const MitreTechniquesHeader = React.memo(() => (
   <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
     <SecurityIcon sx={{ mr: 1, color: 'primary.main' }} />
     <Typography variant="h4" component="h1">
       MITRE ATT&CK Techniques
     </Typography>
   </Box>
-);
+));
+
+// Tactic color mapping - outside component for performance
+const TACTIC_COLORS: { [key: string]: any } = {
+  'reconnaissance': 'info',
+  'resource-development': 'secondary',
+  'initial-access': 'warning',
+  'execution': 'error',
+  'persistence': 'error',
+  'privilege-escalation': 'error',
+  'defense-evasion': 'warning',
+  'credential-access': 'error',
+  'discovery': 'info',
+  'lateral-movement': 'warning',
+  'collection': 'info',
+  'command-and-control': 'warning',
+  'exfiltration': 'error',
+  'impact': 'error',
+};
+
+const getTacticColor = (tactic: string) => {
+  const tacticKey = tactic?.toLowerCase().replace(/\s+/g, '-') || '';
+  return TACTIC_COLORS[tacticKey] || 'default';
+};
 
 // Custom component for tactic display with color coding
-const TacticField = ({ source }: any) => {
+const TacticField = React.memo(({ source }: any) => {
   const record = useRecordContext();
-  
-  const getTacticColor = (tactic: string) => {
-    const tacticColors: { [key: string]: any } = {
-      'reconnaissance': 'info',
-      'resource-development': 'secondary',
-      'initial-access': 'warning',
-      'execution': 'error',
-      'persistence': 'error',
-      'privilege-escalation': 'error',
-      'defense-evasion': 'warning',
-      'credential-access': 'error',
-      'discovery': 'info',
-      'lateral-movement': 'warning',
-      'collection': 'info',
-      'command-and-control': 'warning',
-      'exfiltration': 'error',
-      'impact': 'error',
-    };
-    
-    const tacticKey = tactic?.toLowerCase().replace(/\s+/g, '-') || '';
-    return tacticColors[tacticKey] || 'default';
-  };
-
   const tacticValue = record?.[source] || record?.tactic || 'Unknown';
-  
+
   return (
-    <Chip 
-      label={tacticValue} 
+    <Chip
+      label={tacticValue}
       color={getTacticColor(tacticValue)}
       size="small"
       variant="outlined"
     />
   );
-};
+});
 
 // Custom component for platform display
-const PlatformField = ({ source }: any) => {
+const PlatformField = React.memo(({ source }: any) => {
   const record = useRecordContext();
   const platforms = record?.[source] || record?.platform || '';
-  
+
   if (!platforms) return <Typography variant="body2">-</Typography>;
-  
+
   const platformList = platforms.split(',').map((p: string) => p.trim());
-  
+
   return (
     <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap' }}>
-      {platformList.slice(0, 3).map((platform: string, index: number) => (
-        <Chip 
+      {platformList.map((platform: string, index: number) => (
+        <Chip
           key={index}
           label={platform}
           size="small"
@@ -114,17 +114,9 @@ const PlatformField = ({ source }: any) => {
           color="default"
         />
       ))}
-      {platformList.length > 3 && (
-        <Chip 
-          label={`+${platformList.length - 3} more`}
-          size="small"
-          variant="outlined"
-          color="primary"
-        />
-      )}
     </Box>
   );
-};
+});
 
 // Import dialog component
 const ImportDialog = ({ 
@@ -145,55 +137,41 @@ const ImportDialog = ({
     setResult(null);
 
     try {
-      console.log('[MITRE Import] Starting import request...', {
-        token: localStorage.getItem('auth_token') ? 'Present' : 'Missing',
-        url: 'mitre/import'
-      });
-      
       const response = await dataProvider.custom({
         url: 'mitre/import',
         method: 'POST',
       });
-      
-      console.log('[MITRE Import] Import response received:', response);
+
       setResult(response.data);
-      notify(`Successfully imported ${response.data.result?.techniquesImported || 0} techniques`, { 
-        type: 'success' 
+      notify(`Successfully imported ${response.data.result?.techniquesImported || 0} techniques`, {
+        type: 'success'
       });
-      
+
       // Refresh the list after successful import
       setTimeout(() => {
         refresh();
         onClose();
       }, 2000);
-      
+
     } catch (error: any) {
-      console.error('[MITRE Import] Import error details:', {
-        error,
-        message: error.message,
-        status: error.status,
-        body: error.body,
-        stack: error.stack
-      });
-      
       // Extract detailed error message
       let errorMessage = 'Import failed';
       let errorDetails = '';
-      
+
       if (error.body) {
         errorDetails = error.body.details || error.body.message || JSON.stringify(error.body);
         errorMessage = error.body.message || errorMessage;
       } else if (error.message) {
         errorMessage = error.message;
       }
-      
+
       setResult({
         success: false,
         message: errorMessage,
         details: errorDetails,
         result: null
       });
-      
+
       notify(`Import failed: ${errorMessage}`, { type: 'error' });
     } finally {
       setImporting(false);
@@ -316,7 +294,7 @@ const ImportDialog = ({
 };
 
 // Custom list actions with import button
-const MitreListActions = () => {
+const MitreListActions = React.memo(() => {
   const [importDialogOpen, setImportDialogOpen] = useState(false);
   
   return (
@@ -342,7 +320,7 @@ const MitreListActions = () => {
       />
     </TopToolbar>
   );
-};
+});
 
 // Filters for the list view
 const MitreTechniqueFilters = [
@@ -362,30 +340,35 @@ const MitreTechniqueFilters = [
   />,
 ];
 
+// Memoized description truncation
+const DescriptionField = React.memo(({ record }: any) => (
+  <span>
+    {record?.description
+      ? record.description.substring(0, 100) + (record.description.length > 100 ? '...' : '')
+      : '-'}
+  </span>
+));
+
 export const MitreTechniquesList = () => (
   <Box>
     <MitreTechniquesHeader />
-    <List 
+    <List
       filters={<Filter>{MitreTechniqueFilters}</Filter>}
       sort={{ field: 'techniqueId', order: 'ASC' }}
       perPage={25}
       title=" "
       actions={<MitreListActions />}
-      resource="mitre/techniques"
+      resource="mitre-techniques"
     >
       <Datagrid rowClick="show" size="small">
         <TextField source="techniqueId" label="ID" sortable />
         <TextField source="name" label="Name" />
         <TacticField source="tactic" label="Tactic" />
         <PlatformField source="platform" label="Platforms" />
-        <FunctionField 
-          source="description" 
+        <FunctionField
+          source="description"
           label="Description"
-          render={(record: any) => 
-            record.description 
-              ? record.description.substring(0, 100) + (record.description.length > 100 ? '...' : '')
-              : '-'
-          }
+          render={(record: any) => <DescriptionField record={record} />}
         />
         <DateField source="createdAt" showTime label="Added" />
       </Datagrid>
@@ -396,7 +379,7 @@ export const MitreTechniquesList = () => (
 export const MitreTechniquesShow = () => (
   <Box>
     <MitreTechniquesHeader />
-    <Show title=" " resource="mitre/techniques">
+    <Show title=" " resource="mitre-techniques">
       <SimpleShowLayout>
         <TextField source="techniqueId" label="Technique ID" />
         <TextField source="name" label="Name" />
@@ -455,26 +438,22 @@ export const MitreStatisticsDashboard = () => {
       try {
         setLoading(true);
         setCacheHit(false);
-        
-        console.log('📊 Fetching MITRE statistics (using cached data provider)...');
+
         const startTime = Date.now();
-        
+
         const [statsResponse, countResponse] = await Promise.all([
           dataProvider.custom({ url: 'mitre/statistics', method: 'GET' }),
           dataProvider.custom({ url: 'mitre/count', method: 'GET' })
         ]);
-        
+
         const endTime = Date.now();
         const fetchTime = endTime - startTime;
-        
+
         // If fetch was very fast (< 100ms), it was likely from cache
         if (fetchTime < 100) {
           setCacheHit(true);
-          console.log('⚡ MITRE statistics loaded from cache in', fetchTime, 'ms');
-        } else {
-          console.log('🌐 MITRE statistics fetched from API in', fetchTime, 'ms');
         }
-        
+
         setStatistics({
           ...statsResponse.data,
           ...countResponse.data,
@@ -482,7 +461,6 @@ export const MitreStatisticsDashboard = () => {
           _fromCache: fetchTime < 100
         });
       } catch (error) {
-        console.error('Failed to fetch MITRE statistics:', error);
         notify('Failed to load MITRE statistics', { type: 'error' });
       } finally {
         setLoading(false);

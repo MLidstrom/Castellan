@@ -56,6 +56,7 @@ export const TimelinePanel: React.FC = () => {
       });
       setStats(statsResp.data || statsResp);
     } catch (e: any) {
+      console.error('[TimelinePanel] Error fetching timeline:', e);
       setError(e?.message || 'Failed to load timeline');
     } finally {
       setLoading(false);

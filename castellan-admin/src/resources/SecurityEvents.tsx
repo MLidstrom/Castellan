@@ -336,7 +336,7 @@ const CorrelationField = React.memo(({ source }: any) => {
 });
 
 // Custom component for MITRE ATT&CK techniques with database-driven tooltips
-const MitreTechniquesField = ({ source }: any) => {
+const MitreTechniquesField = React.memo(({ source }: any) => {
   const record = useRecordContext();
   const techniques = record?.[source] || record?.mitreAttack || record?.MitreAttack || [];
   const { techniques: mitreData, loading, error, fetchTechniques } = useMitreTechniques();
@@ -523,7 +523,7 @@ const MitreTechniquesField = ({ source }: any) => {
       )}
     </Box>
   );
-};
+});
 
 // React Admin v5.11.1 - filters are passed as array directly to List component
 const securityEventFilters = [

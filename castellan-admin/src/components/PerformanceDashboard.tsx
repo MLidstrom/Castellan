@@ -39,7 +39,7 @@ interface PerformanceMetric {
   status: 'excellent' | 'good' | 'fair' | 'poor';
 }
 
-export const PerformanceDashboard: React.FC = () => {
+export const PerformanceDashboard: React.FC = React.memo(() => {
   const { realtimeMetrics, isConnected } = useSignalRContext();
   const [historicalData, setHistoricalData] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -376,6 +376,6 @@ export const PerformanceDashboard: React.FC = () => {
       </Grid>
     </Box>
   );
-};
+});
 
 export default PerformanceDashboard;

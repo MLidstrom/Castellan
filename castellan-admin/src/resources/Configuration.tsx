@@ -308,6 +308,26 @@ const ThreatIntelligenceConfig = ({ record }: { record?: any }) => {
   const notify = useNotify();
   const refresh = useRefresh();
 
+  // Load configuration on mount
+  useEffect(() => {
+    const loadConfig = async () => {
+      try {
+        const { data } = await dataProvider.getOne('configuration', {
+          id: 'threat-intelligence'
+        });
+        console.log('[ThreatIntelligenceConfig] Loaded config from backend:', data);
+        if (data) {
+          setConfig((prevConfig: ConfigType) => ({ ...DEFAULT_CONFIG, ...data }));
+        }
+      } catch (error) {
+        console.error('[ThreatIntelligenceConfig] Failed to load config:', error);
+        // Keep using defaults
+      }
+    };
+
+    loadConfig();
+  }, [dataProvider]);
+
   // Update config when record changes
   useEffect(() => {
     console.log('[ThreatIntelligenceConfig] Record changed:', record);
@@ -319,13 +339,14 @@ const ThreatIntelligenceConfig = ({ record }: { record?: any }) => {
   const handleSave = async () => {
     setSaving(true);
     try {
-      await dataProvider.update('configuration', {
+      const result = await dataProvider.update('configuration', {
         id: 'threat-intelligence',
         data: config,
         previousData: {}
       });
       notify('Configuration saved successfully', { type: 'success' });
-      refresh();
+      // Don't refresh - the dataProvider.update already returns the updated data
+      // and React Admin will use that to update the UI
     } catch (error) {
       notify('Failed to save configuration', { type: 'error' });
     } finally {
@@ -355,6 +376,12 @@ const ThreatIntelligenceConfig = ({ record }: { record?: any }) => {
     if (service.apiKey && service.apiKey.length > 0) return { color: 'success', icon: <CheckIcon />, text: 'Configured' };
     if (service.enabled && !service.apiKey) return { color: 'warning', icon: <WarningIcon />, text: 'API Key Required' };
     return { color: 'info', icon: <CheckIcon />, text: 'Enabled' };
+  };
+
+  // Special status for MalwareBazaar (doesn't require API key)
+  const getMalwareBazaarStatus = (service: any) => {
+    if (!service.enabled) return { color: 'default', icon: <ErrorIcon />, text: 'Disabled' };
+    return { color: 'success', icon: <CheckIcon />, text: 'Configured' };
   };
 
   return (
@@ -454,9 +481,9 @@ const ThreatIntelligenceConfig = ({ record }: { record?: any }) => {
               <Typography variant="h6">MalwareBazaar</Typography>
               <Box sx={{ ml: 'auto' }}>
                 <Chip
-                  icon={getServiceStatus(config.malwareBazaar).icon}
-                  label={getServiceStatus(config.malwareBazaar).text}
-                  color={getServiceStatus(config.malwareBazaar).color as any}
+                  icon={getMalwareBazaarStatus(config.malwareBazaar).icon}
+                  label={getMalwareBazaarStatus(config.malwareBazaar).text}
+                  color={getMalwareBazaarStatus(config.malwareBazaar).color as any}
                   size="small"
                 />
               </Box>
@@ -475,10 +502,6 @@ const ThreatIntelligenceConfig = ({ record }: { record?: any }) => {
 
             {config.malwareBazaar.enabled && (
               <Box>
-                <Alert severity="info" sx={{ mb: 2 }}>
-                  MalwareBazaar doesn't require an API key - free public access
-                </Alert>
-
                 <MuiTextField
                   fullWidth
                   label="Rate Limit (requests/minute)"
@@ -654,7 +677,7 @@ const NotificationsConfig = ({ record }: { record?: any }) => {
         previousData: {}
       });
       notify('Notification configuration saved successfully', { type: 'success' });
-      refresh();
+      // Don't refresh - the dataProvider.update already returns the updated data
     } catch (error) {
       notify('Failed to save notification configuration', { type: 'error' });
     } finally {
@@ -979,13 +1002,13 @@ const IPEnrichmentConfig = ({ record }: { record?: any }) => {
 
   const handleSave = async () => {
     try {
-      await dataProvider.update('settings', {
+      await dataProvider.update('configuration', {
         id: 'ip-enrichment',
         data: config,
         previousData: config
       });
       notify('IP enrichment configuration saved successfully', { type: 'success' });
-      refresh();
+      // Don't refresh - the dataProvider.update already returns the updated data
     } catch (error: any) {
       notify(`Failed to save configuration: ${error.message}`, { type: 'error' });
     }

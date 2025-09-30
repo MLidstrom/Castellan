@@ -49,7 +49,7 @@ import {
 import { useSignalRContext } from '../contexts/SignalRContext';
 
 // Custom field to display threat level with color coding
-const ThreatLevelField = () => {
+const ThreatLevelField = React.memo(() => {
   const record = useRecordContext();
   if (!record) return null;
 
@@ -71,10 +71,10 @@ const ThreatLevelField = () => {
       size="small"
     />
   );
-};
+});
 
 // Custom field to display file information
-const FileInfoField = () => {
+const FileInfoField = React.memo(() => {
   const record = useRecordContext();
   if (!record) return null;
 
@@ -88,10 +88,10 @@ const FileInfoField = () => {
       </Typography>
     </Box>
   );
-};
+});
 
 // Custom field to display matched strings details
-const MatchedStringsField = () => {
+const MatchedStringsField = React.memo(() => {
   const record = useRecordContext();
   if (!record || !record.matchedStrings || record.matchedStrings.length === 0) {
     return <Typography variant="caption">No strings matched</Typography>;
@@ -152,10 +152,10 @@ const MatchedStringsField = () => {
       </Table>
     </TableContainer>
   );
-};
+});
 
 // Custom field to display rule information
-const RuleInfoField = () => {
+const RuleInfoField = React.memo(() => {
   const record = useRecordContext();
   if (!record) return null;
 
@@ -177,10 +177,10 @@ const RuleInfoField = () => {
       )}
     </Box>
   );
-};
+});
 
 // Custom field to display execution performance
-const PerformanceField = () => {
+const PerformanceField = React.memo(() => {
   const record = useRecordContext();
   if (!record) return null;
 
@@ -197,10 +197,10 @@ const PerformanceField = () => {
       color={getPerformanceColor(record.executionTimeMs) as any}
     />
   );
-};
+});
 
 // Custom actions for YARA matches list
-const YaraMatchesActions = () => {
+const YaraMatchesActions = React.memo(() => {
   const { isConnected: signalRConnected, connectionState } = useSignalRContext();
 
   return (
@@ -221,7 +221,7 @@ const YaraMatchesActions = () => {
       </Box>
     </TopToolbar>
   );
-};
+});
 
 // List view for YARA matches
 export const YaraMatchesList = () => (
@@ -275,7 +275,7 @@ export const YaraMatchesList = () => (
 );
 
 // Metadata display component
-const MetadataDisplay = () => {
+const MetadataDisplay = React.memo(() => {
   const record = useRecordContext();
   
   if (!record || !record.metadata || Object.keys(record.metadata).length === 0) {
@@ -296,7 +296,7 @@ const MetadataDisplay = () => {
       </TableBody>
     </Table>
   );
-};
+});
 
 // Show view for individual YARA match
 export const YaraMatchesShow = () => (

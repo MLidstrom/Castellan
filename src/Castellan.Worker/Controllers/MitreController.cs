@@ -104,46 +104,20 @@ public class MitreController : ControllerBase
             var actualPageSize = limit > 0 ? limit : pageSize;
             if (actualPageSize > 100) actualPageSize = 100; // Limit page size
             if (page < 1) page = 1;
-            
-            List<Models.MitreTechnique> techniques;
-            
-            if (!string.IsNullOrEmpty(tactic))
-            {
-                techniques = await _mitreService.GetTechniquesByTacticAsync(tactic);
-            }
-            else if (!string.IsNullOrEmpty(search))
-            {
-                techniques = await _mitreService.SearchTechniquesAsync(search);
-            }
-            else
-            {
-                techniques = await _mitreService.GetAllTechniquesAsync();
-            }
-            
-            // Apply sorting
-            if (!string.IsNullOrEmpty(sort))
-            {
-                var isDescending = order?.ToLowerInvariant() == "desc";
-                techniques = sort.ToLowerInvariant() switch
-                {
-                    "techniqueid" => isDescending ? techniques.OrderByDescending(t => t.TechniqueId).ToList()
-                                                  : techniques.OrderBy(t => t.TechniqueId).ToList(),
-                    "name" => isDescending ? techniques.OrderByDescending(t => t.Name).ToList()
-                                           : techniques.OrderBy(t => t.Name).ToList(),
-                    "tactic" => isDescending ? techniques.OrderByDescending(t => t.Tactic).ToList()
-                                             : techniques.OrderBy(t => t.Tactic).ToList(),
-                    "platform" => isDescending ? techniques.OrderByDescending(t => t.Platform).ToList()
-                                                : techniques.OrderBy(t => t.Platform).ToList(),
-                    "createdat" => isDescending ? techniques.OrderByDescending(t => t.CreatedAt).ToList()
-                                                : techniques.OrderBy(t => t.CreatedAt).ToList(),
-                    _ => techniques.OrderBy(t => t.TechniqueId).ToList()
-                };
-            }
 
-            var totalCount = techniques.Count;
+            var isDescending = order?.ToLowerInvariant() == "desc";
+
+            // Use database-level pagination for performance
+            var (techniques, totalCount) = await _mitreService.GetTechniquesPagedAsync(
+                page: page,
+                pageSize: actualPageSize,
+                sort: sort,
+                descending: isDescending,
+                tactic: tactic,
+                search: search
+            );
+
             var pagedTechniques = techniques
-                .Skip((page - 1) * actualPageSize)
-                .Take(actualPageSize)
                 .Select(t => new MitreTechniqueDto
                 {
                     Id = t.Id,
@@ -155,7 +129,7 @@ public class MitreController : ControllerBase
                     CreatedAt = t.CreatedAt
                 })
                 .ToList();
-            
+
             return Ok(new MitreTechniqueListResponse
             {
                 Techniques = pagedTechniques,

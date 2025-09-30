@@ -115,10 +115,18 @@ builder.Services.AddSingleton<IQdrantConnectionPool>(provider => provider.GetReq
 // Removed caching layer services to simplify architecture
 
 // Add SQLite Database
-var dbPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "data", "castellan.db");
+// Get database path from configuration (relative paths are resolved from repository root)
+var dbPathFromConfig = builder.Configuration["Database:Path"] ?? "data/castellan.db";
+var repoRoot = Path.GetFullPath(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "..", "..", "..", "..", ".."));
+var dbPath = Path.IsPathRooted(dbPathFromConfig)
+    ? dbPathFromConfig
+    : Path.Combine(repoRoot, dbPathFromConfig);
 Directory.CreateDirectory(Path.GetDirectoryName(dbPath)!);
 builder.Services.AddDbContext<CastellanDbContext>(options =>
     options.UseSqlite($"Data Source={dbPath}"));
+
+// Store database path in configuration for other services to use
+builder.Services.AddSingleton(new DatabaseConfiguration { Path = dbPath });
 
 // Add database services
 builder.Services.AddScoped<ApplicationService>();

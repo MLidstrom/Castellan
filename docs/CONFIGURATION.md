@@ -29,7 +29,18 @@ src/Castellan.Worker/appsettings.json
 # Environment-specific overrides
 src/Castellan.Worker/appsettings.Development.json
 src/Castellan.Worker/appsettings.Production.json
+
+# Runtime configuration (persisted via web UI)
+src/Castellan.Worker/bin/Release/net8.0-windows/data/threat-intelligence-config.json
+src/Castellan.Worker/bin/Release/net8.0-windows/data/notification-config.json
+src/Castellan.Worker/bin/Release/net8.0-windows/data/ip-enrichment-config.json
 ```
+
+**Runtime Configuration:**
+- Configuration changes made through the web UI at `http://localhost:8080/#/configuration` are persisted to JSON files in the `data/` directory
+- These files use camelCase naming convention for compatibility with JavaScript/TypeScript frontends
+- Changes are automatically loaded when navigating between configuration tabs
+- Runtime configuration overrides default settings from appsettings.json
 
 ### 2. Environment Variables
 Environment variables override configuration file settings and follow the hierarchical naming pattern:

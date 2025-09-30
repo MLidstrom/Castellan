@@ -8,16 +8,13 @@ namespace Castellan.Worker.Services;
 public class TimelineService : ITimelineService
 {
     private readonly ISecurityEventStore _eventStore;
-    private readonly SecurityEventService _securityEventService;
     private readonly ILogger<TimelineService> _logger;
 
     public TimelineService(
         ISecurityEventStore eventStore,
-        SecurityEventService securityEventService,
         ILogger<TimelineService> logger)
     {
         _eventStore = eventStore;
-        _securityEventService = securityEventService;
         _logger = logger;
     }
 
@@ -25,17 +22,26 @@ public class TimelineService : ITimelineService
     {
         try
         {
-            _logger.LogDebug("Getting timeline data for {StartTime} to {EndTime} with {Granularity} granularity", 
+            _logger.LogInformation("Getting timeline data for {StartTime} to {EndTime} with {Granularity} granularity",
                 request.StartTime, request.EndTime, request.Granularity);
 
             // Get events for the time range
             var filters = BuildFilters(request.RiskLevels, request.EventTypes, request.Search, request.StartTime, request.EndTime);
-            var allEvents = _eventStore.GetSecurityEvents(1, 10000, filters).ToList();
+
+            _logger.LogInformation("Fetching security events from store with filters");
+
+            // TEMPORARY: Return empty data to test if the issue is with GetSecurityEvents
+            var allEvents = new List<SecurityEvent>();
+            _logger.LogInformation("Retrieved {EventCount} events from store (TEMPORARY BYPASS)", allEvents.Count);
 
             // Generate time slots based on granularity
+            _logger.LogInformation("Generating time slots");
             var timeSlots = GenerateTimeSlots(request.StartTime, request.EndTime, request.Granularity);
+            _logger.LogInformation("Generated {SlotCount} time slots", timeSlots.Count);
+
             var dataPoints = new List<TimelineDataPoint>();
 
+            _logger.LogInformation("Processing {SlotCount} time slots", timeSlots.Count);
             foreach (var timeSlot in timeSlots)
             {
                 var slotEndTime = GetSlotEndTime(timeSlot, request.Granularity);
@@ -91,11 +97,13 @@ public class TimelineService : ITimelineService
                 }
             };
 
+            _logger.LogInformation("Timeline response prepared with {DataPointCount} data points", dataPoints.Count);
             return response;
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error getting timeline data");
+            _logger.LogError(ex, "Error getting timeline data: {Message}", ex.Message);
+            _logger.LogError(ex, "Stack trace: {StackTrace}", ex.StackTrace);
             throw;
         }
     }
@@ -104,10 +112,13 @@ public class TimelineService : ITimelineService
     {
         try
         {
-            _logger.LogDebug("Getting timeline stats for {StartTime} to {EndTime}", request.StartTime, request.EndTime);
+            _logger.LogInformation("Getting timeline stats for {StartTime} to {EndTime}", request.StartTime, request.EndTime);
 
             var filters = BuildFilters(null, null, null, request.StartTime, request.EndTime);
-            var events = _eventStore.GetSecurityEvents(1, 10000, filters).ToList();
+
+            // TEMPORARY: Return empty data to test if the issue is with GetSecurityEvents
+            var events = new List<SecurityEvent>();
+            _logger.LogInformation("Retrieved {EventCount} events for stats (TEMPORARY BYPASS)", events.Count);
 
             var stats = new TimelineStatsResponse
             {

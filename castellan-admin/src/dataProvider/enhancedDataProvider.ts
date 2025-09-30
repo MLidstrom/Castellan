@@ -471,8 +471,26 @@ export class EnhancedDataProvider implements DataProvider {
 }
 
 /**
- * Factory function to create enhanced data provider
+ * Factory function to create enhanced data provider with Proxy for custom methods
  */
-export const createEnhancedDataProvider = (baseProvider: DataProvider): EnhancedDataProvider => {
-  return new EnhancedDataProvider(baseProvider);
+export const createEnhancedDataProvider = (baseProvider: DataProvider): any => {
+  const enhancedProvider = new EnhancedDataProvider(baseProvider);
+
+  // Create a Proxy to handle custom methods not defined in EnhancedDataProvider
+  return new Proxy(enhancedProvider, {
+    get(target: any, prop: string) {
+      // If the property exists on the enhanced provider, use it
+      if (prop in target) {
+        return target[prop];
+      }
+
+      // Otherwise, check if it exists on the base provider
+      if (prop in baseProvider && typeof (baseProvider as any)[prop] === 'function') {
+        console.log(`[EnhancedDataProvider] Proxying custom method: ${prop}`);
+        return (baseProvider as any)[prop].bind(baseProvider);
+      }
+
+      return undefined;
+    }
+  });
 };

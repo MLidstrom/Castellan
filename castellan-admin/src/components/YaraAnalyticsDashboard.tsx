@@ -111,7 +111,7 @@ interface YaraRuleEffectiveness {
 
 const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8', '#82CA9D', '#FFC658'];
 
-export const YaraAnalyticsDashboard: React.FC = () => {
+export const YaraAnalyticsDashboard: React.FC = React.memo(() => {
   const [statistics, setStatistics] = useState<YaraStatistics | null>(null);
   const [analytics, setAnalytics] = useState<YaraMatchAnalytics | null>(null);
   const [loading, setLoading] = useState(false);
@@ -461,4 +461,4 @@ export const YaraAnalyticsDashboard: React.FC = () => {
       </Grid>
     </Box>
   );
-};
+});
