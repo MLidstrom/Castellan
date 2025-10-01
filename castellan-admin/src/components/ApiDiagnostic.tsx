@@ -3,22 +3,18 @@ import { Card, CardContent, Typography, Box, Chip } from '@mui/material';
 
 interface ApiDiagnosticProps {
   securityEventsData: any;
-  complianceReportsData: any;
   systemStatusData: any;
   threatScannerData: any;
   securityEventsError?: string | null;
-  complianceReportsError?: string | null;
   systemStatusError?: string | null;
   threatScannerError?: string | null;
 }
 
 export const ApiDiagnostic: React.FC<ApiDiagnosticProps> = ({
   securityEventsData,
-  complianceReportsData,
   systemStatusData,
   threatScannerData,
   securityEventsError,
-  complianceReportsError,
   systemStatusError,
   threatScannerError
 }) => {
@@ -46,15 +42,6 @@ export const ApiDiagnostic: React.FC<ApiDiagnosticProps> = ({
             <Chip 
               label={getStatusText(securityEventsData, securityEventsError)}
               color={getStatusColor(securityEventsData, securityEventsError)}
-              size="small"
-            />
-          </Box>
-          
-          <Box>
-            <Typography variant="subtitle2" sx={{ mb: 1 }}>Compliance Reports API</Typography>
-            <Chip 
-              label={getStatusText(complianceReportsData, complianceReportsError)}
-              color={getStatusColor(complianceReportsData, complianceReportsError)}
               size="small"
             />
           </Box>

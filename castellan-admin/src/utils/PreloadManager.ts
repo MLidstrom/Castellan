@@ -46,7 +46,6 @@ class PreloadManager {
     ['mitre-techniques', () => import('../resources/MitreTechniques')],
     ['system-status', () => import('../resources/SystemStatus')],
     ['threat-scanner', () => import('../resources/ThreatScanner')],
-    ['compliance-reports', () => import('../resources/ComplianceReports')],
     ['timelines', () => import('../resources/Timelines')],
     ['configuration', () => import('../resources/Configuration')],
     ['trend-analysis', () => import('../components/TrendAnalysisPage')],

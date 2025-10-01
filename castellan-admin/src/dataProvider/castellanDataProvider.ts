@@ -46,7 +46,6 @@ const httpClient = (url: string, options: fetchUtils.Options = {}) => {
 // Resource mapping between frontend and backend
 const RESOURCE_MAP: Record<string, string> = {
     'security-events': 'security-events',
-    'compliance-reports': 'compliance-reports',
     'system-status': 'system-status',
     'threat-scanner': 'threat-scanner',
     'notification-settings': 'notifications/config',
@@ -757,17 +756,6 @@ const baseEnhancedCastellanDataProvider = {
         }
     },
 
-    // Custom method for compliance reports export
-    exportComplianceReport: async (reportId: string, format: 'csv' | 'pdf' | 'json' = 'csv') => {
-        const url = `${API_URL}/compliance-reports/${reportId}/export?format=${format}`;
-        try {
-            const response = await httpClient(url);
-            return response;
-        } catch (error) {
-            console.error('Error exporting compliance report:', error);
-            throw error;
-        }
-    },
 
     // Custom method for file uploads
     uploadFile: async (resource: string, file: File, metadata?: any) => {

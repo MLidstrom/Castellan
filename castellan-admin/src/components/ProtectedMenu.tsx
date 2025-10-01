@@ -10,7 +10,6 @@ import {
 import { 
   Dashboard as DashboardIcon,
   Security as SecurityIcon,
-  Assessment as ComplianceIcon,
   Computer as SystemIcon,
   Settings as SettingsIcon,
   People as UsersIcon,
@@ -106,13 +105,6 @@ export const ProtectedMenu: React.FC<MenuProps> = (props) => {
         requiredPermissions={['security.read']}
       />
 
-      {/* Compliance Reports - requires compliance permissions */}
-      <ProtectedMenuItem
-        to="/compliance-reports"
-        primaryText="Compliance Reports"
-        leftIcon={<ComplianceIcon />}
-        requiredPermissions={['compliance.read']}
-      />
 
       {/* System Status - requires system monitoring permissions */}
       <ProtectedMenuItem
@@ -159,7 +151,7 @@ export const ProtectedMenu: React.FC<MenuProps> = (props) => {
         const resource = resources[resourceName];
         
         // Skip if already handled above
-        const skipResources = ['security-events', 'compliance-reports', 'system-status', 'users', 'settings'];
+        const skipResources = ['security-events', 'system-status', 'users', 'settings'];
         if (skipResources.includes(resourceName)) {
           return null;
         }
@@ -188,7 +180,6 @@ export const RoleBasedMenu: React.FC<MenuProps> = (props) => {
 
   const isAdmin = permissions?.roles?.includes('admin');
   const isSecurity = permissions?.roles?.includes('security_analyst');
-  const isCompliance = permissions?.roles?.includes('compliance_officer');
   const isViewer = permissions?.roles?.includes('viewer');
 
   return (
@@ -218,30 +209,13 @@ export const RoleBasedMenu: React.FC<MenuProps> = (props) => {
         </>
       )}
 
-      {/* Compliance Section - Available to compliance officers and admins */}
-      {(isCompliance || isAdmin) && (
-        <>
-          <ProtectedMenuItem
-            to="/compliance-reports"
-            primaryText="Compliance Reports"
-            leftIcon={<ComplianceIcon />}
-            requiredRoles={['compliance_officer', 'admin']}
-          />
-          <ProtectedMenuItem
-            to="/reports"
-            primaryText="Custom Reports"
-            leftIcon={<ReportsIcon />}
-            requiredRoles={['compliance_officer', 'admin']}
-          />
-        </>
-      )}
 
       {/* System Section - Available to all authenticated users */}
       <ProtectedMenuItem
         to="/system-status"
         primaryText="System Status"
         leftIcon={<SystemIcon />}
-        requiredRoles={['viewer', 'security_analyst', 'compliance_officer', 'admin']}
+        requiredRoles={['viewer', 'security_analyst', 'admin']}
       />
 
       {/* Admin Section - Available only to admins */}

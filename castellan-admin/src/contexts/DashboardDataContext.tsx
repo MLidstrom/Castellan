@@ -2,7 +2,6 @@ import React, { createContext, useContext, useState, useCallback } from 'react';
 
 interface DashboardData {
   securityEvents: any[];
-  complianceReports: any[];
   systemStatus: any;
   threatScanner: any[];
   timestamp: number;

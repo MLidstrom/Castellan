@@ -7,7 +7,6 @@ public class ConsolidatedDashboardData
 {
     public SecurityEventsSummary SecurityEvents { get; set; } = new();
     public SystemStatusSummary SystemStatus { get; set; } = new();
-    public ComplianceReportsSummary Compliance { get; set; } = new();
     public ThreatScannerSummary ThreatScanner { get; set; } = new();
     public DateTime LastUpdated { get; set; } = DateTime.UtcNow;
     public string TimeRange { get; set; } = "24h";
@@ -33,18 +32,6 @@ public class SystemStatusSummary
     public int HealthyComponents { get; set; }
     public List<ComponentHealthBasic> Components { get; set; } = new();
     public Dictionary<string, string> ComponentStatuses { get; set; } = new();
-}
-
-/// <summary>
-/// Summary of compliance reports for dashboard display
-/// </summary>
-public class ComplianceReportsSummary
-{
-    public int TotalReports { get; set; }
-    public double AverageScore { get; set; }
-    public int PassingReports { get; set; }
-    public int FailingReports { get; set; }
-    public List<ComplianceReportBasic> RecentReports { get; set; } = new();
 }
 
 /// <summary>
@@ -84,18 +71,6 @@ public class ComponentHealthBasic
     public string Status { get; set; } = string.Empty;
     public int ResponseTime { get; set; }
     public DateTime LastCheck { get; set; }
-}
-
-/// <summary>
-/// Basic compliance report information for dashboard display
-/// </summary>
-public class ComplianceReportBasic
-{
-    public string Id { get; set; } = string.Empty;
-    public string Title { get; set; } = string.Empty;
-    public double Score { get; set; }
-    public DateTime Generated { get; set; }
-    public string Status { get; set; } = string.Empty;
 }
 
 /// <summary>

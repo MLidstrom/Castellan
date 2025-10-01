@@ -51,9 +51,25 @@ public class DatabasePerformanceMetrics
 public class DatabaseConnectionPoolMetrics
 {
     public int Active { get; set; }
+    public int ActiveConnections { get; set; }
+    public int IdleConnections { get; set; }
     public int Total { get; set; }
+    public int TotalConnections { get; set; }
+    public int MaxPoolSize { get; set; }
+    public long TotalConnectionsCreated { get; set; }
+    public long TotalConnectionsClosed { get; set; }
+    public long TotalConnectionRequests { get; set; }
+    public long FailedConnectionAttempts { get; set; }
+    public double AverageWaitTimeMs { get; set; }
     public double Utilization { get; set; } // percentage (0.0 - 1.0)
+    public double PoolUtilizationPercent =>
+        MaxPoolSize > 0 ? (double)ActiveConnections / MaxPoolSize * 100 : 0;
     public int PeakConnections { get; set; }
+    public ConnectionPoolHealthStatus HealthStatus { get; set; }
+    public DateTimeOffset LastHealthCheck { get; set; }
+    public DateTimeOffset CollectedAt { get; set; } = DateTimeOffset.UtcNow;
+    public string DatabaseProvider { get; set; } = "Unknown";
+    public Dictionary<string, object> ProviderSpecificMetrics { get; set; } = new();
 }
 
 public class QueryPerformanceMetrics

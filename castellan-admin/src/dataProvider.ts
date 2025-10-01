@@ -1,6 +1,6 @@
 import { fetchUtils, DataProvider } from 'react-admin';
 import simpleRestProvider from 'ra-data-simple-rest';
-import { mockSecurityEvents, mockComplianceReports, mockSystemStatus } from './mockData';
+import { mockSecurityEvents, mockSystemStatus } from './mockData';
 
 const httpClient = (url: string, options: any = {}) => {
   if (!options.headers) {
@@ -36,9 +36,6 @@ const mockDataProvider: DataProvider = {
     switch (resource) {
       case 'security-events':
         data = mockSecurityEvents;
-        break;
-      case 'compliance-reports':
-        data = mockComplianceReports;
         break;
       case 'system-status':
         data = mockSystemStatus;
@@ -107,9 +104,6 @@ const mockDataProvider: DataProvider = {
       case 'security-events':
         data = mockSecurityEvents;
         break;
-      case 'compliance-reports':
-        data = mockComplianceReports;
-        break;
       case 'system-status':
         data = mockSystemStatus;
         break;
@@ -134,9 +128,6 @@ const mockDataProvider: DataProvider = {
       case 'security-events':
         data = mockSecurityEvents;
         break;
-      case 'compliance-reports':
-        data = mockComplianceReports;
-        break;
       case 'system-status':
         data = mockSystemStatus;
         break;
@@ -157,7 +148,7 @@ const mockDataProvider: DataProvider = {
     console.log('DataProvider create called:', resource, params);
     
     // Generate a new ID
-    const newId = Math.max(...mockSecurityEvents.map(e => e.id), ...mockComplianceReports.map(r => r.id), ...mockSystemStatus.map(s => s.id)) + 1;
+    const newId = Math.max(...mockSecurityEvents.map(e => e.id), ...mockSystemStatus.map(s => s.id)) + 1;
     const newRecord = { ...params.data, id: newId };
     
     // In a real implementation, this would persist the data to the backend
@@ -174,9 +165,6 @@ const mockDataProvider: DataProvider = {
     switch (resource) {
       case 'security-events':
         data = mockSecurityEvents;
-        break;
-      case 'compliance-reports':
-        data = mockComplianceReports;
         break;
       case 'system-status':
         data = mockSystemStatus;

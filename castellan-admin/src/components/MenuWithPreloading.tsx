@@ -17,7 +17,6 @@ import RuleIcon from '@mui/icons-material/Rule';
 import FindInPageIcon from '@mui/icons-material/FindInPage';
 import TimelineIcon from '@mui/icons-material/Timeline';
 import TrendingUpIcon from '@mui/icons-material/TrendingUp';
-import AssessmentIcon from '@mui/icons-material/Assessment';
 import MonitorHeartIcon from '@mui/icons-material/MonitorHeart';
 import RadarIcon from '@mui/icons-material/Radar';
 import SettingsIcon from '@mui/icons-material/Settings';
@@ -80,17 +79,6 @@ const dataPrefetchers: Record<string, (q: ReturnType<typeof useQueryClient>, dp:
         filter: {}
       }),
       staleTime: 20000, // 20 seconds
-    });
-  },
-  'compliance-reports': (q, dp) => {
-    q.prefetchQuery({
-      queryKey: ['compliance-reports', 'list', { page: 1, perPage: 25 }],
-      queryFn: () => dp.getList('compliance-reports', {
-        pagination: { page: 1, perPage: 25 },
-        sort: { field: 'createdAt', order: 'DESC' },
-        filter: {}
-      }),
-      staleTime: 60000, // 60 seconds
     });
   },
   'threat-scanner': (q, dp) => {
@@ -239,12 +227,6 @@ export const MenuWithPreloading: React.FC = () => {
         primaryText="Trend Analysis"
         leftIcon={<TrendingUpIcon />}
         onMouseEnter={() => handleHover('trend-analysis')}
-      />
-      <Menu.Item
-        to="/compliance-reports"
-        primaryText="Compliance Reports"
-        leftIcon={<AssessmentIcon />}
-        onMouseEnter={() => handleHover('compliance-reports')}
       />
       <Menu.Item
         to="/system-status"

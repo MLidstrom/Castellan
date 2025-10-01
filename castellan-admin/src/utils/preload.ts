@@ -29,7 +29,6 @@ export const preloadMap: Record<string, () => Promise<any>> = {
   'yara-matches': () => import(/* webpackPrefetch: true */ '../resources/YaraMatches'),
   'timelines': () => import(/* webpackPrefetch: true */ '../resources/Timelines'),
   'trend-analysis': () => import(/* webpackPrefetch: true */ '../components/TrendAnalysisPage'),
-  'compliance-reports': () => import(/* webpackPrefetch: true */ '../resources/ComplianceReports'),
   'threat-scanner': () => import(/* webpackPrefetch: true */ '../resources/ThreatScanner'),
   'configuration': () => import(/* webpackPrefetch: true */ '../resources/Configuration'),
 };
@@ -43,7 +42,7 @@ export const bundleStrategy = {
   hover: ['mitre/techniques', 'system-status', 'yara-matches'],
 
   // Lazy load: Low frequency
-  lazy: ['compliance-reports', 'threat-scanner', 'configuration', 'timelines', 'trend-analysis']
+  lazy: ['threat-scanner', 'configuration', 'timelines', 'trend-analysis']
 };
 
 // Performance monitoring utilities
@@ -76,7 +75,6 @@ export const navigationPatterns: Record<string, string[]> = {
   'yara-matches': ['yara-rules', 'security-events'], // 70% probability
   'system-status': ['dashboard', 'configuration'], // 65% probability
   'mitre/techniques': ['security-events', 'dashboard'], // 60% probability
-  'compliance-reports': ['dashboard', 'configuration'], // 50% probability
 };
 
 // Predict next likely navigation based on current page

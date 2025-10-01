@@ -13,7 +13,6 @@ public interface IDashboardDataConsolidationService
     Task<ConsolidatedDashboardData> GetConsolidatedDashboardDataAsync(string timeRange = "24h");
     Task<SecurityEventsSummary> GetSecurityEventsSummaryAsync();
     Task<SystemStatusSummary> GetSystemStatusSummaryAsync();
-    Task<ComplianceReportsSummary> GetComplianceReportsSummaryAsync();
     Task<ThreatScannerSummary> GetThreatScannerSummaryAsync();
     Task InvalidateCache();
 }
@@ -28,9 +27,6 @@ public class DashboardDataConsolidationService : IDashboardDataConsolidationServ
     private readonly SystemHealthService _systemHealthService;
     private readonly ILogger<DashboardDataConsolidationService> _logger;
     private readonly IMemoryCache _cache;
-
-    // Inject existing services that provide the data
-    private readonly ApplicationService _applicationService; // For compliance reports
     private readonly IThreatScanHistoryRepository _threatScanRepository;
 
     private const string CACHE_KEY_PREFIX = "consolidated_dashboard_data";
@@ -39,14 +35,12 @@ public class DashboardDataConsolidationService : IDashboardDataConsolidationServ
     public DashboardDataConsolidationService(
         ISecurityEventStore securityEventStore,
         SystemHealthService systemHealthService,
-        ApplicationService applicationService,
         IThreatScanHistoryRepository threatScanRepository,
         IMemoryCache cache,
         ILogger<DashboardDataConsolidationService> logger)
     {
         _securityEventStore = securityEventStore;
         _systemHealthService = systemHealthService;
-        _applicationService = applicationService;
         _threatScanRepository = threatScanRepository;
         _cache = cache;
         _logger = logger;
@@ -76,14 +70,12 @@ public class DashboardDataConsolidationService : IDashboardDataConsolidationServ
 
             var securityEventsTask = GetSecurityEventsSummaryAsync();
             var systemStatusTask = GetSystemStatusSummaryAsync();
-            var complianceTask = GetComplianceReportsSummaryAsync();
             var threatScannerTask = GetThreatScannerSummaryAsync();
 
-            await Task.WhenAll(securityEventsTask, systemStatusTask, complianceTask, threatScannerTask);
+            await Task.WhenAll(securityEventsTask, systemStatusTask, threatScannerTask);
 
             var securityEvents = securityEventsTask.Result;
             var systemStatus = systemStatusTask.Result;
-            var compliance = complianceTask.Result;
             var threatScanner = threatScannerTask.Result;
 
             stopwatch.Stop();
@@ -92,7 +84,6 @@ public class DashboardDataConsolidationService : IDashboardDataConsolidationServ
             {
                 SecurityEvents = securityEvents,
                 SystemStatus = systemStatus,
-                Compliance = compliance,
                 ThreatScanner = threatScanner,
                 TimeRange = timeRange,
                 LastUpdated = DateTime.UtcNow
@@ -194,74 +185,6 @@ public class DashboardDataConsolidationService : IDashboardDataConsolidationServ
         {
             _logger.LogError(ex, "Error getting system status summary");
             return new SystemStatusSummary();
-        }
-    }
-
-    /// <summary>
-    /// Get compliance reports summary optimized for dashboard display
-    /// </summary>
-    public async Task<ComplianceReportsSummary> GetComplianceReportsSummaryAsync()
-    {
-        try
-        {
-            // This would need to be implemented based on your compliance report storage
-            // For now, return mock data matching the current API response structure
-            // TODO: Implement actual compliance report retrieval once the storage mechanism is clarified
-            return new ComplianceReportsSummary
-            {
-                TotalReports = 5,
-                AverageScore = 85.4,
-                PassingReports = 4,
-                FailingReports = 1,
-                RecentReports = new List<ComplianceReportBasic>
-                {
-                    new ComplianceReportBasic
-                    {
-                        Id = "1",
-                        Title = "Windows Security Baseline",
-                        Score = 92.5,
-                        Generated = DateTime.UtcNow.AddHours(-2),
-                        Status = "Passed"
-                    },
-                    new ComplianceReportBasic
-                    {
-                        Id = "2",
-                        Title = "NIST Cybersecurity Framework",
-                        Score = 78.3,
-                        Generated = DateTime.UtcNow.AddHours(-4),
-                        Status = "Failed"
-                    },
-                    new ComplianceReportBasic
-                    {
-                        Id = "3",
-                        Title = "ISO 27001 Controls",
-                        Score = 88.7,
-                        Generated = DateTime.UtcNow.AddHours(-6),
-                        Status = "Passed"
-                    },
-                    new ComplianceReportBasic
-                    {
-                        Id = "4",
-                        Title = "CIS Controls v8",
-                        Score = 82.1,
-                        Generated = DateTime.UtcNow.AddHours(-12),
-                        Status = "Passed"
-                    },
-                    new ComplianceReportBasic
-                    {
-                        Id = "5",
-                        Title = "SOC 2 Type II",
-                        Score = 90.0,
-                        Generated = DateTime.UtcNow.AddDays(-1),
-                        Status = "Passed"
-                    }
-                }
-            };
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error getting compliance reports summary");
-            return new ComplianceReportsSummary();
         }
     }
 

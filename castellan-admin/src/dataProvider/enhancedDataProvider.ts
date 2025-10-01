@@ -39,7 +39,6 @@ export class EnhancedDataProvider implements DataProvider {
     'system-status': 10000,          // 10 seconds - real-time monitoring
     'threat-scanner': 5000,          // 5 seconds - real-time scanning
     'yara-rules': 60000,             // 1 minute - less frequently changed
-    'compliance-reports': 60000,     // 1 minute
     'mitre/techniques': 120000,      // 2 minutes - rarely changes
     'configuration': 300000,         // 5 minutes - rarely changes
     'default': 30000                 // Default 30 seconds
@@ -352,7 +351,6 @@ export class EnhancedDataProvider implements DataProvider {
       'yara-rules': ['yara-matches'],
       'system-status': ['dashboard'],
       'mitre/techniques': ['security-events'],
-      'compliance-reports': ['configuration']
     };
 
     return predictions[resource] || [];
@@ -366,7 +364,6 @@ export class EnhancedDataProvider implements DataProvider {
       'security-events': { field: 'timestamp', order: 'DESC' },
       'yara-rules': { field: 'updatedAt', order: 'DESC' },
       'yara-matches': { field: 'detectedAt', order: 'DESC' },
-      'compliance-reports': { field: 'createdAt', order: 'DESC' },
       'mitre/techniques': { field: 'techniqueId', order: 'ASC' }
     };
 
@@ -436,7 +433,6 @@ export class EnhancedDataProvider implements DataProvider {
       'yara-rules': ['yara-matches'],
       'yara-matches': ['dashboard', 'security-events'],
       'system-status': ['dashboard'],
-      'compliance-reports': ['dashboard'],
       'configuration': ['system-status']
     };
 

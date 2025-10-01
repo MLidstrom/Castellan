@@ -41,7 +41,7 @@ import { useSignalRContext } from '../contexts/SignalRContext';
 
 interface SystemNotification {
   id: string;
-  type: 'security' | 'system' | 'compliance' | 'performance';
+  type: 'security' | 'system' | 'performance';
   severity: 'info' | 'warning' | 'error' | 'success';
   title: string;
   message: string;
@@ -83,7 +83,7 @@ const defaultSettings: NotificationSettings = {
   soundEnabled: true,
   desktopEnabled: true,
   severityFilter: ['info', 'warning', 'error', 'success'],
-  typeFilter: ['security', 'system', 'compliance', 'performance'],
+  typeFilter: ['security', 'system', 'performance'],
   autoMarkReadDelay: 5
 };
 
@@ -194,8 +194,6 @@ export const NotificationSystem: React.FC<NotificationSystemProps> = ({
     switch (type) {
       case 'security':
         return '/icons/security-notification.png';
-      case 'compliance':
-        return '/icons/compliance-notification.png';
       case 'performance':
         return '/icons/performance-notification.png';
       default:
@@ -461,10 +459,10 @@ export const NotificationSystem: React.FC<NotificationSystemProps> = ({
               </Button>
               <Button
                 size="small"
-                onClick={() => addTestNotification('compliance', 'info')}
+                onClick={() => addTestNotification('performance', 'info')}
                 color="info"
               >
-                Compliance Info
+                Performance Info
               </Button>
             </Box>
           </Box>

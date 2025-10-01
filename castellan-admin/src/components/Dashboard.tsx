@@ -34,7 +34,6 @@ import {
 } from 'recharts';
 import {
   Security as SecurityIcon,
-  Assessment as ComplianceIcon,
   Warning as WarningIcon,
   CheckCircle as HealthyIcon,
   Error as ErrorIcon,
@@ -82,12 +81,6 @@ interface SecurityEvent {
   [key: string]: any;
 }
 
-interface ComplianceReport {
-  id: string;
-  complianceScore?: number;
-  ComplianceScore?: number;
-  [key: string]: any;
-}
 
 interface SystemStatus {
   id: string;
@@ -159,7 +152,6 @@ export const Dashboard = React.memo(() => {
 
   // Legacy state for backward compatibility with existing components
   const [securityEventsData, setSecurityEventsData] = useState<{ events: SecurityEvent[], total: number }>({ events: [], total: 0 });
-  const [complianceReports, setComplianceReports] = useState<ComplianceReport[]>([]);
   const [systemStatus, setSystemStatus] = useState<SystemStatus[]>([]);
   const [threatScanner, setThreatScanner] = useState<ThreatScan[]>([]);
   const [scanInProgress, setScanInProgress] = useState(false);
@@ -200,10 +192,6 @@ export const Dashboard = React.memo(() => {
         total: consolidatedDashboardData.securityEvents.totalEvents
       });
 
-      setComplianceReports(consolidatedDashboardData.compliance.recentReports.map(report => ({
-        id: report.id,
-        complianceScore: report.score
-      })));
 
       setSystemStatus(consolidatedDashboardData.systemStatus.components.map(component => ({
         id: component.component,
@@ -590,10 +578,6 @@ export const Dashboard = React.memo(() => {
             total: data.securityEvents.totalEvents
           });
 
-          setComplianceReports(data.compliance.recentReports.map((report: any) => ({
-            id: report.id,
-            complianceScore: report.score
-          })));
 
           setSystemStatus(data.systemStatus.components.map((component: any) => ({
             id: component.component,
@@ -647,11 +631,6 @@ export const Dashboard = React.memo(() => {
         totalComponents: consolidatedData.systemStatus.totalComponents,
         healthyComponents: consolidatedData.systemStatus.healthyComponents,
         componentsCount: consolidatedData.systemStatus.components.length
-      });
-      console.log('Compliance:', {
-        totalReports: consolidatedData.compliance.totalReports,
-        averageScore: consolidatedData.compliance.averageScore,
-        recentReportsCount: consolidatedData.compliance.recentReports.length
       });
       console.log('Threat Scanner:', {
         totalScans: consolidatedData.threatScanner.totalScans,
@@ -748,21 +727,6 @@ export const Dashboard = React.memo(() => {
     return Object.entries(riskCounts).map(([name, value]) => ({ name, value }));
   };
 
-  const processComplianceData = () => {
-    if (consolidatedData?.compliance.recentReports) {
-      return consolidatedData.compliance.recentReports.map((report, index) => ({
-        name: report.title.substring(0, 20) + (report.title.length > 20 ? '...' : ''),
-        score: report.score
-      }));
-    }
-
-    // Fallback to legacy data processing
-    if (!complianceReports || complianceReports.length === 0) return [];
-    return complianceReports.map((report, index) => ({
-      name: `Report ${index + 1}`,
-      score: report.complianceScore || report.ComplianceScore || 0
-    }));
-  };
 
   const processSystemHealthData = () => {
     if (consolidatedData?.systemStatus) {
@@ -807,7 +771,6 @@ export const Dashboard = React.memo(() => {
 
   // Chart data - memoized to prevent unnecessary re-renders
   const securityEventsChartData = useMemo(() => processSecurityEventsForChart(), [securityEvents]);
-  const complianceChartData = useMemo(() => processComplianceData(), [complianceReports]);
   const systemHealthChartData = useMemo(() => processSystemHealthData(), [systemStatus]);
   const threatScanChartData = useMemo(() => processThreatScanData(), [threatScanner]);
 
@@ -1039,11 +1002,9 @@ export const Dashboard = React.memo(() => {
           <CardContent>
             <ApiDiagnostic
               securityEventsData={securityEvents}
-              complianceReportsData={complianceReports}
               systemStatusData={systemStatus}
               threatScannerData={threatScanner}
               securityEventsError={dashboardDataError}
-              complianceReportsError={dashboardDataError}
               systemStatusError={dashboardDataError}
               threatScannerError={dashboardDataError}
             />

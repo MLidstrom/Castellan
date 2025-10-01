@@ -4,30 +4,19 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
-using Microsoft.AspNetCore.Authentication.JwtBearer;
-using Microsoft.IdentityModel.Tokens;
-using Microsoft.EntityFrameworkCore;
-using System.Text;
 using Castellan.Worker; // for Pipeline
 using Castellan.Worker.Abstractions;
-using Castellan.Worker.Collectors;
-using Castellan.Worker.Embeddings;
-using Castellan.Worker.VectorStores;
-using Castellan.Worker.Llms;
-using Castellan.Worker.Models;
-using Castellan.Worker.Models.ThreatIntelligence;
-using Castellan.Worker.Services;
-using Castellan.Worker.Services.Interfaces;
-using Castellan.Worker.Services.NotificationChannels;
 using Castellan.Worker.Configuration;
 using Castellan.Worker.Configuration.Validation;
 using Castellan.Worker.Data;
+using Castellan.Worker.Extensions;
 using Castellan.Worker.Middleware;
-using Castellan.Worker.Services.ConnectionPools;
-using Castellan.Worker.Services.ConnectionPools.Interfaces;
-using Castellan.Worker.Services.Compliance;
 using Castellan.Worker.Hubs;
+using Castellan.Worker.Models;
 using Castellan.Worker.Options;
+using Castellan.Worker.Services;
+using Castellan.Worker.Services.Interfaces;
+using Castellan.Worker.VectorStores;
 using Castellan.Worker.Infrastructure;
 using Serilog;
 
@@ -50,34 +39,19 @@ Log.Logger = new LoggerConfiguration()
     .Enrich.WithProperty("Environment", builder.Environment.EnvironmentName)
     .WriteTo.Console(outputTemplate:
         "[{Timestamp:HH:mm:ss} {Level:u3}] {Message:lj} {Properties:j}{NewLine}{Exception}")
-    .WriteTo.File("logs/run-.log", 
+    .WriteTo.File("logs/run-.log",
         rollingInterval: RollingInterval.Day,
         fileSizeLimitBytes: 2 * 1024 * 1024, // 2MB
         retainedFileCountLimit: 5,
         rollOnFileSizeLimit: true,
         shared: true,
         flushToDiskInterval: TimeSpan.FromSeconds(1),
-        outputTemplate: 
+        outputTemplate:
             "{Timestamp:yyyy-MM-dd HH:mm:ss.fff zzz} [{Level:u3}] {CorrelationId} {SourceContext} {Message:lj} {Properties:j}{NewLine}{Exception}")
     .CreateLogger();
 
 builder.Logging.ClearProviders();
 builder.Logging.AddSerilog();
-
-builder.Services.Configure<EvtxOptions>(builder.Configuration.GetSection("Ingest:Evtx"));
-builder.Services.Configure<QdrantOptions>(builder.Configuration.GetSection("Qdrant"));
-builder.Services.Configure<EmbeddingOptions>(builder.Configuration.GetSection("Embeddings"));
-builder.Services.Configure<LlmOptions>(builder.Configuration.GetSection("LLM"));
-builder.Services.Configure<AlertOptions>(builder.Configuration.GetSection("Alerts"));
-builder.Services.Configure<PipelineOptions>(builder.Configuration.GetSection("Pipeline"));
-builder.Services.Configure<Castellan.Worker.Configuration.CorrelationOptions>(builder.Configuration.GetSection("Correlation"));
-builder.Services.Configure<NotificationOptions>(builder.Configuration.GetSection("Notifications"));
-builder.Services.Configure<IPEnrichmentOptions>(builder.Configuration.GetSection("IPEnrichment"));
-builder.Services.Configure<AutomatedResponseOptions>(builder.Configuration.GetSection("AutomatedResponse"));
-builder.Services.Configure<ThreatScanOptions>(builder.Configuration.GetSection("ThreatScan"));
-builder.Services.Configure<AuthenticationOptions>(builder.Configuration.GetSection(AuthenticationOptions.SectionName));
-builder.Services.Configure<TeamsNotificationOptions>(builder.Configuration.GetSection("Notifications:Teams"));
-builder.Services.Configure<SlackNotificationOptions>(builder.Configuration.GetSection("Notifications:Slack"));
 
 // Configure connection pools
 builder.Services.Configure<ConnectionPoolOptions>(builder.Configuration.GetSection("ConnectionPools"));
@@ -87,251 +61,20 @@ builder.Services.AddSingleton<IValidateOptions<AuthenticationOptions>, Authentic
 builder.Services.AddSingleton<IValidateOptions<QdrantOptions>, QdrantOptionsValidator>();
 builder.Services.AddSingleton<IValidateOptions<PipelineOptions>, PipelineOptionsValidator>();
 
-// Add new security services
-builder.Services.AddSingleton<IPasswordHashingService, BCryptPasswordHashingService>();
-builder.Services.AddSingleton<IJwtTokenBlacklistService, MemoryJwtTokenBlacklistService>();
-builder.Services.AddSingleton<IRefreshTokenService, MemoryRefreshTokenService>();
-
-builder.Services.AddSingleton<ILogCollector, EvtxCollector>();
-
-
-builder.Services.AddSingleton<INotificationService, NotificationService>();
-
-// Add notification channels
-builder.Services.AddSingleton<INotificationChannel, TeamsNotificationChannel>();
-builder.Services.AddSingleton<INotificationChannel, SlackNotificationChannel>();
-builder.Services.AddSingleton<INotificationManager, NotificationManager>();
-
-// Add notification configuration store
-builder.Services.AddSingleton<INotificationConfigurationStore, FileBasedNotificationConfigurationStore>();
-
-builder.Services.AddHttpClient();
-builder.Services.AddMemoryCache(); // For IP enrichment caching
-
-// Add connection pools
-builder.Services.AddSingleton<QdrantConnectionPool>();
-builder.Services.AddSingleton<IQdrantConnectionPool>(provider => provider.GetRequiredService<QdrantConnectionPool>());
-
-// Removed caching layer services to simplify architecture
-
-// Add SQLite Database
-// Get database path from configuration (relative paths are resolved from repository root)
-var dbPathFromConfig = builder.Configuration["Database:Path"] ?? "data/castellan.db";
-var repoRoot = Path.GetFullPath(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "..", "..", "..", "..", ".."));
-var dbPath = Path.IsPathRooted(dbPathFromConfig)
-    ? dbPathFromConfig
-    : Path.Combine(repoRoot, dbPathFromConfig);
-Directory.CreateDirectory(Path.GetDirectoryName(dbPath)!);
-builder.Services.AddDbContext<CastellanDbContext>(options =>
-    options.UseSqlite($"Data Source={dbPath}"));
-
-// Store database path in configuration for other services to use
-builder.Services.AddSingleton(new DatabaseConfiguration { Path = dbPath });
-
-// Add database services
-builder.Services.AddScoped<ApplicationService>();
-builder.Services.AddScoped<MitreService>();
-builder.Services.AddScoped<SecurityEventService>();
-builder.Services.AddScoped<SystemConfigurationService>();
-builder.Services.AddScoped<MitreAttackImportService>();
-builder.Services.AddScoped<DatabaseSchemaUpdateService>();
-
-// Register performance monitoring service
-builder.Services.Configure<PerformanceMonitorOptions>(builder.Configuration.GetSection("PerformanceMonitoring"));
-builder.Services.AddSingleton<IPerformanceMonitor, PerformanceMonitorService>();
-
-// Register enhanced performance services for dashboard
-builder.Services.AddScoped<PerformanceMetricsService>();
-builder.Services.AddScoped<PerformanceAlertService>();
-builder.Services.AddSingleton<AnalyticsService>();
-
-// Register IP enrichment service based on configuration
-var ipEnrichmentProvider = builder.Configuration["IPEnrichment:Provider"] ?? "MaxMind";
-if (ipEnrichmentProvider.Equals("MaxMind", StringComparison.OrdinalIgnoreCase))
-    builder.Services.AddSingleton<IIPEnrichmentService, MaxMindIPEnrichmentService>();
-else
-    builder.Services.AddSingleton<IIPEnrichmentService, MaxMindIPEnrichmentService>(); // Default to MaxMind
-
-// Register system health service (singleton for system-level metrics)
-builder.Services.AddSingleton<SystemHealthService>();
-
-// Register threat scanner service
-builder.Services.Configure<ThreatScanOptions>(builder.Configuration.GetSection("ThreatScanner"));
-// Configure threat intelligence services
-builder.Services.Configure<ThreatIntelligenceOptions>(builder.Configuration.GetSection("ThreatIntelligence"));
-// Register threat intelligence cache service
-builder.Services.AddSingleton<IThreatIntelligenceCacheService, ThreatIntelligenceCacheService>();
-
-// Register VirusTotal service with HttpClient
-builder.Services.AddHttpClient<IVirusTotalService, VirusTotalService>();
-
-// Register MalwareBazaar service with HttpClient
-builder.Services.AddHttpClient<IMalwareBazaarService, MalwareBazaarService>();
-
-// Register AlienVault OTX service with HttpClient
-builder.Services.AddHttpClient<IOtxService, OtxService>();
-
-// Register threat scan progress store as singleton to share across scoped services
-builder.Services.AddSingleton<IThreatScanProgressStore, ThreatScanProgressStore>();
-
-// Register threat scanner service with threat intelligence
-builder.Services.AddScoped<IThreatScanner, ThreatScannerService>();
-
-var embedProvider = builder.Configuration["Embeddings:Provider"] ?? "Ollama";
-if (embedProvider.Equals("Ollama", StringComparison.OrdinalIgnoreCase))
-    builder.Services.AddSingleton<IEmbedder, OllamaEmbedder>();
-else if (embedProvider.Equals("OpenAI", StringComparison.OrdinalIgnoreCase))
-    builder.Services.AddSingleton<IEmbedder, OpenAIEmbedder>();
-else if (embedProvider.Equals("Mock", StringComparison.OrdinalIgnoreCase))
-    builder.Services.AddSingleton<IEmbedder, MockEmbedder>();
-else
-    builder.Services.AddSingleton<IEmbedder, OllamaEmbedder>(); // Default fallback
-
-var llmProvider = builder.Configuration["LLM:Provider"] ?? "Ollama";
-if (llmProvider.Equals("Ollama", StringComparison.OrdinalIgnoreCase))
-    builder.Services.AddSingleton<ILlmClient, OllamaLlm>();
-else
-    builder.Services.AddSingleton<ILlmClient, OpenAILlm>();
-
-// Use QdrantPooledVectorStore with connection pooling for improved performance
-builder.Services.AddSingleton<IVectorStore, QdrantPooledVectorStore>();
-builder.Services.AddSingleton<SecurityEventDetector>();
-builder.Services.AddSingleton<RulesEngine>(); // M4: Add RulesEngine for correlation and fusion
-
-// Register the base security event store (DatabaseSecurityEventStore for database persistence)
-builder.Services.AddScoped<DatabaseSecurityEventStore>();
-// Wrap it with SignalR broadcasting capabilities for real-time updates
-builder.Services.AddScoped<ISecurityEventStore>(provider =>
-{
-    var baseStore = provider.GetRequiredService<DatabaseSecurityEventStore>();
-    var broadcaster = provider.GetRequiredService<IScanProgressBroadcaster>();
-    var logger = provider.GetRequiredService<ILogger<SignalRSecurityEventStore>>();
-    return new SignalRSecurityEventStore(baseStore, broadcaster, logger);
-});
-
-builder.Services.AddSingleton<IAutomatedResponseService, AutomatedResponseService>(); // Automated threat response
-
-// Register Export Service
-builder.Services.AddSingleton<IExportService, ExportService>();
-
-// Register Timeline Service
-builder.Services.AddScoped<ITimelineService, TimelineService>();
-
-// Register Advanced Search Service - v0.5.0
-builder.Services.AddScoped<IAdvancedSearchService, AdvancedSearchService>();
-
-// Register Search Management Services - v0.5.0
-builder.Services.AddScoped<ISavedSearchService, SavedSearchService>();
-builder.Services.AddScoped<ISearchHistoryService, SearchHistoryService>();
-
-// Register Correlation Engine - v0.6.0
-builder.Services.AddSingleton<ICorrelationEngine, CorrelationEngine>();
-
-// Register YARA services
-builder.Services.Configure<YaraScanningOptions>(builder.Configuration.GetSection(YaraScanningOptions.SectionName));
-builder.Services.AddSingleton<DatabaseYaraRuleStore>();
-builder.Services.AddSingleton<IYaraRuleStore>(sp => sp.GetRequiredService<DatabaseYaraRuleStore>());
-builder.Services.AddSingleton<IYaraScanService, YaraScanService>();
-builder.Services.AddHostedService<YaraScanService>(provider =>
-    (YaraScanService)provider.GetRequiredService<IYaraScanService>());
-
-// Register threat scan history repository
-builder.Services.AddScoped<IThreatScanHistoryRepository, ThreatScanHistoryRepository>();
-
-// Register threat scan configuration service
-builder.Services.AddSingleton<IThreatScanConfigurationService, ThreatScanConfigurationService>();
-
-builder.Services.AddHostedService<Pipeline>();
-builder.Services.AddHostedService<StartupOrchestratorService>(); // Automatically start all required services
-builder.Services.AddHostedService<MitreImportStartupService>(); // Auto-import MITRE data if needed
-builder.Services.AddHostedService<DailyRefreshHostedService>(); // Daily refresh for MITRE/YARA
-builder.Services.AddHostedService<ScheduledThreatScanService>(); // Scheduled threat scanning
-builder.Services.AddHostedService<CorrelationBackgroundService>(); // Background correlation processing
+// Add feature-specific services using extension methods
+builder.Services.AddHttpClient(); // Required by multiple features
+builder.Services.AddCastellanDatabase(builder.Configuration, builder.Environment);
+builder.Services.AddCastellanAuthentication(builder.Configuration);
+builder.Services.AddCastellanAI(builder.Configuration);
+builder.Services.AddCastellanSecurity(builder.Configuration);
+builder.Services.AddCastellanThreatIntelligence(builder.Configuration);
+builder.Services.AddCastellanNotifications(builder.Configuration);
+builder.Services.AddCastellanMonitoring(builder.Configuration);
+builder.Services.AddCastellanPipeline(builder.Configuration);
+builder.Services.AddCastellanSignalR();
 
 // Add Web API services
 builder.Services.AddControllers();
-
-// Add SignalR for real-time updates
-builder.Services.AddSignalR();
-
-// Add SignalR progress broadcaster service
-builder.Services.AddSingleton<IScanProgressBroadcaster, ScanProgressBroadcaster>();
-
-// Add enhanced progress tracking service
-builder.Services.AddSingleton<IEnhancedProgressTrackingService, EnhancedProgressTrackingService>();
-
-// Add system metrics background service for SignalR broadcasting
-builder.Services.AddHostedService<SystemMetricsBackgroundService>();
-
-// Add dashboard data consolidation services
-builder.Services.AddScoped<IDashboardDataConsolidationService, DashboardDataConsolidationService>();
-builder.Services.AddSingleton<DashboardDataBroadcastService>();
-builder.Services.AddHostedService<DashboardDataBroadcastService>(provider =>
-    provider.GetRequiredService<DashboardDataBroadcastService>());
-
-// Add Compliance Assessment Services - v0.6.0
-builder.Services.AddScoped<Castellan.Worker.Services.Compliance.IComplianceAssessmentService, Castellan.Worker.Services.Compliance.ComplianceAssessmentService>();
-builder.Services.AddScoped<Castellan.Worker.Services.Compliance.IComplianceFrameworkService, Castellan.Worker.Services.Compliance.ComplianceFrameworkService>();
-builder.Services.AddScoped<Castellan.Worker.Services.Compliance.IComplianceReportGenerationService, Castellan.Worker.Services.Compliance.ComplianceReportGenerationService>();
-
-// Add Compliance Report Caching - Phase 4 Week 3 Performance Optimization
-builder.Services.AddComplianceReportCaching();
-
-// Add Optimized PDF Report Service - Phase 4 Week 3 Performance Optimization
-builder.Services.AddScoped<Castellan.Worker.Services.Compliance.IOptimizedPdfReportService, Castellan.Worker.Services.Compliance.OptimizedPdfReportService>();
-
-// Add Background Compliance Report Service - Phase 4 Week 3 Performance Optimization
-builder.Services.AddSingleton<Castellan.Worker.Services.Compliance.IBackgroundComplianceReportService, Castellan.Worker.Services.Compliance.BackgroundComplianceReportService>();
-builder.Services.AddHostedService<Castellan.Worker.Services.Compliance.BackgroundComplianceReportService>(provider =>
-    provider.GetRequiredService<Castellan.Worker.Services.Compliance.IBackgroundComplianceReportService>() as Castellan.Worker.Services.Compliance.BackgroundComplianceReportService
-    ?? throw new InvalidOperationException("BackgroundComplianceReportService not found"));
-
-// Add Compliance Performance Monitoring - Phase 4 Week 3 Performance Optimization
-builder.Services.AddSingleton<Castellan.Worker.Services.Compliance.ICompliancePerformanceMonitorService, Castellan.Worker.Services.Compliance.CompliancePerformanceMonitorService>();
-
-// Register all compliance frameworks
-builder.Services.AddScoped<Castellan.Worker.Services.Compliance.Frameworks.HipaaComplianceFramework>();
-builder.Services.AddScoped<Castellan.Worker.Services.Compliance.Frameworks.SoxComplianceFramework>();
-builder.Services.AddScoped<Castellan.Worker.Services.Compliance.Frameworks.PCIDSSComplianceFramework>();
-builder.Services.AddScoped<Castellan.Worker.Services.Compliance.Frameworks.ISO27001ComplianceFramework>();
-builder.Services.AddScoped<Castellan.Worker.Services.Compliance.Frameworks.SOC2ComplianceFramework>();
-
-// Register frameworks as IComplianceFramework for enumerable injection
-// Organization-scope frameworks (visible to users)
-builder.Services.AddScoped<Castellan.Worker.Services.Compliance.IComplianceFramework, Castellan.Worker.Services.Compliance.Frameworks.HipaaComplianceFramework>();
-builder.Services.AddScoped<Castellan.Worker.Services.Compliance.IComplianceFramework, Castellan.Worker.Services.Compliance.Frameworks.SoxComplianceFramework>();
-builder.Services.AddScoped<Castellan.Worker.Services.Compliance.IComplianceFramework, Castellan.Worker.Services.Compliance.Frameworks.PCIDSSComplianceFramework>();
-builder.Services.AddScoped<Castellan.Worker.Services.Compliance.IComplianceFramework, Castellan.Worker.Services.Compliance.Frameworks.ISO27001ComplianceFramework>();
-builder.Services.AddScoped<Castellan.Worker.Services.Compliance.IComplianceFramework, Castellan.Worker.Services.Compliance.Frameworks.SOC2ComplianceFramework>();
-
-// Application-scope frameworks (hidden from users)
-// TODO: Fix CISControlsFramework and WindowsSecurityBaselinesFramework compilation errors
-// builder.Services.AddScoped<Castellan.Worker.Services.Compliance.IComplianceFramework, Castellan.Worker.Services.Compliance.Frameworks.CISControlsFramework>();
-// builder.Services.AddScoped<Castellan.Worker.Services.Compliance.IComplianceFramework, Castellan.Worker.Services.Compliance.Frameworks.WindowsSecurityBaselinesFramework>();
-
-// Register framework factory to resolve frameworks by name
-builder.Services.AddScoped<Func<string, Castellan.Worker.Services.Compliance.IComplianceFramework>>(serviceProvider => frameworkName =>
-{
-    return frameworkName.ToUpperInvariant() switch
-    {
-        "HIPAA" => serviceProvider.GetRequiredService<Castellan.Worker.Services.Compliance.Frameworks.HipaaComplianceFramework>(),
-        "SOX" => serviceProvider.GetRequiredService<Castellan.Worker.Services.Compliance.Frameworks.SoxComplianceFramework>(),
-        "PCI DSS" => serviceProvider.GetRequiredService<Castellan.Worker.Services.Compliance.Frameworks.PCIDSSComplianceFramework>(),
-        "ISO 27001" => serviceProvider.GetRequiredService<Castellan.Worker.Services.Compliance.Frameworks.ISO27001ComplianceFramework>(),
-        "SOC2" => serviceProvider.GetRequiredService<Castellan.Worker.Services.Compliance.Frameworks.SOC2ComplianceFramework>(),
-        // "CIS CONTROLS V8" => serviceProvider.GetRequiredService<Castellan.Worker.Services.Compliance.Frameworks.CISControlsFramework>(),
-        // "WINDOWS SECURITY BASELINES" => serviceProvider.GetRequiredService<Castellan.Worker.Services.Compliance.Frameworks.WindowsSecurityBaselinesFramework>(),
-        _ => throw new ArgumentException($"Unknown compliance framework: {frameworkName}")
-    };
-});
-
-builder.Services.AddHostedService<ComplianceDataSeedingService>(); // Seed compliance controls data
-// TODO: Fix ApplicationComplianceBackgroundService - depends on broken framework implementations\n// builder.Services.AddHostedService<Castellan.Worker.Services.Compliance.ApplicationComplianceBackgroundService>(); // Background Application compliance assessment
-
-// Add Windows Event Log Watcher services
-builder.Services.Configure<WindowsEventLogOptions>(builder.Configuration.GetSection("WindowsEventLog"));
-builder.Services.AddScoped<IEventBookmarkStore, DatabaseEventBookmarkStore>();
-builder.Services.AddHostedService<WindowsEventLogWatcherService>();
 
 // Add CORS for frontend and SignalR
 builder.Services.AddCors(options =>
@@ -346,64 +89,13 @@ builder.Services.AddCors(options =>
     });
 });
 
-// Add JWT Authentication
-builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
-    .AddJwtBearer(options =>
-    {
-        var authOptions = builder.Configuration.GetSection(AuthenticationOptions.SectionName).Get<AuthenticationOptions>();
-        if (authOptions?.Jwt == null || string.IsNullOrEmpty(authOptions.Jwt.SecretKey))
-        {
-            throw new InvalidOperationException("JWT SecretKey not configured in Authentication:Jwt:SecretKey");
-        }
-
-        options.TokenValidationParameters = new TokenValidationParameters
-        {
-            ValidateIssuer = true,
-            ValidateAudience = true,
-            ValidateLifetime = true,
-            ValidateIssuerSigningKey = true,
-            ValidIssuer = authOptions.Jwt.Issuer,
-            ValidAudience = authOptions.Jwt.Audience,
-            IssuerSigningKey = new SymmetricSecurityKey(
-                Encoding.UTF8.GetBytes(authOptions.Jwt.SecretKey))
-        };
-        
-        // Configure JWT for SignalR
-        options.Events = new JwtBearerEvents
-        {
-            OnMessageReceived = context =>
-            {
-                var accessToken = context.Request.Query["access_token"];
-                
-                // If the request is for our SignalR hub...
-                var path = context.HttpContext.Request.Path;
-                if (!string.IsNullOrEmpty(accessToken) && 
-                    path.StartsWithSegments("/hubs"))
-                {
-                    // Read the token out of the query string
-                    context.Token = accessToken;
-                }
-                return Task.CompletedTask;
-            },
-            OnAuthenticationFailed = context =>
-            {
-                // Don't fail negotiation for SignalR - allow anonymous negotiation
-                if (context.Request.Path.StartsWithSegments("/hubs"))
-                {
-                    context.NoResult();
-                }
-                return Task.CompletedTask;
-            }
-        };
-    });
-
 #if DEBUG
 // Validate service registrations in development
 Console.WriteLine("Validating service registrations...");
-try 
+try
 {
     using var scope = builder.Services.BuildServiceProvider().CreateScope();
-    
+
     // Test critical services can be resolved
     var criticalServices = new[]
     {
@@ -415,17 +107,15 @@ try
         typeof(ILlmClient),
         typeof(INotificationService),
         typeof(IPerformanceMonitor),
-        // Removed caching services
-        // v0.4.0 Export Service
         typeof(IExportService)
     };
-    
+
     foreach (var serviceType in criticalServices)
     {
         var service = scope.ServiceProvider.GetRequiredService(serviceType);
         Console.WriteLine($"✅ {serviceType.Name} resolved successfully");
     }
-    
+
     Console.WriteLine("✅ All critical services validated successfully");
 }
 catch (Exception ex)
@@ -442,12 +132,12 @@ try
     var authOptions = configScope.ServiceProvider.GetRequiredService<IOptionsMonitor<AuthenticationOptions>>();
     var qdrantOptions = configScope.ServiceProvider.GetRequiredService<IOptionsMonitor<QdrantOptions>>();
     var pipelineOptions = configScope.ServiceProvider.GetRequiredService<IOptionsMonitor<PipelineOptions>>();
-    
+
     // Accessing .Value will trigger validation
     _ = authOptions.CurrentValue;
     _ = qdrantOptions.CurrentValue;
     _ = pipelineOptions.CurrentValue;
-    
+
     Console.WriteLine("✅ All configuration options validated successfully");
 }
 catch (OptionsValidationException ex)
@@ -467,7 +157,7 @@ using (var scope = app.Services.CreateScope())
         var context = scope.ServiceProvider.GetRequiredService<CastellanDbContext>();
         await context.Database.EnsureCreatedAsync();
         Console.WriteLine("Database initialized successfully");
-        
+
         // Ensure new search tables exist (for v0.5.0)
         var schemaUpdateService = scope.ServiceProvider.GetRequiredService<DatabaseSchemaUpdateService>();
         await schemaUpdateService.EnsureTablesExistAsync();

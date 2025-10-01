@@ -222,19 +222,6 @@ export interface ConsolidatedDashboardData {
     }>;
     componentStatuses: Record<string, string>;
   };
-  compliance: {
-    totalReports: number;
-    averageScore: number;
-    passingReports: number;
-    failingReports: number;
-    recentReports: Array<{
-      id: string;
-      title: string;
-      score: number;
-      generated: string;
-      status: string;
-    }>;
-  };
   threatScanner: {
     totalScans: number;
     activeScans: number;

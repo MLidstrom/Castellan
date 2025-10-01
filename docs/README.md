@@ -42,7 +42,6 @@ Welcome to the complete documentation for **Castellan**, the AI-powered Windows 
 
 | Use Case | Document | Description |
 |----------|----------|-------------|
-| **Compliance** | [COMPLIANCE.md](COMPLIANCE.md) | Security compliance features |
 | **Performance Tuning** | [PERFORMANCE_TUNING.md](PERFORMANCE_TUNING.md) | Optimization strategies |
 | **Windows Compatibility** | [WINDOWS_POWERSHELL_COMPATIBILITY.md](WINDOWS_POWERSHELL_COMPATIBILITY.md) | Native Windows support |
 | **Advanced Search** | [ADVANCED_SEARCH_SPEC.md](ADVANCED_SEARCH_SPEC.md) | Search and filtering capabilities |
@@ -69,7 +68,6 @@ Welcome to the complete documentation for **Castellan**, the AI-powered Windows 
 - ✅ **Enterprise Scale** - 12K+ events/sec with intelligent caching
 - ✅ **Real-time Notifications** - Teams/Slack with adaptive rate limiting
 - ✅ **Threat Intelligence** - VirusTotal/MalwareBazaar/OTX integration
-- ✅ **Compliance Reporting** - 7 enterprise frameworks with performance optimization and background processing
 
 ## 🚀 Quick Links
 

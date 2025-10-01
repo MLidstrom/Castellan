@@ -3,7 +3,6 @@ import { Admin, Resource } from 'react-admin';
 import { Box, CircularProgress, Typography } from '@mui/material';
 import {
   Security as SecurityIcon,
-  Assessment as ComplianceIcon,
   Computer as SystemIcon,
   BugReport as ThreatScannerIcon,
   Gavel as MitreIcon,
@@ -36,9 +35,6 @@ const SecurityEventCreate = React.lazy(() => import(/* webpackPrefetch: true */ 
 const SystemStatusList = React.lazy(() => import(/* webpackPrefetch: true */ './resources/SystemStatus').then(module => ({ default: module.SystemStatusList })));
 const SystemStatusShow = React.lazy(() => import(/* webpackPrefetch: true */ './resources/SystemStatus').then(module => ({ default: module.SystemStatusShow })));
 
-const ComplianceReportList = React.lazy(() => import(/* webpackPrefetch: true */ './resources/ComplianceReports').then(module => ({ default: module.ComplianceReportList })));
-const ComplianceReportShow = React.lazy(() => import(/* webpackPrefetch: true */ './resources/ComplianceReports').then(module => ({ default: module.ComplianceReportShow })));
-const ComplianceReportCreate = React.lazy(() => import(/* webpackPrefetch: true */ './resources/ComplianceReports').then(module => ({ default: module.ComplianceReportCreate })));
 
 const ThreatScannerList = React.lazy(() => import(/* webpackPrefetch: true */ './resources/ThreatScanner').then(module => ({ default: module.ThreatScannerList })));
 const ThreatScannerShow = React.lazy(() => import(/* webpackPrefetch: true */ './resources/ThreatScanner').then(module => ({ default: module.ThreatScannerShow })));
@@ -152,15 +148,6 @@ const App = () => {
             />
 
 
-            {/* Compliance Reports Resource - Now Available */}
-            <Resource
-              name="compliance-reports"
-              list={ComplianceReportList}
-              show={ComplianceReportShow}
-              create={ComplianceReportCreate}
-              icon={ComplianceIcon}
-              recordRepresentation={(record) => `${record.framework} - ${record.reportType}`}
-            />
     
             {/* System Status Resource - Available in CastellanProFree */}
             <Resource

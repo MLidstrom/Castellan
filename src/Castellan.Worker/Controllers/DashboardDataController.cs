@@ -30,7 +30,7 @@ public class DashboardDataController : ControllerBase
 
     /// <summary>
     /// Get consolidated dashboard data for all widgets in a single call
-    /// This replaces the need for multiple API calls: /security-events, /system-status, /compliance-reports, /threat-scanner
+    /// This replaces the need for multiple API calls: /security-events, /system-status, /threat-scanner
     /// </summary>
     /// <param name="timeRange">Time range for dashboard data (1h, 24h, 7d, 30d)</param>
     /// <returns>Consolidated dashboard data</returns>
@@ -92,24 +92,6 @@ public class DashboardDataController : ControllerBase
         {
             _logger.LogError(ex, "Error retrieving system status summary");
             return StatusCode(500, new { error = "Failed to retrieve system status summary", message = ex.Message });
-        }
-    }
-
-    /// <summary>
-    /// Get compliance reports summary only
-    /// </summary>
-    [HttpGet("compliance")]
-    public async Task<ActionResult<ComplianceReportsSummary>> GetComplianceReportsSummary()
-    {
-        try
-        {
-            var data = await _dashboardDataService.GetComplianceReportsSummaryAsync();
-            return Ok(data);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error retrieving compliance reports summary");
-            return StatusCode(500, new { error = "Failed to retrieve compliance reports summary", message = ex.Message });
         }
     }
 

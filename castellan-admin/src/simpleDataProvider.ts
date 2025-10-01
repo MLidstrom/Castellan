@@ -1,5 +1,5 @@
 import { DataProvider } from 'react-admin';
-import { mockSecurityEvents, mockComplianceReports, mockSystemStatus } from './mockData';
+import { mockSecurityEvents, mockSystemStatus } from './mockData';
 
 // Simplified mock data provider for development
 export const dataProvider: DataProvider = {
@@ -9,9 +9,6 @@ export const dataProvider: DataProvider = {
     switch (resource) {
       case 'security-events':
         data = [...mockSecurityEvents];
-        break;
-      case 'compliance-reports':
-        data = [...mockComplianceReports];
         break;
       case 'system-status':
         data = [...mockSystemStatus];
@@ -55,9 +52,6 @@ export const dataProvider: DataProvider = {
       case 'security-events':
         data = mockSecurityEvents;
         break;
-      case 'compliance-reports':
-        data = mockComplianceReports;
-        break;
       case 'system-status':
         data = mockSystemStatus;
         break;
@@ -79,9 +73,6 @@ export const dataProvider: DataProvider = {
     switch (resource) {
       case 'security-events':
         data = mockSecurityEvents;
-        break;
-      case 'compliance-reports':
-        data = mockComplianceReports;
         break;
       case 'system-status':
         data = mockSystemStatus;
@@ -114,9 +105,6 @@ export const dataProvider: DataProvider = {
     switch (resource) {
       case 'security-events':
         data = mockSecurityEvents;
-        break;
-      case 'compliance-reports':
-        data = mockComplianceReports;
         break;
       case 'system-status':
         data = mockSystemStatus;
