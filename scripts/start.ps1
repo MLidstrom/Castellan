@@ -7,11 +7,13 @@
 #   .\scripts\start.ps1 -NoBuild           # Skip build step
 #   .\scripts\start.ps1 -Foreground        # Run Worker in foreground (for debugging)
 #   .\scripts\start.ps1 -NoReactAdmin      # Skip React Admin startup
+#   .\scripts\start.ps1 -ProductionBuild   # Use production build instead of dev server
 #
 param(
     [switch]$NoBuild = $false,        # Skip building the project
     [switch]$Foreground = $false,      # Run Worker in foreground instead of background
-    [switch]$NoReactAdmin = $false     # Skip starting React Admin UI
+    [switch]$NoReactAdmin = $false,    # Skip starting React Admin UI
+    [switch]$ProductionBuild = $false  # Use production build instead of dev server (default: dev)
 )
 
 # Ensure we're using TLS 1.2 for web requests on older PowerShell versions
@@ -80,6 +82,8 @@ function Build-Project {
 
 # Function to start React Admin UI
 function Start-ReactAdmin {
+    param([bool]$UseProductionBuild)
+
     Write-Host "Checking React Admin UI..." -ForegroundColor Yellow
     
     # Check if React Admin is already running (dev server or static serve)
@@ -99,29 +103,34 @@ function Start-ReactAdmin {
         return $false
     }
 
-    # Prefer production build if present
-    $buildIndexPath = Join-Path $reactAdminPath "build\index.html"
-    if (Test-Path $buildIndexPath) {
-        try {
-            Write-Host "Starting React Admin (production build) on http://localhost:8080 ..." -ForegroundColor Yellow
-            $startInfo = New-Object System.Diagnostics.ProcessStartInfo
-            $startInfo.FileName = "cmd.exe"
-            # Use npx to serve the static build (-s) on port 8080; --yes auto-installs 'serve' if needed
-            $startInfo.Arguments = "/c npx --yes serve -s build -l 8080"
-            $startInfo.WorkingDirectory = $reactAdminPath
-            $startInfo.UseShellExecute = $false
-            $startInfo.CreateNoWindow = $true
-            $process = [System.Diagnostics.Process]::Start($startInfo)
-            if ($process) {
-                Write-Host "OK: React Admin (prod) starting in background (PID: $($process.Id))" -ForegroundColor Green
-                return $true
-            } else {
-                Write-Host "WARNING: Failed to launch production server; falling back to dev server" -ForegroundColor Yellow
+    # Use production build if explicitly requested
+    if ($UseProductionBuild) {
+        $buildIndexPath = Join-Path $reactAdminPath "build\index.html"
+        if (Test-Path $buildIndexPath) {
+            try {
+                Write-Host "Starting React Admin (production build) on http://localhost:8080 ..." -ForegroundColor Yellow
+                $startInfo = New-Object System.Diagnostics.ProcessStartInfo
+                $startInfo.FileName = "cmd.exe"
+                # Use npx to serve the static build (-s) on port 8080; --yes auto-installs 'serve' if needed
+                $startInfo.Arguments = "/c npx --yes serve -s build -l 8080"
+                $startInfo.WorkingDirectory = $reactAdminPath
+                $startInfo.UseShellExecute = $false
+                $startInfo.CreateNoWindow = $true
+                $process = [System.Diagnostics.Process]::Start($startInfo)
+                if ($process) {
+                    Write-Host "OK: React Admin (prod) starting in background (PID: $($process.Id))" -ForegroundColor Green
+                    return $true
+                } else {
+                    Write-Host "WARNING: Failed to launch production server; falling back to dev server" -ForegroundColor Yellow
+                }
+            }
+            catch {
+                Write-Host "WARNING: Failed to launch production server: $_" -ForegroundColor Yellow
+                Write-Host "Falling back to dev server (npm start)" -ForegroundColor Yellow
             }
         }
-        catch {
-            Write-Host "WARNING: Failed to launch production server: $_" -ForegroundColor Yellow
-            Write-Host "Falling back to dev server (npm start)" -ForegroundColor Yellow
+        else {
+            Write-Host "WARNING: Production build not found at build\index.html; falling back to dev server" -ForegroundColor Yellow
         }
     }
     
@@ -310,7 +319,7 @@ $workerStarted = Start-Worker -RunInBackground:$runInBackground
 if ($runInBackground -and $workerStarted) {
     # Only start React Admin if Worker is running in background
     Write-Host "`nStarting web interface..." -ForegroundColor Cyan
-    $uiStarted = Start-ReactAdmin
+    $uiStarted = Start-ReactAdmin -UseProductionBuild:$ProductionBuild
     
     if ($workerStarted -and $uiStarted) {
         Write-Host "`n✅ Castellan successfully started!" -ForegroundColor Green

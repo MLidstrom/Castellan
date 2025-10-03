@@ -16,6 +16,7 @@ import {
   Stack,
   Skeleton
 } from '@mui/material';
+import { MetricCardSkeleton, ChartSkeleton } from './skeletons';
 import { useNotify } from 'react-admin';
 import { useNavigate } from 'react-router-dom';
 import { 
@@ -707,9 +708,10 @@ export const Dashboard = React.memo(() => {
   const COLORS = ['#8884d8', '#82ca9d', '#ffc658', '#ff7300', '#00ff00'];
   const riskLevelColors = {
     critical: '#f44336',
-    high: '#ff9800', 
-    medium: '#ffeb3b',
-    low: '#4caf50'
+    high: '#ff9800',
+    medium: '#8bc34a',
+    low: '#2e7d32',
+    unknown: '#757575'
   };
 
   // Chart data - memoized to prevent unnecessary re-renders and use consolidated data
@@ -832,6 +834,20 @@ export const Dashboard = React.memo(() => {
         </Box>
       </Box>
 
+      {/* Loading Progress Indicator */}
+      {dashboardDataLoading && (
+        <LinearProgress
+          sx={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            zIndex: 9999,
+            height: 3
+          }}
+        />
+      )}
+
       {/* Summary Cards */}
       <Box display="flex" gap={3} mb={3}>
         <Card sx={{ minWidth: 200, flex: 1 }}>
@@ -842,10 +858,7 @@ export const Dashboard = React.memo(() => {
           />
           <CardContent>
             {dashboardDataLoading ? (
-              <Box>
-                <Skeleton variant="text" width="60%" height={48} sx={{ mb: 0.5 }} />
-                <Skeleton variant="text" width="40%" />
-              </Box>
+              <MetricCardSkeleton delay={0} />
             ) : dashboardDataError ? (
               <Typography color="error" variant="body2">
                 Error: {dashboardDataError}
@@ -872,10 +885,7 @@ export const Dashboard = React.memo(() => {
           />
           <CardContent>
             {dashboardDataLoading ? (
-              <Box>
-                <Skeleton variant="text" width="50%" height={48} sx={{ mb: 0.5 }} />
-                <Skeleton variant="text" width="45%" />
-              </Box>
+              <MetricCardSkeleton delay={0.1} />
             ) : dashboardDataError ? (
               <Typography color="error" variant="body2">
                 Error: {dashboardDataError}
@@ -918,10 +928,7 @@ export const Dashboard = React.memo(() => {
           />
           <CardContent>
             {dashboardDataLoading ? (
-              <Box>
-                <Skeleton variant="text" width="40%" height={48} sx={{ mb: 0.5 }} />
-                <Skeleton variant="text" width="35%" />
-              </Box>
+              <MetricCardSkeleton delay={0.2} />
             ) : dashboardDataError ? (
               <Typography color="error" variant="body2">
                 Error: {dashboardDataError}
@@ -949,12 +956,7 @@ export const Dashboard = React.memo(() => {
               {/* Pie Chart - Left Side */}
               <Box width="40%" height={300} flexShrink={0}>
                 {dashboardDataLoading ? (
-                  <Skeleton
-                    variant="circular"
-                    width={200}
-                    height={200}
-                    sx={{ mx: 'auto', mt: 3 }}
-                  />
+                  <ChartSkeleton type="pie" height={200} />
                 ) : securityEventsChartData.length > 0 ? (
                   <ResponsiveContainer width="100%" height="100%">
                     <PieChart>
@@ -969,9 +971,11 @@ export const Dashboard = React.memo(() => {
                         dataKey="value"
                         isAnimationActive={false}
                       >
-                        {securityEventsChartData.map((entry, index) => (
-                          <Cell key={`cell-${entry.name}`} fill={COLORS[index % COLORS.length]} />
-                        ))}
+                        {securityEventsChartData.map((entry, index) => {
+                          const riskLevelKey = entry.name.toLowerCase() as keyof typeof riskLevelColors;
+                          const color = riskLevelColors[riskLevelKey] || COLORS[index % COLORS.length];
+                          return <Cell key={`cell-${entry.name}`} fill={color} />;
+                        })}
                       </Pie>
                       <Tooltip />
                     </PieChart>
@@ -1046,14 +1050,20 @@ export const Dashboard = React.memo(() => {
         <Card sx={{ flex: 1 }}>
           <CardHeader title="API Diagnostics" />
           <CardContent>
-            <ApiDiagnostic
-              securityEventsData={securityEvents}
-              systemStatusData={systemStatus}
-              threatScannerData={threatScanner}
-              securityEventsError={dashboardDataError}
-              systemStatusError={dashboardDataError}
-              threatScannerError={dashboardDataError}
-            />
+            {dashboardDataLoading ? (
+              <Box>
+                <Skeleton variant="rectangular" height={120} animation="wave" />
+              </Box>
+            ) : (
+              <ApiDiagnostic
+                securityEventsData={securityEvents}
+                systemStatusData={systemStatus}
+                threatScannerData={threatScanner}
+                securityEventsError={dashboardDataError}
+                systemStatusError={dashboardDataError}
+                threatScannerError={dashboardDataError}
+              />
+            )}
           </CardContent>
         </Card>
 
@@ -1070,7 +1080,15 @@ export const Dashboard = React.memo(() => {
         >
           <CardHeader title="YARA Summary" />
           <CardContent>
-            <YaraSummaryCard />
+            {dashboardDataLoading ? (
+              <Box>
+                <Skeleton variant="text" width="70%" height={32} sx={{ mb: 1 }} />
+                <Skeleton variant="text" width="50%" />
+                <Skeleton variant="text" width="60%" />
+              </Box>
+            ) : (
+              <YaraSummaryCard />
+            )}
           </CardContent>
         </Card>
       </Box>
@@ -1080,17 +1098,25 @@ export const Dashboard = React.memo(() => {
         <Card sx={{ flex: 1 }}>
           <CardHeader title="Connection Pool Monitor" />
           <CardContent>
-            <ConnectionPoolMonitor systemStatus={systemStatus} />
+            {dashboardDataLoading ? (
+              <Skeleton variant="rectangular" height={180} animation="wave" />
+            ) : (
+              <ConnectionPoolMonitor systemStatus={systemStatus} />
+            )}
           </CardContent>
         </Card>
 
         <Card sx={{ flex: 1 }}>
           <CardHeader title="System Metrics" />
           <CardContent>
-            <RealtimeSystemMetrics 
-              metrics={realtimeMetrics} 
-              connectionStatus={connectionState}
-            />
+            {dashboardDataLoading ? (
+              <Skeleton variant="rectangular" height={180} animation="wave" />
+            ) : (
+              <RealtimeSystemMetrics
+                metrics={realtimeMetrics}
+                connectionStatus={connectionState}
+              />
+            )}
           </CardContent>
         </Card>
       </Box>
@@ -1100,7 +1126,11 @@ export const Dashboard = React.memo(() => {
         <Card>
           <CardHeader title="Geographic Threat Map" />
           <CardContent>
-            <GeographicThreatMap />
+            {dashboardDataLoading ? (
+              <Skeleton variant="rectangular" height={400} animation="wave" />
+            ) : (
+              <GeographicThreatMap />
+            )}
           </CardContent>
         </Card>
       </Box>
@@ -1109,7 +1139,11 @@ export const Dashboard = React.memo(() => {
         <Card>
           <CardHeader title="Performance" />
           <CardContent>
-            <PerformanceDashboard />
+            {dashboardDataLoading ? (
+              <Skeleton variant="rectangular" height={300} animation="wave" />
+            ) : (
+              <PerformanceDashboard />
+            )}
           </CardContent>
         </Card>
       </Box>
@@ -1118,7 +1152,11 @@ export const Dashboard = React.memo(() => {
         <Card>
           <CardHeader title="Threat Intelligence Health" />
           <CardContent>
-            <ThreatIntelligenceHealthDashboard />
+            {dashboardDataLoading ? (
+              <Skeleton variant="rectangular" height={250} animation="wave" />
+            ) : (
+              <ThreatIntelligenceHealthDashboard />
+            )}
           </CardContent>
         </Card>
       </Box>
