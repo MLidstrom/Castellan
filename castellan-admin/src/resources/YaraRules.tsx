@@ -84,6 +84,7 @@ import {
   BugReport as FalsePositiveIcon,
   Upload as UploadIcon,
   Download as DownloadIcon,
+  Check as CheckIcon,
 } from '@mui/icons-material';
 
 // Import YARA Dashboard Components
@@ -867,121 +868,186 @@ const YaraShowActions = React.memo(() => {
 });
 
 // Show view for individual YARA rule
+// Custom show layout component for better card layout
+const YaraRuleShowLayout = () => {
+  const record = useRecordContext();
+
+  if (!record) return null;
+
+  return (
+    <Box sx={{ p: 2 }}>
+      <Grid container spacing={3}>
+        {/* Rule Information Card */}
+        <Grid item xs={12} md={6}>
+          <Card elevation={2}>
+            <CardContent>
+              <Typography variant="h6" gutterBottom>Rule Information</Typography>
+              <Divider sx={{ mb: 3 }} />
+
+              <Box mb={2}>
+                <Typography variant="caption" color="textSecondary">Rule Name</Typography>
+                <Typography variant="h6" fontWeight="medium">{record.name}</Typography>
+              </Box>
+
+              <Box mb={2}>
+                <Typography variant="caption" color="textSecondary">Author</Typography>
+                <Typography variant="body1">{record.author || 'Unknown'}</Typography>
+              </Box>
+
+              <Box mb={2}>
+                <Typography variant="caption" color="textSecondary">Category</Typography>
+                <Typography variant="body1">{record.category || 'Uncategorized'}</Typography>
+              </Box>
+
+              <Box mb={2}>
+                <Typography variant="caption" color="textSecondary">Threat Level</Typography>
+                <Box mt={0.5}><ThreatLevelField /></Box>
+              </Box>
+
+              <Box mb={2}>
+                <Typography variant="caption" color="textSecondary">Status</Typography>
+                <Box mt={0.5}>
+                  <Chip
+                    label={record.isEnabled ? 'Enabled' : 'Disabled'}
+                    color={record.isEnabled ? 'success' : 'default'}
+                    size="small"
+                    icon={record.isEnabled ? <CheckIcon /> : undefined}
+                  />
+                </Box>
+              </Box>
+
+              <Grid container spacing={2}>
+                <Grid item xs={6}>
+                  <Typography variant="caption" color="textSecondary">Created</Typography>
+                  <Typography variant="body2" sx={{ mt: 0.5 }}>
+                    {new Date(record.createdAt).toLocaleString()}
+                  </Typography>
+                </Grid>
+                <Grid item xs={6}>
+                  <Typography variant="caption" color="textSecondary">Last Modified</Typography>
+                  <Typography variant="body2" sx={{ mt: 0.5 }}>
+                    {new Date(record.updatedAt).toLocaleString()}
+                  </Typography>
+                </Grid>
+              </Grid>
+            </CardContent>
+          </Card>
+        </Grid>
+
+        {/* Validation & Performance Card */}
+        <Grid item xs={12} md={6}>
+          <Card elevation={2}>
+            <CardContent>
+              <Typography variant="h6" gutterBottom>Validation & Performance</Typography>
+              <Divider sx={{ mb: 3 }} />
+
+              <Box mb={2}>
+                <Typography variant="caption" color="textSecondary">Validation Status</Typography>
+                <Box mt={0.5}><ValidationStatusField /></Box>
+              </Box>
+
+              <Box mb={2}>
+                <Typography variant="caption" color="textSecondary">Total Matches</Typography>
+                <Typography variant="h5" fontWeight="bold" color="primary">
+                  {record.hitCount?.toLocaleString() || '0'}
+                </Typography>
+              </Box>
+
+              <Box mb={2}>
+                <Typography variant="caption" color="textSecondary">Average Execution Time</Typography>
+                <Typography variant="body1">
+                  {record.averageExecutionTimeMs?.toFixed(2) || '0.00'} ms
+                </Typography>
+              </Box>
+
+              <Box>
+                <Typography variant="caption" color="textSecondary">False Positives</Typography>
+                <Typography variant="body1" color={record.falsePositiveCount > 0 ? 'warning.main' : 'textPrimary'}>
+                  {record.falsePositiveCount || 0}
+                </Typography>
+              </Box>
+            </CardContent>
+          </Card>
+        </Grid>
+
+        {/* Rule Content Card */}
+        <Grid item xs={12}>
+          <Card elevation={2}>
+            <CardContent>
+              <Typography variant="h6" gutterBottom>Rule Content</Typography>
+              <Divider sx={{ mb: 3 }} />
+              <Box
+                component="pre"
+                sx={{
+                  fontFamily: 'monospace',
+                  fontSize: '0.875rem',
+                  backgroundColor: 'grey.100',
+                  p: 2,
+                  borderRadius: 1,
+                  whiteSpace: 'pre-wrap',
+                  overflow: 'auto',
+                  border: '1px solid',
+                  borderColor: 'divider'
+                }}
+              >
+                {record.ruleContent || 'No rule content available'}
+              </Box>
+            </CardContent>
+          </Card>
+        </Grid>
+
+        {/* MITRE ATT&CK Techniques Card */}
+        <Grid item xs={12} md={6}>
+          <Card elevation={2}>
+            <CardContent>
+              <Typography variant="h6" gutterBottom>MITRE ATT&CK Techniques</Typography>
+              <Divider sx={{ mb: 3 }} />
+              <MitreTechniquesField />
+            </CardContent>
+          </Card>
+        </Grid>
+
+        {/* Tags Card */}
+        <Grid item xs={12} md={6}>
+          <Card elevation={2}>
+            <CardContent>
+              <Typography variant="h6" gutterBottom>Tags</Typography>
+              <Divider sx={{ mb: 3 }} />
+              {record.tags && record.tags.length > 0 ? (
+                <Box display="flex" gap={0.5} flexWrap="wrap">
+                  {record.tags.map((tag: string, index: number) => (
+                    <Chip key={index} label={tag} size="small" variant="outlined" />
+                  ))}
+                </Box>
+              ) : (
+                <Typography variant="body2" color="textSecondary">No tags</Typography>
+              )}
+            </CardContent>
+          </Card>
+        </Grid>
+
+        {/* Description Card */}
+        {record.description && (
+          <Grid item xs={12}>
+            <Card elevation={2}>
+              <CardContent>
+                <Typography variant="h6" gutterBottom>Description</Typography>
+                <Divider sx={{ mb: 3 }} />
+                <Typography variant="body1" sx={{ whiteSpace: 'pre-wrap', lineHeight: 1.7 }}>
+                  {record.description || 'No description provided'}
+                </Typography>
+              </CardContent>
+            </Card>
+          </Grid>
+        )}
+      </Grid>
+    </Box>
+  );
+};
+
 export const YaraRulesShow = () => (
   <Show actions={<YaraShowActions />}>
-    <SimpleShowLayout>
-      <Grid container spacing={2}>
-        <Grid item xs={12} md={6}>
-          <Card>
-            <CardContent>
-              <Typography variant="h6" gutterBottom>
-                Rule Information
-              </Typography>
-              <TextField source="name" label="Name" />
-              <TextField source="author" label="Author" />
-              <TextField source="category" label="Category" />
-              <FunctionField
-                label="Threat Level"
-                render={(record: any) => <ThreatLevelField />}
-              />
-              <BooleanField source="isEnabled" label="Enabled" />
-              <DateField source="createdAt" label="Created" />
-              <DateField source="updatedAt" label="Last Modified" />
-            </CardContent>
-          </Card>
-        </Grid>
-        <Grid item xs={12} md={6}>
-          <Card>
-            <CardContent>
-              <Typography variant="h6" gutterBottom>
-                Validation & Performance
-              </Typography>
-              <FunctionField
-                label="Validation Status"
-                render={(record: any) => <ValidationStatusField />}
-              />
-              <NumberField source="hitCount" label="Total Matches" />
-              <NumberField source="averageExecutionTimeMs" label="Avg Exec Time (ms)" />
-              <NumberField source="falsePositiveCount" label="False Positives" />
-            </CardContent>
-          </Card>
-        </Grid>
-        <Grid item xs={12}>
-          <Card>
-            <CardContent>
-              <Typography variant="h6" gutterBottom>
-                Rule Content
-              </Typography>
-              <FunctionField
-                label="YARA Rule"
-                render={(record: any) => (
-                  <pre
-                    style={{
-                      fontFamily: 'monospace',
-                      fontSize: '0.875rem',
-                      backgroundColor: '#f5f5f5',
-                      padding: '8px',
-                      borderRadius: '4px',
-                      whiteSpace: 'pre-wrap',
-                      maxWidth: '100%',
-                      overflow: 'auto'
-                    }}
-                  >
-                    {record.ruleContent}
-                  </pre>
-                )}
-              />
-            </CardContent>
-          </Card>
-        </Grid>
-        <Grid item xs={12} md={6}>
-          <Card>
-            <CardContent>
-              <Typography variant="h6" gutterBottom>
-                MITRE ATT&CK Techniques
-              </Typography>
-              <FunctionField
-                render={(record: any) => <MitreTechniquesField />}
-              />
-            </CardContent>
-          </Card>
-        </Grid>
-        <Grid item xs={12} md={6}>
-          <Card>
-            <CardContent>
-              <Typography variant="h6" gutterBottom>
-                Tags
-              </Typography>
-              <FunctionField
-                render={(record: any) => (
-                  <Box display="flex" gap={0.5} flexWrap="wrap">
-                    {record.tags?.map((tag: string, index: number) => (
-                      <Chip key={index} label={tag} size="small" />
-                    ))}
-                  </Box>
-                )}
-              />
-            </CardContent>
-          </Card>
-        </Grid>
-        <Grid item xs={12}>
-          <Card>
-            <CardContent>
-              <Typography variant="h6" gutterBottom>
-                Description
-              </Typography>
-              <FunctionField
-                render={(record: any) => (
-                  <Typography variant="body2">
-                    {record.description || 'No description provided'}
-                  </Typography>
-                )}
-              />
-            </CardContent>
-          </Card>
-        </Grid>
-      </Grid>
-    </SimpleShowLayout>
+    <YaraRuleShowLayout />
   </Show>
 );
 

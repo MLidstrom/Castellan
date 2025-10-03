@@ -262,9 +262,71 @@ If the system tray application doesn't start automatically:
    ```
 
 ## Performance Issues
+
+### Slow Timeline Page Loading
+
+✅ **FIXED (October 2025)**: Timeline page performance has been optimized with database connection pooling.
+
+**Problem**: The `/timeline` endpoint was slow and didn't cache results properly.
+
+**Solution Applied**:
+- Converted `TimelineService` to use `IDbContextFactory<CastellanDbContext>` for connection pooling
+- All database queries now benefit from the 100-connection pool with WAL mode
+- Added `AsNoTracking()` for read-only queries to improve performance
+
+**Performance Improvements**:
+- Timeline data fetching: `GetTimelineDataAsync` (src/Castellan.Worker/Services/TimelineService.cs:36)
+- Statistics aggregation: `GetTimelineStatsAsync` (src/Castellan.Worker/Services/TimelineService.cs:114)
+- SQL aggregation: `GetTimelineDataPointsViaSqlAsync` (src/Castellan.Worker/Services/TimelineService.cs:576)
+
+**Expected Results**: Timeline page should now load significantly faster with proper caching.
+
+### Slow Saved Searches Loading
+
+✅ **FIXED (October 2025)**: Saved Searches endpoint performance has been optimized.
+
+**Problem**: The `/api/saved-searches` endpoint was very slow.
+
+**Solution Applied**:
+- Converted `SavedSearchService` to use `IDbContextFactory<CastellanDbContext>` for connection pooling
+- All 8 service methods now use pooled database contexts
+
+**Performance Improvements**:
+- `GetUserSavedSearchesAsync` - Fetch user's saved searches
+- `GetSavedSearchAsync` - Get specific saved search
+- `CreateSavedSearchAsync` - Create new saved search
+- `UpdateSavedSearchAsync` - Update existing search
+- `DeleteSavedSearchAsync` - Delete saved search
+- `RecordSearchUsageAsync` - Track search usage
+- `GetMostUsedSearchesAsync` - Get frequently used searches
+- `SearchSavedSearchesAsync` - Search through saved searches
+
+**Expected Results**: Saved searches should load instantly with connection pooling.
+
+### Dashboard Widget Loading Performance
+
+✅ **FIXED (October 2025)**: Dashboard widgets now load instantly without unnecessary loading states.
+
+**Problem**: Dashboard widgets (Security Events, System Health, Threat Scans, Security Events by Risk Level) showed loading skeletons for too long even when data was already available.
+
+**Solution Applied**:
+- Initialize dashboard state from SignalR context data to avoid unnecessary loading states
+- Fixed useMemo dependencies to use consolidated data instead of legacy state
+- Removed duplicate SignalR context hook calls
+
+**Performance Improvements**:
+- Dashboard now renders instantly if data is already in SignalR context
+- Loading state only shows when data is genuinely unavailable
+- Memoized computations properly trigger on data changes
+
+**Expected Results**: Dashboard should render data immediately on navigation, with minimal skeleton loading time.
+
+### General Performance Guidelines
 - **Large Threat Scans**: Full system scans can take several minutes and find thousands of threats
 - **Memory Usage**: Monitor system memory during large scans
 - **False Positives**: Legitimate software in temp directories may be flagged as threats
+- **Database Connection Pooling**: All services should use `IDbContextFactory<CastellanDbContext>` for optimal performance
+- **Monitor Performance**: Use `/api/database-pool/metrics` to check connection pool utilization
 
 ## AI Provider Issues
 

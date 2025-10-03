@@ -78,6 +78,13 @@ public class InMemorySecurityEventStore : ISecurityEventStore
         return filteredEvents.Count();
     }
 
+    public Dictionary<string, int> GetRiskLevelCounts()
+    {
+        return _events.ToArray()
+            .GroupBy(e => e.RiskLevel.ToLower())
+            .ToDictionary(g => g.Key, g => g.Count());
+    }
+
     private IEnumerable<SecurityEvent> ApplyFilters(IEnumerable<SecurityEvent> events, Dictionary<string, object> filters)
     {
         if (filters == null || filters.Count == 0)

@@ -11,7 +11,7 @@ namespace Castellan.Worker.Services;
 /// </summary>
 public class SavedSearchService : ISavedSearchService
 {
-    private readonly CastellanDbContext _context;
+    private readonly IDbContextFactory<CastellanDbContext> _contextFactory;
     private readonly ILogger<SavedSearchService> _logger;
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
@@ -19,9 +19,9 @@ public class SavedSearchService : ISavedSearchService
         WriteIndented = false
     };
 
-    public SavedSearchService(CastellanDbContext context, ILogger<SavedSearchService> logger)
+    public SavedSearchService(IDbContextFactory<CastellanDbContext> contextFactory, ILogger<SavedSearchService> logger)
     {
-        _context = context;
+        _contextFactory = contextFactory;
         _logger = logger;
     }
 
@@ -29,7 +29,8 @@ public class SavedSearchService : ISavedSearchService
     {
         try
         {
-            return await _context.SavedSearches
+            await using var context = await _contextFactory.CreateDbContextAsync();
+            return await context.SavedSearches
                 .Where(s => s.UserId == userId)
                 .OrderByDescending(s => s.LastUsedAt ?? s.CreatedAt)
                 .ToListAsync();
@@ -45,7 +46,8 @@ public class SavedSearchService : ISavedSearchService
     {
         try
         {
-            return await _context.SavedSearches
+            await using var context = await _contextFactory.CreateDbContextAsync();
+            return await context.SavedSearches
                 .FirstOrDefaultAsync(s => s.Id == searchId && s.UserId == userId);
         }
         catch (Exception ex)
@@ -55,13 +57,15 @@ public class SavedSearchService : ISavedSearchService
         }
     }
 
-    public async Task<SavedSearchEntity> CreateSavedSearchAsync(string userId, string name, string? description, 
+    public async Task<SavedSearchEntity> CreateSavedSearchAsync(string userId, string name, string? description,
         AdvancedSearchRequest filters, string[]? tags = null)
     {
         try
         {
+            await using var context = await _contextFactory.CreateDbContextAsync();
+
             // Check for duplicate names
-            var existingSearch = await _context.SavedSearches
+            var existingSearch = await context.SavedSearches
                 .FirstOrDefaultAsync(s => s.UserId == userId && s.Name == name);
 
             if (existingSearch != null)
@@ -81,8 +85,8 @@ public class SavedSearchService : ISavedSearchService
                 UseCount = 0
             };
 
-            _context.SavedSearches.Add(savedSearch);
-            await _context.SaveChangesAsync();
+            context.SavedSearches.Add(savedSearch);
+            await context.SaveChangesAsync();
 
             _logger.LogInformation("Created saved search: {Name} for user: {UserId}", name, userId);
 
@@ -95,19 +99,23 @@ public class SavedSearchService : ISavedSearchService
         }
     }
 
-    public async Task<SavedSearchEntity> UpdateSavedSearchAsync(int searchId, string userId, string name, 
+    public async Task<SavedSearchEntity> UpdateSavedSearchAsync(int searchId, string userId, string name,
         string? description, AdvancedSearchRequest filters, string[]? tags = null)
     {
         try
         {
-            var savedSearch = await GetSavedSearchAsync(searchId, userId);
+            await using var context = await _contextFactory.CreateDbContextAsync();
+
+            var savedSearch = await context.SavedSearches
+                .FirstOrDefaultAsync(s => s.Id == searchId && s.UserId == userId);
+
             if (savedSearch == null)
             {
                 throw new InvalidOperationException($"Saved search with ID {searchId} not found or access denied.");
             }
 
             // Check for duplicate names (excluding current search)
-            var duplicateSearch = await _context.SavedSearches
+            var duplicateSearch = await context.SavedSearches
                 .FirstOrDefaultAsync(s => s.UserId == userId && s.Name == name && s.Id != searchId);
 
             if (duplicateSearch != null)
@@ -121,7 +129,7 @@ public class SavedSearchService : ISavedSearchService
             savedSearch.Tags = tags != null ? string.Join(",", tags) : null;
             savedSearch.UpdatedAt = DateTime.UtcNow;
 
-            await _context.SaveChangesAsync();
+            await context.SaveChangesAsync();
 
             _logger.LogInformation("Updated saved search: {SearchId} for user: {UserId}", searchId, userId);
 
@@ -138,14 +146,18 @@ public class SavedSearchService : ISavedSearchService
     {
         try
         {
-            var savedSearch = await GetSavedSearchAsync(searchId, userId);
+            await using var context = await _contextFactory.CreateDbContextAsync();
+
+            var savedSearch = await context.SavedSearches
+                .FirstOrDefaultAsync(s => s.Id == searchId && s.UserId == userId);
+
             if (savedSearch == null)
             {
                 return false;
             }
 
-            _context.SavedSearches.Remove(savedSearch);
-            await _context.SaveChangesAsync();
+            context.SavedSearches.Remove(savedSearch);
+            await context.SaveChangesAsync();
 
             _logger.LogInformation("Deleted saved search: {SearchId} for user: {UserId}", searchId, userId);
 
@@ -162,7 +174,11 @@ public class SavedSearchService : ISavedSearchService
     {
         try
         {
-            var savedSearch = await GetSavedSearchAsync(searchId, userId);
+            await using var context = await _contextFactory.CreateDbContextAsync();
+
+            var savedSearch = await context.SavedSearches
+                .FirstOrDefaultAsync(s => s.Id == searchId && s.UserId == userId);
+
             if (savedSearch == null)
             {
                 return false;
@@ -171,7 +187,7 @@ public class SavedSearchService : ISavedSearchService
             savedSearch.UseCount++;
             savedSearch.LastUsedAt = DateTime.UtcNow;
 
-            await _context.SaveChangesAsync();
+            await context.SaveChangesAsync();
 
             _logger.LogDebug("Recorded usage for saved search: {SearchId} (total uses: {UseCount})", searchId, savedSearch.UseCount);
 
@@ -188,7 +204,8 @@ public class SavedSearchService : ISavedSearchService
     {
         try
         {
-            return await _context.SavedSearches
+            await using var context = await _contextFactory.CreateDbContextAsync();
+            return await context.SavedSearches
                 .Where(s => s.UserId == userId)
                 .OrderByDescending(s => s.UseCount)
                 .ThenByDescending(s => s.LastUsedAt ?? s.CreatedAt)
@@ -206,11 +223,12 @@ public class SavedSearchService : ISavedSearchService
     {
         try
         {
+            await using var context = await _contextFactory.CreateDbContextAsync();
             var lowerSearchTerm = searchTerm.ToLower();
 
-            return await _context.SavedSearches
-                .Where(s => s.UserId == userId && 
-                           (s.Name.ToLower().Contains(lowerSearchTerm) || 
+            return await context.SavedSearches
+                .Where(s => s.UserId == userId &&
+                           (s.Name.ToLower().Contains(lowerSearchTerm) ||
                             (s.Description != null && s.Description.ToLower().Contains(lowerSearchTerm)) ||
                             (s.Tags != null && s.Tags.ToLower().Contains(lowerSearchTerm))))
                 .OrderByDescending(s => s.LastUsedAt ?? s.CreatedAt)

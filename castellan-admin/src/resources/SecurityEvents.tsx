@@ -24,7 +24,7 @@ import {
   Button,
   // ReferenceField, // Not used
 } from 'react-admin';
-import { Chip, Box, Typography, Tooltip, CircularProgress, Alert, Card, CardContent } from '@mui/material';
+import { Chip, Box, Typography, Tooltip, CircularProgress, Alert, Card, CardContent, Grid, Divider } from '@mui/material';
 import {
   Security as SecurityIcon,
   FilterList as FilterListIcon,
@@ -33,7 +33,8 @@ import {
   SignalWifi4Bar as ConnectedIcon,
   SignalWifiOff as DisconnectedIcon,
   AccountTree as CorrelationIcon,
-  Timeline as TimelineIcon
+  Timeline as TimelineIcon,
+  Policy as PolicyIcon
 } from '@mui/icons-material';
 
 // Import our advanced search components
@@ -749,28 +750,251 @@ export const SecurityEventList = () => {
   );
 };
 
+// Component to show link to Security Event Rule
+const ViewRuleButton = () => {
+  const record = useRecordContext();
+  const dataProvider = useDataProvider();
+  const [ruleId, setRuleId] = React.useState<number | null>(null);
+  const [loading, setLoading] = React.useState(false);
+
+  useEffect(() => {
+    if (!record || !record.eventId) return;
+
+    setLoading(true);
+
+    // The numeric Windows Event ID is already available in record.eventId
+    const eventIdNum = typeof record.eventId === 'string'
+      ? parseInt(record.eventId, 10)
+      : record.eventId;
+
+    // Use the source field to determine the channel (defaults to Security)
+    const channel = record.source || 'Security';
+
+    // Try to find the rule for this event - fetch all rules
+    dataProvider.getList('security-event-rules', {
+      pagination: { page: 1, perPage: 100 },
+      sort: { field: 'eventId', order: 'ASC' },
+      filter: {}
+    })
+    .then((response: any) => {
+      // Find rule matching this event's EventId and Channel
+      const matchingRule = response.data.find((rule: any) => {
+        const ruleEventId = typeof rule.eventId === 'string' ? parseInt(rule.eventId, 10) : rule.eventId;
+        return ruleEventId === eventIdNum &&
+          (rule.channel === channel || rule.channel === 'Security');
+      });
+      if (matchingRule) {
+        setRuleId(matchingRule.id);
+      }
+    })
+    .catch(() => {
+      // Ignore errors
+    })
+    .finally(() => {
+      setLoading(false);
+    });
+  }, [record, dataProvider]);
+
+  if (!record) return null;
+
+  return (
+    <Box sx={{ mt: 2, mb: 2 }}>
+      {loading ? (
+        <CircularProgress size={20} />
+      ) : ruleId ? (
+        <Button
+          href={`/#/security-event-rules/${ruleId}/show`}
+          label="View Detection Rule"
+          startIcon={<PolicyIcon />}
+          variant="contained"
+          size="small"
+        />
+      ) : (
+        <Typography variant="body2" color="text.secondary">
+          No detection rule configured for Event ID {record.eventId}
+        </Typography>
+      )}
+    </Box>
+  );
+};
+
+// Custom show layout component for better card layout
+const SecurityEventShowLayout = () => {
+  const record = useRecordContext();
+
+  if (!record) return null;
+
+  return (
+    <Box sx={{ p: 2 }}>
+      <Grid container spacing={3}>
+        {/* Event Overview Card */}
+        <Grid item xs={12}>
+          <Card elevation={2}>
+            <CardContent>
+              <Box display="flex" alignItems="center" gap={1} mb={2}>
+                <SecurityIcon color="primary" />
+                <Typography variant="h6">Event Overview</Typography>
+              </Box>
+              <Divider sx={{ mb: 3 }} />
+
+              <Grid container spacing={3}>
+                <Grid item xs={12} md={6}>
+                  <Box mb={2}>
+                    <Typography variant="caption" color="textSecondary">Event ID</Typography>
+                    <Typography variant="body1" fontWeight="medium">{record.id}</Typography>
+                  </Box>
+                  <Box mb={2}>
+                    <Typography variant="caption" color="textSecondary">Windows Event ID</Typography>
+                    <Typography variant="body1" fontWeight="medium">{record.eventId}</Typography>
+                  </Box>
+                  <Box mb={2}>
+                    <Typography variant="caption" color="textSecondary">Event Type</Typography>
+                    <Typography variant="body1">{record.eventType}</Typography>
+                  </Box>
+                  <Box mb={2}>
+                    <Typography variant="caption" color="textSecondary">Source</Typography>
+                    <Typography variant="body1">{record.source}</Typography>
+                  </Box>
+                </Grid>
+                <Grid item xs={12} md={6}>
+                  <Box mb={2}>
+                    <Typography variant="caption" color="textSecondary">Risk Level</Typography>
+                    <Box mt={0.5}><RiskLevelField source="riskLevel" /></Box>
+                  </Box>
+                  <Box mb={2}>
+                    <Typography variant="caption" color="textSecondary">Confidence Score</Typography>
+                    <Typography variant="body1" fontWeight="medium">{record.confidence}%</Typography>
+                  </Box>
+                  <Box mb={2}>
+                    <Typography variant="caption" color="textSecondary">Correlation Score</Typography>
+                    <Typography variant="body1" fontWeight="medium">
+                      {record.correlationScore?.toFixed(2) || '0.00'}
+                    </Typography>
+                  </Box>
+                  <Box mb={2}>
+                    <Typography variant="caption" color="textSecondary">Timestamp</Typography>
+                    <Typography variant="body1">
+                      {new Date(record.timestamp).toLocaleString()}
+                    </Typography>
+                  </Box>
+                </Grid>
+              </Grid>
+
+              <ViewRuleButton />
+            </CardContent>
+          </Card>
+        </Grid>
+
+        {/* System & User Information Card */}
+        <Grid item xs={12} md={6}>
+          <Card elevation={2}>
+            <CardContent>
+              <Typography variant="h6" gutterBottom>System & User Information</Typography>
+              <Divider sx={{ mb: 3 }} />
+
+              <Box mb={2}>
+                <Typography variant="caption" color="textSecondary">Machine</Typography>
+                <Typography variant="body1" fontWeight="medium">{record.machine || 'N/A'}</Typography>
+              </Box>
+              <Box mb={2}>
+                <Typography variant="caption" color="textSecondary">User</Typography>
+                <Typography variant="body1">{record.user || 'N/A'}</Typography>
+              </Box>
+              {record.ipAddresses && (
+                <Box>
+                  <Typography variant="caption" color="textSecondary">IP Addresses</Typography>
+                  <Typography variant="body2" sx={{ mt: 0.5 }}>{record.ipAddresses}</Typography>
+                </Box>
+              )}
+            </CardContent>
+          </Card>
+        </Grid>
+
+        {/* MITRE ATT&CK Card */}
+        <Grid item xs={12} md={6}>
+          <Card elevation={2}>
+            <CardContent>
+              <Typography variant="h6" gutterBottom>MITRE ATT&CK Techniques</Typography>
+              <Divider sx={{ mb: 3 }} />
+
+              {record.mitreAttack ? (
+                <MitreTechniquesField source="mitreAttack" />
+              ) : (
+                <Typography variant="body2" color="textSecondary">No MITRE techniques identified</Typography>
+              )}
+            </CardContent>
+          </Card>
+        </Grid>
+
+        {/* Event Message Card */}
+        <Grid item xs={12}>
+          <Card elevation={2}>
+            <CardContent>
+              <Typography variant="h6" gutterBottom>Event Message</Typography>
+              <Divider sx={{ mb: 3 }} />
+              <Typography variant="body2" sx={{ whiteSpace: 'pre-wrap' }}>
+                {record.message || 'No message available'}
+              </Typography>
+            </CardContent>
+          </Card>
+        </Grid>
+
+        {/* Recommended Actions Card */}
+        {record.recommendedActions && (
+          <Grid item xs={12}>
+            <Card elevation={2}>
+              <CardContent>
+                <Typography variant="h6" gutterBottom>Recommended Actions</Typography>
+                <Divider sx={{ mb: 3 }} />
+                <Typography variant="body2" sx={{ whiteSpace: 'pre-wrap' }}>
+                  {record.recommendedActions}
+                </Typography>
+              </CardContent>
+            </Card>
+          </Grid>
+        )}
+
+        {/* IP Enrichment Card */}
+        {record.enrichedIPs && (
+          <Grid item xs={12}>
+            <Card elevation={2}>
+              <CardContent>
+                <Typography variant="h6" gutterBottom>IP Enrichment Data</Typography>
+                <Divider sx={{ mb: 3 }} />
+                <Typography variant="body2" component="pre" sx={{
+                  whiteSpace: 'pre-wrap',
+                  fontFamily: 'monospace',
+                  fontSize: '0.875rem'
+                }}>
+                  {JSON.stringify(record.enrichedIPs, null, 2)}
+                </Typography>
+              </CardContent>
+            </Card>
+          </Grid>
+        )}
+
+        {/* Correlation Context Card */}
+        {record.correlationContext && (
+          <Grid item xs={12}>
+            <Card elevation={2}>
+              <CardContent>
+                <Typography variant="h6" gutterBottom>Correlation Context</Typography>
+                <Divider sx={{ mb: 3 }} />
+                <CorrelationField source="correlationContext" />
+              </CardContent>
+            </Card>
+          </Grid>
+        )}
+      </Grid>
+    </Box>
+  );
+};
+
 export const SecurityEventShow = () => (
   <Box>
     <SecurityEventsHeader />
     <Show title=" ">
-      <SimpleShowLayout>
-      <TextField source="id" />
-      <TextField source="eventId" />
-      <TextField source="eventType" />
-      <RiskLevelField source="riskLevel" label="Risk Level" />
-      <NumberField source="correlationScore" options={{ minimumFractionDigits: 2, maximumFractionDigits: 2 }} />
-      <NumberField source="confidence" options={{ minimumFractionDigits: 0, maximumFractionDigits: 0 }} />
-      <TextField source="ipAddresses" label="IP Addresses" />
-      <TextField source="machine" />
-      <TextField source="user" />
-      <TextField source="mitreAttack" label="MITRE Techniques" />
-      <TextField source="source" label="Source" />
-      <TextField source="message" label="Message" />
-      <TextField source="recommendedActions" />
-      <TextField source="enrichedIPs" label="IP Enrichment" />
-      <CorrelationField source="correlationContext" />
-      <DateField source="timestamp" showTime />
-    </SimpleShowLayout>
+      <SecurityEventShowLayout />
     </Show>
   </Box>
 );

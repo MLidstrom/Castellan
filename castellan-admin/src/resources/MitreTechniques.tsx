@@ -376,51 +376,198 @@ export const MitreTechniquesList = () => (
   </Box>
 );
 
+// Custom show layout component for better card layout
+const MitreTechniqueShowLayout = () => {
+  const record = useRecordContext();
+
+  if (!record) return null;
+
+  // Parse platforms if it's a string
+  const platforms = typeof record.platform === 'string'
+    ? record.platform.split(',').map((p: string) => p.trim())
+    : [];
+
+  // Try to parse JSON fields
+  const parseJsonField = (field: any) => {
+    if (!field) return null;
+    if (typeof field === 'string') {
+      try {
+        return JSON.parse(field);
+      } catch {
+        return null;
+      }
+    }
+    return field;
+  };
+
+  const dataSources = parseJsonField(record.dataSources);
+  const mitigations = parseJsonField(record.mitigations);
+  const examples = parseJsonField(record.examples);
+
+  return (
+    <Box sx={{ p: 2 }}>
+      <Box sx={{ display: 'flex', gap: 3, flexWrap: 'wrap' }}>
+        {/* Technique Overview Card */}
+        <Card elevation={2} sx={{ flex: 1 }}>
+          <CardContent>
+            <Box display="flex" alignItems="center" gap={1} mb={2}>
+              <SecurityIcon color="primary" />
+              <Typography variant="h6">Technique Overview</Typography>
+            </Box>
+            <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 3 }} />
+
+            <Box mb={2}>
+              <Typography variant="caption" color="textSecondary">Technique ID</Typography>
+              <Typography variant="h5" fontWeight="bold" color="primary">{record.techniqueId}</Typography>
+            </Box>
+
+            <Box mb={2}>
+              <Typography variant="caption" color="textSecondary">Name</Typography>
+              <Typography variant="h6">{record.name}</Typography>
+            </Box>
+
+            <Box mb={2}>
+              <Typography variant="caption" color="textSecondary">Tactic</Typography>
+              <Box mt={0.5}><TacticField source="tactic" /></Box>
+            </Box>
+
+            <Box mb={2}>
+              <Typography variant="caption" color="textSecondary">Platforms</Typography>
+              <Box mt={0.5}>
+                <PlatformField source="platform" />
+              </Box>
+            </Box>
+
+            <Box>
+              <Typography variant="caption" color="textSecondary">Added to Database</Typography>
+              <Typography variant="body2" sx={{ mt: 0.5 }}>
+                {new Date(record.createdAt).toLocaleString()}
+              </Typography>
+            </Box>
+          </CardContent>
+        </Card>
+      </Box>
+
+      {/* Description Card */}
+      <Card elevation={2} sx={{ mt: 3 }}>
+        <CardContent>
+          <Typography variant="h6" gutterBottom>Description</Typography>
+          <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 3 }} />
+          <Typography variant="body1" sx={{ whiteSpace: 'pre-wrap', lineHeight: 1.7 }}>
+            {record.description || 'No description available'}
+          </Typography>
+        </CardContent>
+      </Card>
+
+      {/* Technical Details Card */}
+      <Card elevation={2} sx={{ mt: 3 }}>
+        <CardContent>
+          <Typography variant="h6" gutterBottom>Technical Details</Typography>
+          <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 3 }} />
+
+          {/* Data Sources */}
+          <Box mb={3}>
+            <Typography variant="subtitle2" color="primary" gutterBottom>
+              Data Sources
+            </Typography>
+            {dataSources && Array.isArray(dataSources) && dataSources.length > 0 ? (
+              <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', mt: 1 }}>
+                {dataSources.map((source: string, index: number) => (
+                  <Chip
+                    key={index}
+                    label={source}
+                    size="small"
+                    color="primary"
+                    variant="outlined"
+                  />
+                ))}
+              </Box>
+            ) : (
+              <Typography variant="body2" color="textSecondary">
+                {record.dataSources || 'No data sources specified'}
+              </Typography>
+            )}
+          </Box>
+
+          {/* Mitigations */}
+          <Box mb={3}>
+            <Typography variant="subtitle2" color="primary" gutterBottom>
+              Mitigations
+            </Typography>
+            {mitigations && Array.isArray(mitigations) && mitigations.length > 0 ? (
+              <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', mt: 1 }}>
+                {mitigations.map((mitigation: string, index: number) => (
+                  <Chip
+                    key={index}
+                    label={mitigation}
+                    size="small"
+                    color="success"
+                    variant="outlined"
+                  />
+                ))}
+              </Box>
+            ) : (
+              <Typography variant="body2" color="textSecondary">
+                {record.mitigations || 'No mitigations specified'}
+              </Typography>
+            )}
+          </Box>
+
+          {/* Examples */}
+          <Box>
+            <Typography variant="subtitle2" color="primary" gutterBottom>
+              Examples
+            </Typography>
+            {examples && Array.isArray(examples) && examples.length > 0 ? (
+              <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', mt: 1 }}>
+                {examples.map((example: string, index: number) => (
+                  <Chip
+                    key={index}
+                    label={example}
+                    size="small"
+                    color="info"
+                    variant="outlined"
+                  />
+                ))}
+              </Box>
+            ) : (
+              <Typography variant="body2" color="textSecondary">
+                {record.examples || 'No examples specified'}
+              </Typography>
+            )}
+          </Box>
+        </CardContent>
+      </Card>
+
+      {/* Associated Applications Card */}
+      {record.associatedApplications && record.associatedApplications.length > 0 && (
+        <Card elevation={2} sx={{ mt: 3 }}>
+          <CardContent>
+            <Typography variant="h6" gutterBottom>Associated Applications</Typography>
+            <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 3 }} />
+            <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+              {record.associatedApplications.map((app: any, index: number) => (
+                <Chip
+                  key={index}
+                  label={`${app.ApplicationName} (${app.Confidence})`}
+                  size="small"
+                  color="secondary"
+                  variant="outlined"
+                />
+              ))}
+            </Box>
+          </CardContent>
+        </Card>
+      )}
+    </Box>
+  );
+};
+
 export const MitreTechniquesShow = () => (
   <Box>
     <MitreTechniquesHeader />
     <Show title=" " resource="mitre-techniques">
-      <SimpleShowLayout>
-        <TextField source="techniqueId" label="Technique ID" />
-        <TextField source="name" label="Name" />
-        <TacticField source="tactic" label="Tactic" />
-        <PlatformField source="platform" label="Platforms" />
-        
-        <Typography variant="h6" sx={{ mt: 2, mb: 1 }}>Description</Typography>
-        <TextField source="description" label="" />
-        
-        {/* Show additional fields if available */}
-        <Typography variant="h6" sx={{ mt: 2, mb: 1 }}>Technical Details</Typography>
-        <TextField source="dataSources" label="Data Sources" />
-        <TextField source="mitigations" label="Mitigations" />
-        <TextField source="examples" label="Examples" />
-        
-        <DateField source="createdAt" showTime label="Added to Database" />
-        
-        {/* Show associated applications if any */}
-        <Typography variant="h6" sx={{ mt: 2, mb: 1 }}>Associated Applications</Typography>
-        <FunctionField
-          source="associatedApplications"
-          label=""
-          render={(record: any) => {
-            if (!record.associatedApplications || record.associatedApplications.length === 0) {
-              return <Typography variant="body2" color="text.secondary">None</Typography>;
-            }
-            return (
-              <Box>
-                {record.associatedApplications.map((app: any, index: number) => (
-                  <Chip 
-                    key={index}
-                    label={`${app.ApplicationName} (${app.Confidence})`}
-                    size="small"
-                    sx={{ mr: 1, mb: 1 }}
-                  />
-                ))}
-              </Box>
-            );
-          }}
-        />
-      </SimpleShowLayout>
+      <MitreTechniqueShowLayout />
     </Show>
   </Box>
 );

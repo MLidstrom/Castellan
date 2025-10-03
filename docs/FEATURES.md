@@ -14,6 +14,14 @@
 - **Anomaly Detection** - Machine learning-based behavioral analysis with vector similarity
 - **Automated Response** - Real-time threat response with configurable actions and escalation
 - **MITRE ATT&CK Mapping** - Automatic threat technique classification with 800+ techniques
+- **Security Event Rules Management** - Database-backed detection rules with web UI (v0.7.0)
+  - **Rule Storage** - EF Core-backed rule store with 15-minute in-memory caching
+  - **Full CRUD API** - Complete REST API at `/api/security-event-rules` with role-based access
+  - **Web Interface** - React Admin UI positioned under "Security Events" in navigation
+  - **Rule Properties** - EventId, Channel, EventType, RiskLevel, Confidence, Summary, MITRE Techniques, Recommended Actions, Priority, Tags
+  - **Flexible Filtering** - Query by enabled status, event ID, or channel for targeted rule retrieval
+  - **Cache Management** - Automatic cache refresh on modifications with manual refresh endpoint
+  - **Real-time Integration** - Used by SecurityEventDetector for live event analysis and enrichment
 - **YARA Real-time Malware Detection** - Complete signature-based malware detection system with dnYara 2.1.0 library
 - **YARA Configuration Management** - Advanced rule source management with automatic updates
   - **Editable Rule Sources** - Dynamic add/remove functionality for YARA rule source URLs
@@ -93,9 +101,14 @@
   - **Smart Preloading** - Navigation pattern prediction with hover-based component loading
   - **Enhanced Data Provider** - Cache-first strategy with 90% faster data fetch times
   - **Predictive Loading** - 80%+ cache hit rate for predicted pages
-  - **Performance Optimization** - 81% page load reduction (800ms → 150ms)
+  - **Performance Optimization (v0.7.0)** - 81% page load reduction (800ms → 150ms)
+  - **Component Memoization (v0.7.0)** - 36 React components optimized with React.memo for 30-50% fewer re-renders
+  - **Virtual Scrolling (v0.7.0)** - VirtualDatagrid handles 10,000+ rows with 60fps scrolling and <100ms render
+  - **Professional Card Layouts (v0.7.0)** - Consistent, polished card-based show pages for Security Events, YARA Rules, MITRE Techniques, and Security Event Rules
+  - **Database Connection Pooling (v0.7.0)** - EF Core PooledDbContextFactory with automatic health monitoring for 20-30% latency reduction
   - **Dashboard** - Real-time security monitoring with consolidated SignalR data streaming
   - **Security Events Management** - List, view, edit security events with MITRE integration and real-time updates
+  - **Security Event Rules** - Complete rule management interface with CRUD operations (v0.7.0)
   - **MITRE ATT&CK Techniques** - Browse and search 800+ techniques with statistics
   - **YARA Rules Management** - Full CRUD operations with validation and performance tracking
   - **YARA Matches Analysis** - Detection history with forensic details and correlation
@@ -136,9 +149,10 @@
 - **Local Deployment** - No cloud dependencies, runs entirely on your local infrastructure
 
 ## 🔌 **Comprehensive REST API**
-- **Complete API Coverage** - 19+ controllers covering all system functionality
+- **Complete API Coverage** - 20+ controllers covering all system functionality
 - **Authentication API** - Login, refresh, logout, and token validation endpoints
 - **Security Events API** - Full CRUD operations with advanced search and filtering
+- **Security Event Rules API** - Complete rule management with caching and role-based access (v0.7.0)
 - **Analytics API** - Trend analysis and forecasting endpoints with ML.NET predictions
 - **Advanced Search APIs** - Dedicated endpoints for search history and saved searches management
 - **System Monitoring APIs** - Performance metrics, system status, and health check endpoints

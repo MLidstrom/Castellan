@@ -95,6 +95,23 @@ public class DatabaseSecurityEventStore : ISecurityEventStore
         return query.Count();
     }
 
+    public Dictionary<string, int> GetRiskLevelCounts()
+    {
+        try
+        {
+            return _context.SecurityEvents
+                .GroupBy(e => e.RiskLevel)
+                .Select(g => new { RiskLevel = g.Key, Count = g.Count() })
+                .AsEnumerable()
+                .ToDictionary(x => x.RiskLevel.ToLower(), x => x.Count);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to get risk level counts from database");
+            return new Dictionary<string, int>();
+        }
+    }
+
     public void Clear()
     {
         _context.SecurityEvents.RemoveRange(_context.SecurityEvents);
@@ -226,12 +243,14 @@ public class DatabaseSecurityEventStore : ISecurityEventStore
 
                 case "starttime":
                 case "start_time":
+                case "startdate":
                     if (filter.Value is DateTime startTime)
                         query = query.Where(e => e.Timestamp >= startTime);
                     break;
 
                 case "endtime":
                 case "end_time":
+                case "enddate":
                     if (filter.Value is DateTime endTime)
                         query = query.Where(e => e.Timestamp <= endTime);
                     break;

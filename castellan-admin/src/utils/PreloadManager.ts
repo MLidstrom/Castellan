@@ -43,10 +43,11 @@ class PreloadManager {
     ['security-events', () => import('../resources/SecurityEvents')],
     ['yara-rules', () => import('../resources/YaraRules')],
     ['yara-matches', () => import('../resources/YaraMatches')],
+    ['security-event-rules', () => import('../resources/SecurityEventRules')],
     ['mitre-techniques', () => import('../resources/MitreTechniques')],
     ['system-status', () => import('../resources/SystemStatus')],
     ['threat-scanner', () => import('../resources/ThreatScanner')],
-    ['timelines', () => import('../resources/Timelines')],
+    ['timeline', () => import('../resources/Timelines')],
     ['configuration', () => import('../resources/Configuration')],
     ['trend-analysis', () => import('../components/TrendAnalysisPage')],
   ]);
@@ -87,7 +88,8 @@ class PreloadManager {
     // Medium priority - load on idle
     const mediumPriorityComponents: PreloadConfig[] = [
       { componentPath: 'threat-scanner', priority: 'medium' },
-      { componentPath: 'timelines', priority: 'medium' },
+      { componentPath: 'security-event-rules', priority: 'medium' },
+      { componentPath: 'timeline', priority: 'medium' },
       { componentPath: 'trend-analysis', priority: 'medium' },
     ];
 

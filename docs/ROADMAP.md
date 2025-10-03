@@ -61,8 +61,15 @@
   - Enhanced data provider with cache-first strategy (90% faster data fetching)
   - MenuWithPreloading component with hover-based component loading
   - Webpack prefetch hints for all lazy-loaded components
+  - Phase 1 (Oct 2, 2025): Skeleton-based instant render on dashboard (removed blocking overlay, added skeletons to metric cards and risk-level chart)
 
-## ⚡ v0.7.0 - Performance & Caching Overhaul (96% Complete - In Progress Q2 2025)
+## ⚡ v0.7.0 - Performance & Caching Overhaul (100% Complete - October 1, 2025)
+
+**Status**: ✅ COMPLETE - All planned performance optimization features successfully delivered.
+
+**Delivered Features**: Component Memoization (36 components), Virtual Scrolling (10K+ rows), Connection Pooling (EF Core with health monitoring)
+
+**Scope Management**: Cache Compression evaluated and moved to v0.8.0 as optional enhancement. Current caching (EnhancedDataProvider: 90% faster data fetching, 80%+ cache hit rate) already exceeds performance targets, making compression unnecessary for v0.7.0.
 
 ### 🚀 React Admin Performance Acceleration
 - **Optimized Data Provider** - ✅ COMPLETE - Enhanced caching integration with React Admin (EnhancedDataProvider)
@@ -72,13 +79,14 @@
 - **Bundle Optimization** - ✅ COMPLETE - Code splitting and webpack prefetch hints implemented
 - **Configuration Persistence** - ✅ COMPLETE (Sep 30, 2025) - Web UI configuration changes persist to JSON files with camelCase naming for frontend compatibility
 - **Connection Pooling** - ✅ WEEK 4 COMPLETE (Oct 1, 2025) - EF Core PooledDbContextFactory with health monitoring (5-100 connections), SQLite optimizations (WAL mode, shared cache), API endpoints for metrics and health checks
+- **Security Event Rules UI** - ✅ COMPLETE (Oct 1, 2025) - Database-backed rule management with React Admin interface, positioned under Security Events in navigation menu, includes full CRUD operations with caching
 
 ### 🧠 Advanced Caching System
 - **Multi-Layer Cache** - ✅ PARTIALLY COMPLETE - Enhanced data provider with intelligent caching
 - **Smart Cache Invalidation** - ✅ COMPLETE - Background refresh for stale data (50% TTL trigger)
 - **Cache Debugging Tools** - ✅ COMPLETE - Console logging and performance monitoring implemented
 - **Background Refresh** - ✅ COMPLETE - Preemptive cache warming with predictive loading
-- **Cache Compression** - 🔄 PLANNED (Week 4) - LZ-String compression to reduce localStorage footprint
+- **Cache Compression** - 🔄 DEFERRED to v0.8.0 - LZ-String compression (optional enhancement, not critical as existing caching exceeds performance targets)
 - **Cache Analytics** - ✅ COMPLETE - 80%+ cache hit rate monitoring implemented
 
 ### 🗃️ Database Performance Optimization
@@ -88,6 +96,8 @@
 - **Background Processing** - ✅ COMPLETE - Asynchronous YARA updates and compliance processing
 
 ## 📡 v0.8.0 - External Data Collection (Planned Q3 2025)
+
+**Status**: Partially complete (60%) with YARA rule collection features already implemented. Will include deferred Cache Compression from v0.7.0 as optional enhancement.
 
 ### 🔄 Automated Data Collection Framework
 - **Collection Scheduling Engine** - Flexible scheduling with timezone support
@@ -108,6 +118,12 @@
 - **Rule Conflict Resolution** - ✅ COMPLETE - Intelligent handling of duplicate rules with UPSERT logic
 - **Custom Rule Integration** - Support for organization-specific rules (Planned)
 - **Rule Performance Testing** - Automated testing of rule effectiveness (Planned)
+
+### 💾 Cache Compression (Deferred from v0.7.0)
+- **LZ-String Compression** - Optional enhancement to reduce localStorage footprint by 40-60%
+- **Intelligent Cache Eviction** - Smart eviction based on access frequency and importance
+- **Cache Monitoring UI** - Real-time cache statistics and health monitoring
+- **Automatic Quota Management** - Prevent localStorage quota exceeded errors
 
 ## 🌐 v0.9.0 - Threat Intelligence & Enrichment (Planned Q4 2025)
 
@@ -203,7 +219,7 @@
 |---------|----------|-------------|---------|
 | v0.5.0 | Advanced Search, Saved Searches, MaxMind IP Enrichment | Sept 15, 2024 | ✅ **COMPLETE** |
 | v0.6.0 | Analytics & Reporting, Database Consolidation, YARA Enhancement, Instant Loading | Sept 29, 2025 | ✅ **COMPLETE** (100%) |
-| v0.7.0 | Performance & Caching Overhaul, Configuration Persistence, Connection Pooling | Q2 2025 | 🚧 **PARTIALLY COMPLETE** (96%) |
+| v0.7.0 | Performance & Caching Overhaul, Configuration Persistence, Connection Pooling | Q2 2025 | ✅ **COMPLETE** (100%) |
 | v0.8.0 | External Data Collection | Q3 2025 | 🚧 **PARTIALLY COMPLETE** (60%) |
 | v0.9.0 | Threat Intelligence & Enrichment | Q4 2025 | 📋 **PLANNED** |
 | v1.0.0 | Configuration & Monitoring Excellence | Q1 2026 | 📋 **PLANNED** |
@@ -211,7 +227,7 @@
 
 ## 🤝 Contributing
 
-Castellan is 100% open source under the MIT License. We welcome contributions to help achieve this roadmap:
+Castellan is 100% open source under the AGPL-3.0 License. We welcome contributions to help achieve this roadmap:
 
 - **Feature Development** - Help implement planned features
 - **Documentation** - Improve guides and API documentation  

@@ -35,9 +35,10 @@ export class EnhancedDataProvider implements DataProvider {
   private readonly ttlConfig: Record<string, number> = {
     'security-events': 15000,        // 15 seconds - frequently updated
     'yara-matches': 20000,           // 20 seconds
-    'dashboard': 30000,              // 30 seconds
     'system-status': 10000,          // 10 seconds - real-time monitoring
     'threat-scanner': 5000,          // 5 seconds - real-time scanning
+    'timeline': 30000,               // 30 seconds - aggregated data
+    'timeline/stats': 30000,         // 30 seconds - aggregated statistics
     'yara-rules': 60000,             // 1 minute - less frequently changed
     'mitre/techniques': 120000,      // 2 minutes - rarely changes
     'configuration': 300000,         // 5 minutes - rarely changes
@@ -346,10 +347,8 @@ export class EnhancedDataProvider implements DataProvider {
    */
   private getPredictedResources(resource: string): string[] {
     const predictions: Record<string, string[]> = {
-      'dashboard': ['security-events', 'system-status'],
       'security-events': ['mitre/techniques', 'yara-matches'],
       'yara-rules': ['yara-matches'],
-      'system-status': ['dashboard'],
       'mitre/techniques': ['security-events'],
     };
 
@@ -429,10 +428,9 @@ export class EnhancedDataProvider implements DataProvider {
    */
   private invalidateRelatedCaches(resource: string): void {
     const relatedResources: Record<string, string[]> = {
-      'security-events': ['dashboard', 'mitre/techniques'],
+      'security-events': ['mitre/techniques'],
       'yara-rules': ['yara-matches'],
-      'yara-matches': ['dashboard', 'security-events'],
-      'system-status': ['dashboard'],
+      'yara-matches': ['security-events'],
       'configuration': ['system-status']
     };
 
@@ -463,6 +461,157 @@ export class EnhancedDataProvider implements DataProvider {
     const hitRate = 0; // Placeholder - implement tracking if needed
 
     return { size, entries, hitRate };
+  }
+
+  /**
+   * Get timeline data with caching
+   */
+  async getTimelineData(params: any): Promise<any> {
+    const startTime = performance.now();
+    const cacheKey = this.generateCacheKey('getTimelineData', 'timeline', params);
+    const cached = this.cache.get(cacheKey);
+
+    // Return cached data immediately if valid
+    if (cached && !cached.isExpired()) {
+      performanceMonitor.trackCacheHit('timeline');
+
+      // Trigger background refresh if data is getting stale
+      if (cached.isStale()) {
+        this.backgroundRefreshTimeline('getTimelineData', params);
+      }
+
+      const loadTime = performance.now() - startTime;
+      performanceMonitor.trackPageLoad('timeline', loadTime);
+      return cached.data;
+    }
+
+    // Check if there's already a pending request
+    const pendingKey = `getTimelineData:${cacheKey}`;
+    const pendingRequest = this.pendingRequests.get(pendingKey);
+    if (pendingRequest) {
+      console.log(`[EnhancedDataProvider] Reusing pending request for timeline data`);
+      return pendingRequest;
+    }
+
+    // Fetch fresh data
+    const requestPromise = (this.baseProvider as any).getTimelineData(params)
+      .then((data: any) => {
+        const ttl = this.getTTL('timeline');
+        this.cache.set(cacheKey, new CacheEntry(data, Date.now(), ttl, 'timeline'));
+
+        const loadTime = performance.now() - startTime;
+        performanceMonitor.trackPageLoad('timeline', loadTime);
+
+        // Clean up pending request
+        this.pendingRequests.delete(pendingKey);
+
+        return data;
+      })
+      .catch((error: any) => {
+        // Clean up pending request on error
+        this.pendingRequests.delete(pendingKey);
+        throw error;
+      });
+
+    // Store pending request to avoid duplicates
+    this.pendingRequests.set(pendingKey, requestPromise);
+
+    return requestPromise;
+  }
+
+  /**
+   * Get timeline stats with caching
+   */
+  async getTimelineStats(params: any): Promise<any> {
+    const startTime = performance.now();
+    const cacheKey = this.generateCacheKey('getTimelineStats', 'timeline/stats', params);
+    const cached = this.cache.get(cacheKey);
+
+    // Return cached data immediately if valid
+    if (cached && !cached.isExpired()) {
+      performanceMonitor.trackCacheHit('timeline/stats');
+
+      // Trigger background refresh if data is getting stale
+      if (cached.isStale()) {
+        this.backgroundRefreshTimeline('getTimelineStats', params);
+      }
+
+      const loadTime = performance.now() - startTime;
+      performanceMonitor.trackPageLoad('timeline/stats', loadTime);
+      return cached.data;
+    }
+
+    // Check if there's already a pending request
+    const pendingKey = `getTimelineStats:${cacheKey}`;
+    const pendingRequest = this.pendingRequests.get(pendingKey);
+    if (pendingRequest) {
+      console.log(`[EnhancedDataProvider] Reusing pending request for timeline stats`);
+      return pendingRequest;
+    }
+
+    // Fetch fresh data
+    const requestPromise = (this.baseProvider as any).getTimelineStats(params)
+      .then((data: any) => {
+        const ttl = this.getTTL('timeline/stats');
+        this.cache.set(cacheKey, new CacheEntry(data, Date.now(), ttl, 'timeline/stats'));
+
+        const loadTime = performance.now() - startTime;
+        performanceMonitor.trackPageLoad('timeline/stats', loadTime);
+
+        // Clean up pending request
+        this.pendingRequests.delete(pendingKey);
+
+        return data;
+      })
+      .catch((error: any) => {
+        // Clean up pending request on error
+        this.pendingRequests.delete(pendingKey);
+        throw error;
+      });
+
+    // Store pending request to avoid duplicates
+    this.pendingRequests.set(pendingKey, requestPromise);
+
+    return requestPromise;
+  }
+
+  /**
+   * Background refresh for timeline methods
+   */
+  private backgroundRefreshTimeline(method: string, params: any): void {
+    const cacheKey = this.generateCacheKey(method, method === 'getTimelineData' ? 'timeline' : 'timeline/stats', params);
+
+    // Prevent duplicate background refreshes
+    if (this.backgroundRefreshQueue.has(cacheKey)) {
+      return;
+    }
+
+    this.backgroundRefreshQueue.add(cacheKey);
+    console.log(`[EnhancedDataProvider] Background refresh triggered for ${method}`);
+
+    // Perform refresh after a small delay to batch requests
+    setTimeout(async () => {
+      try {
+        let freshData: any;
+
+        if (method === 'getTimelineData') {
+          freshData = await (this.baseProvider as any).getTimelineData(params);
+          const ttl = this.getTTL('timeline');
+          this.cache.set(cacheKey, new CacheEntry(freshData, Date.now(), ttl, 'timeline'));
+        } else if (method === 'getTimelineStats') {
+          freshData = await (this.baseProvider as any).getTimelineStats(params);
+          const ttl = this.getTTL('timeline/stats');
+          this.cache.set(cacheKey, new CacheEntry(freshData, Date.now(), ttl, 'timeline/stats'));
+        }
+
+        console.log(`[EnhancedDataProvider] Background refresh completed for ${method}`);
+
+      } catch (error) {
+        console.error(`[EnhancedDataProvider] Background refresh failed for ${method}:`, error);
+      } finally {
+        this.backgroundRefreshQueue.delete(cacheKey);
+      }
+    }, 500);
   }
 }
 

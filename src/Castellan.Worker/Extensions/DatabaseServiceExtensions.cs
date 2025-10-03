@@ -55,7 +55,7 @@ public static class DatabaseServiceExtensions
 
             options.UseSqlite(connectionString, sqliteOptions =>
             {
-                sqliteOptions.CommandTimeout(30);
+                sqliteOptions.CommandTimeout(300); // Increased to 5 minutes for large queries
                 sqliteOptions.UseQuerySplittingBehavior(QuerySplittingBehavior.SplitQuery);
             });
 

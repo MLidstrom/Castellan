@@ -1949,18 +1949,48 @@ const ThreatScannerConfig = ({ record }: { record: any }) => {
 
   const loadConfiguration = async () => {
     try {
-      const response = await fetch('http://localhost:5000/api/scheduledscan/config');
+      const token = localStorage.getItem('auth_token');
+      const response = await fetch('http://localhost:5000/api/scheduledscan/config', {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
       if (response.ok) {
         const data = await response.json();
-        // Convert TimeSpan to our format
-        const totalHours = Math.floor(data.scheduledScanInterval.ticks / 36000000000);
+
+        // Convert TimeSpan to our format - handle both ticks object and string format
+        let days = 1, hours = 0, minutes = 0;
+
+        if (data.scheduledScanInterval) {
+          if (typeof data.scheduledScanInterval === 'object' && data.scheduledScanInterval.ticks) {
+            // TimeSpan as object with ticks
+            const totalHours = Math.floor(data.scheduledScanInterval.ticks / 36000000000);
+            days = Math.floor(totalHours / 24);
+            hours = totalHours % 24;
+          } else if (typeof data.scheduledScanInterval === 'string') {
+            // TimeSpan as string "d.hh:mm:ss" or "hh:mm:ss"
+            const parts = data.scheduledScanInterval.split(':');
+            if (parts.length >= 2) {
+              const firstPart = parts[0];
+              if (firstPart.includes('.')) {
+                // Format: "d.hh:mm:ss"
+                const [d, h] = firstPart.split('.');
+                days = parseInt(d) || 0;
+                hours = parseInt(h) || 0;
+              } else {
+                // Format: "hh:mm:ss"
+                hours = parseInt(firstPart) || 0;
+                days = Math.floor(hours / 24);
+                hours = hours % 24;
+              }
+              minutes = parseInt(parts[1]) || 0;
+            }
+          }
+        }
+
         setConfig({
           enabled: data.enabled,
-          scheduledScanInterval: {
-            days: Math.floor(totalHours / 24),
-            hours: totalHours % 24,
-            minutes: 0
-          },
+          scheduledScanInterval: { days, hours, minutes },
           defaultScanType: data.defaultScanType,
           excludedDirectories: data.excludedDirectories || [],
           excludedExtensions: data.excludedExtensions || [],
@@ -1982,7 +2012,12 @@ const ThreatScannerConfig = ({ record }: { record: any }) => {
 
   const loadStatus = async () => {
     try {
-      const response = await fetch('http://localhost:5000/api/scheduledscan/status');
+      const token = localStorage.getItem('auth_token');
+      const response = await fetch('http://localhost:5000/api/scheduledscan/status', {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
       if (response.ok) {
         const data = await response.json();
         setStatus(data);
@@ -1995,19 +2030,35 @@ const ThreatScannerConfig = ({ record }: { record: any }) => {
   const handleSave = async () => {
     setSaving(true);
     try {
-      // Convert our format to TimeSpan
-      const totalHours = config.scheduledScanInterval.days * 24 + config.scheduledScanInterval.hours;
-      const timeSpan = `${totalHours}:${config.scheduledScanInterval.minutes}:00`;
+      // Convert our format to TimeSpan - .NET expects format "d.hh:mm:ss" or TimeSpan object
+      // Ensure we have valid numbers, default to 0 if undefined/NaN
+      const days = Number(config.scheduledScanInterval?.days) || 0;
+      const hours = Number(config.scheduledScanInterval?.hours) || 0;
+      const minutes = Number(config.scheduledScanInterval?.minutes) || 0;
+
+      // Validate that we have at least some time interval
+      if (days === 0 && hours === 0 && minutes === 0) {
+        notify('Scan interval must be greater than zero', { type: 'error' });
+        setSaving(false);
+        return;
+      }
+
+      // Format as "d.hh:mm:ss" (days.hours:minutes:seconds)
+      const timeSpan = days > 0
+        ? `${days}.${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:00`
+        : `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:00`;
 
       const payload = {
         ...config,
         scheduledScanInterval: timeSpan
       };
 
+      const token = localStorage.getItem('auth_token');
       const response = await fetch('http://localhost:5000/api/scheduledscan/config', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
         },
         body: JSON.stringify(payload)
       });
@@ -2016,11 +2067,14 @@ const ThreatScannerConfig = ({ record }: { record: any }) => {
         notify('Threat scanner configuration saved successfully', { type: 'success' });
         await loadStatus(); // Reload status after save
       } else {
-        const error = await response.json();
-        notify(`Failed to save: ${error.error}`, { type: 'error' });
+        const errorData = await response.json();
+        const errorMessage = errorData?.error || errorData?.message || 'Unknown error';
+        notify(`Failed to save: ${errorMessage}`, { type: 'error' });
       }
-    } catch (error) {
-      notify('Failed to save threat scanner configuration', { type: 'error' });
+    } catch (error: any) {
+      const errorMessage = error?.message || 'Failed to save threat scanner configuration';
+      notify(errorMessage, { type: 'error' });
+      console.error('Threat scanner save error:', error);
     } finally {
       setSaving(false);
     }

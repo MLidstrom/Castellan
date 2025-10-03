@@ -70,7 +70,7 @@
 
 | **Capability** | **Castellan (Open Source)** | **Commercial SIEM** | **Advantage** |
 |----------------|------------------------------|----------------------|---------------|
-| **Core Platform** | ✅ MIT License - Full Access | Proprietary licensing | **Complete source control** |
+| **Core Platform** | ✅ AGPL-3.0 - Full Access | Proprietary licensing | **Complete source control** |
 | **AI/ML Integration** | ✅ Advanced (LLM + Vector Search) | Often add-on modules | **Built-in from day one** |
 | **Teams/Slack Alerts** | ✅ Rich card integration | Basic webhook support | **Native rich formatting** |
 | **MITRE ATT&CK** | ✅ Auto-updated (800+ techniques) | Manual mapping required | **Automated intelligence** |

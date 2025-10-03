@@ -13,7 +13,8 @@ import {
   IconButton,
   Tooltip as MuiTooltip,
   Badge,
-  Stack
+  Stack,
+  Skeleton
 } from '@mui/material';
 import { useNotify } from 'react-admin';
 import { useNavigate } from 'react-router-dom';
@@ -145,9 +146,22 @@ export const Dashboard = React.memo(() => {
     testBackend();
   }, [authToken]);
 
+  // Use SignalR context for persistent real-time connection
+  const {
+    connectionState,
+    isConnected,
+    realtimeMetrics,
+    consolidatedDashboardData: contextDashboardData,
+    triggerSystemUpdate,
+    joinDashboardUpdates,
+    leaveDashboardUpdates,
+    requestDashboardData
+  } = useSignalRContext();
+
   // State for consolidated dashboard data - now using SignalR real-time updates
-  const [consolidatedData, setConsolidatedData] = useState<ConsolidatedDashboardData | null>(null);
-  const [dashboardDataLoading, setDashboardDataLoading] = useState(true);
+  // Initialize loading to false if we already have data from context
+  const [consolidatedData, setConsolidatedData] = useState<ConsolidatedDashboardData | null>(contextDashboardData);
+  const [dashboardDataLoading, setDashboardDataLoading] = useState(!contextDashboardData);
   const [dashboardDataError, setDashboardDataError] = useState<string | null>(null);
 
   // Legacy state for backward compatibility with existing components
@@ -158,30 +172,18 @@ export const Dashboard = React.memo(() => {
   const [scanProgress, setScanProgress] = useState<any>(null);
   const [currentScanType, setCurrentScanType] = useState<string>('');
 
-  // Use SignalR context for persistent real-time connection
-  const {
-    connectionState,
-    isConnected,
-    realtimeMetrics,
-    consolidatedDashboardData,
-    triggerSystemUpdate,
-    joinDashboardUpdates,
-    leaveDashboardUpdates,
-    requestDashboardData
-  } = useSignalRContext();
-
   // Update consolidated data when SignalR provides it
   useEffect(() => {
-    if (consolidatedDashboardData) {
-      console.log('📡 Received consolidated dashboard data from context:', consolidatedDashboardData);
-      setConsolidatedData(consolidatedDashboardData);
+    if (contextDashboardData) {
+      console.log('📡 Received consolidated dashboard data from context:', contextDashboardData);
+      setConsolidatedData(contextDashboardData);
       setDashboardDataLoading(false);
       setDashboardDataError(null);
       setInitialLoad(false); // Important: Mark initial load as complete
 
       // Update legacy state for backward compatibility
       setSecurityEventsData({
-        events: consolidatedDashboardData.securityEvents.recentEvents.map(event => ({
+        events: contextDashboardData.securityEvents.recentEvents.map(event => ({
           id: event.id,
           timestamp: event.timestamp,
           eventType: event.eventType,
@@ -189,11 +191,11 @@ export const Dashboard = React.memo(() => {
           source: event.source,
           machine: event.machine
         })),
-        total: consolidatedDashboardData.securityEvents.totalEvents
+        total: contextDashboardData.securityEvents.totalEvents
       });
 
 
-      setSystemStatus(consolidatedDashboardData.systemStatus.components.map(component => ({
+      setSystemStatus(contextDashboardData.systemStatus.components.map(component => ({
         id: component.component,
         component: component.component,
         status: component.status.toLowerCase(),
@@ -205,7 +207,7 @@ export const Dashboard = React.memo(() => {
         details: component.status
       })));
 
-      setThreatScanner(consolidatedDashboardData.threatScanner.recentScans.map(scan => ({
+      setThreatScanner(contextDashboardData.threatScanner.recentScans.map(scan => ({
         id: scan.id,
         status: scan.status.toLowerCase(),
         threatsFound: scan.threatsFound,
@@ -215,7 +217,7 @@ export const Dashboard = React.memo(() => {
       setLastRefresh(new Date());
       console.log('✅ Dashboard data updated from consolidated SignalR context');
     }
-  }, [consolidatedDashboardData]);
+  }, [contextDashboardData]);
 
   // Join dashboard updates on connection and cleanup on unmount
   useEffect(() => {
@@ -710,8 +712,8 @@ export const Dashboard = React.memo(() => {
     low: '#4caf50'
   };
 
-  // Data processing functions - now uses consolidated data when available
-  const processSecurityEventsForChart = () => {
+  // Chart data - memoized to prevent unnecessary re-renders and use consolidated data
+  const securityEventsChartData = useMemo(() => {
     if (consolidatedData?.securityEvents.riskLevelCounts) {
       return Object.entries(consolidatedData.securityEvents.riskLevelCounts)
         .map(([name, value]) => ({ name, value }));
@@ -725,10 +727,9 @@ export const Dashboard = React.memo(() => {
       return acc;
     }, {});
     return Object.entries(riskCounts).map(([name, value]) => ({ name, value }));
-  };
+  }, [consolidatedData, securityEvents]);
 
-
-  const processSystemHealthData = () => {
+  const systemHealthChartData = useMemo(() => {
     if (consolidatedData?.systemStatus) {
       const healthy = consolidatedData.systemStatus.healthyComponents;
       const total = consolidatedData.systemStatus.totalComponents;
@@ -749,9 +750,9 @@ export const Dashboard = React.memo(() => {
       return acc;
     }, {});
     return Object.entries(healthData).map(([name, value]) => ({ name, value }));
-  };
+  }, [consolidatedData, systemStatus]);
 
-  const processThreatScanData = () => {
+  const threatScanChartData = useMemo(() => {
     if (consolidatedData?.threatScanner.recentScans) {
       return consolidatedData.threatScanner.recentScans.slice(0, 10).map((scan, index) => ({
         name: `${scan.scanType} ${index + 1}`,
@@ -767,41 +768,14 @@ export const Dashboard = React.memo(() => {
       threats: scan.threatsFound || 0,
       status: scan.status
     }));
-  };
-
-  // Chart data - memoized to prevent unnecessary re-renders
-  const securityEventsChartData = useMemo(() => processSecurityEventsForChart(), [securityEvents]);
-  const systemHealthChartData = useMemo(() => processSystemHealthData(), [systemStatus]);
-  const threatScanChartData = useMemo(() => processThreatScanData(), [threatScanner]);
+  }, [consolidatedData, threatScanner]);
 
   // Stable label renderer for pie chart to prevent blinking
   const renderPieLabel = useCallback(({ name, percent }: any) => {
     return `${name} ${percent ? (percent * 100).toFixed(0) : 0}%`;
   }, []);
 
-  // Show loading overlay on initial load
-  if (initialLoad) {
-    return (
-      <Box
-        sx={{
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          justifyContent: 'center',
-          height: '50vh',
-          gap: 2
-        }}
-      >
-        <CircularProgress size={50} />
-        <Typography variant="h6" color="text.secondary">
-          Loading Dashboard...
-        </Typography>
-        <Typography variant="body2" color="text.secondary">
-          Fetching security data in parallel
-        </Typography>
-      </Box>
-    );
-  }
+  // Remove blocking initial overlay; allow structure to render immediately with skeletons
 
   return (
     <Box sx={{ flexGrow: 1, p: 3 }}>
@@ -868,7 +842,10 @@ export const Dashboard = React.memo(() => {
           />
           <CardContent>
             {dashboardDataLoading ? (
-              <CircularProgress size={24} />
+              <Box>
+                <Skeleton variant="text" width="60%" height={48} sx={{ mb: 0.5 }} />
+                <Skeleton variant="text" width="40%" />
+              </Box>
             ) : dashboardDataError ? (
               <Typography color="error" variant="body2">
                 Error: {dashboardDataError}
@@ -895,7 +872,10 @@ export const Dashboard = React.memo(() => {
           />
           <CardContent>
             {dashboardDataLoading ? (
-              <CircularProgress size={24} />
+              <Box>
+                <Skeleton variant="text" width="50%" height={48} sx={{ mb: 0.5 }} />
+                <Skeleton variant="text" width="45%" />
+              </Box>
             ) : dashboardDataError ? (
               <Typography color="error" variant="body2">
                 Error: {dashboardDataError}
@@ -938,7 +918,10 @@ export const Dashboard = React.memo(() => {
           />
           <CardContent>
             {dashboardDataLoading ? (
-              <CircularProgress size={24} />
+              <Box>
+                <Skeleton variant="text" width="40%" height={48} sx={{ mb: 0.5 }} />
+                <Skeleton variant="text" width="35%" />
+              </Box>
             ) : dashboardDataError ? (
               <Typography color="error" variant="body2">
                 Error: {dashboardDataError}
@@ -962,33 +945,96 @@ export const Dashboard = React.memo(() => {
         <Card sx={{ flex: 1 }}>
           <CardHeader title="Security Events by Risk Level" />
           <CardContent>
-            <Box height={300}>
-              {securityEventsChartData.length > 0 ? (
-                <ResponsiveContainer width="100%" height="100%">
-                  <PieChart>
-                    <Pie
-                      data={securityEventsChartData}
-                      cx="50%"
-                      cy="50%"
-                      labelLine={false}
-                      label={renderPieLabel}
-                      outerRadius={80}
-                      fill="#8884d8"
-                      dataKey="value"
-                      isAnimationActive={false}
-                    >
-                      {securityEventsChartData.map((entry, index) => (
-                        <Cell key={`cell-${entry.name}`} fill={COLORS[index % COLORS.length]} />
-                      ))}
-                    </Pie>
-                    <Tooltip />
-                  </PieChart>
-                </ResponsiveContainer>
-              ) : (
-                <Box display="flex" alignItems="center" justifyContent="center" height="100%">
-                  <Typography color="text.secondary">No data available</Typography>
-                </Box>
-              )}
+            <Box display="flex" gap={3} alignItems="center">
+              {/* Pie Chart - Left Side */}
+              <Box width="40%" height={300} flexShrink={0}>
+                {dashboardDataLoading ? (
+                  <Skeleton
+                    variant="circular"
+                    width={200}
+                    height={200}
+                    sx={{ mx: 'auto', mt: 3 }}
+                  />
+                ) : securityEventsChartData.length > 0 ? (
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie
+                        data={securityEventsChartData}
+                        cx="50%"
+                        cy="50%"
+                        labelLine={false}
+                        label={renderPieLabel}
+                        outerRadius={80}
+                        fill="#8884d8"
+                        dataKey="value"
+                        isAnimationActive={false}
+                      >
+                        {securityEventsChartData.map((entry, index) => (
+                          <Cell key={`cell-${entry.name}`} fill={COLORS[index % COLORS.length]} />
+                        ))}
+                      </Pie>
+                      <Tooltip />
+                    </PieChart>
+                  </ResponsiveContainer>
+                ) : (
+                  <Box display="flex" alignItems="center" justifyContent="center" height="100%">
+                    <Typography color="text.secondary">No data available</Typography>
+                  </Box>
+                )}
+              </Box>
+
+              {/* Risk Level Details - Right Side */}
+              <Box flex={1}>
+                {!dashboardDataLoading && securityEventsChartData.length > 0 && (
+                  <Stack spacing={1.5}>
+                    {[...securityEventsChartData]
+                      .sort((a, b) => {
+                        const order = { critical: 0, high: 1, medium: 2, low: 3, unknown: 4 };
+                        return (order[a.name.toLowerCase() as keyof typeof order] ?? 999) -
+                               (order[b.name.toLowerCase() as keyof typeof order] ?? 999);
+                      })
+                      .map((entry) => {
+                        const value = typeof entry.value === 'number' ? entry.value : 0;
+                        const total = securityEventsChartData.reduce((sum, e) => sum + (typeof e.value === 'number' ? e.value : 0), 0);
+                        const percentage = total > 0 ? ((value / total) * 100).toFixed(1) : '0.0';
+                        const riskLevelKey = entry.name.toLowerCase() as keyof typeof riskLevelColors;
+                        const color = riskLevelColors[riskLevelKey] || '#757575';
+
+                        return (
+                          <Box
+                            key={entry.name}
+                            display="flex"
+                            justifyContent="space-between"
+                            alignItems="center"
+                            sx={{
+                              py: 1,
+                              px: 2,
+                              borderRadius: 1,
+                              bgcolor: 'action.hover'
+                            }}
+                          >
+                            <Box display="flex" alignItems="center" gap={1.5}>
+                              <Box
+                                sx={{
+                                  width: 12,
+                                  height: 12,
+                                  borderRadius: '50%',
+                                  bgcolor: color
+                                }}
+                              />
+                              <Typography variant="body2" fontWeight={500} sx={{ textTransform: 'capitalize' }}>
+                                {entry.name}
+                              </Typography>
+                            </Box>
+                            <Typography variant="body2" fontWeight={600}>
+                              {value.toLocaleString()} ({percentage}%)
+                            </Typography>
+                          </Box>
+                        );
+                      })}
+                  </Stack>
+                )}
+              </Box>
             </Box>
           </CardContent>
         </Card>

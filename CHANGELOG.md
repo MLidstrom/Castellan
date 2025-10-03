@@ -7,6 +7,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed - Performance Optimizations (October 3, 2025)
+- **Timeline Service Performance**: Converted TimelineService to use IDbContextFactory<CastellanDbContext> for connection pooling
+  - `GetTimelineDataAsync` method optimized (src/Castellan.Worker/Services/TimelineService.cs:36)
+  - `GetTimelineStatsAsync` method optimized (src/Castellan.Worker/Services/TimelineService.cs:114)
+  - `GetTimelineDataPointsViaSqlAsync` method optimized (src/Castellan.Worker/Services/TimelineService.cs:576)
+  - All database queries now benefit from 100-connection pool with WAL mode
+  - Added AsNoTracking() for read-only queries to improve performance
+- **Saved Search Service Performance**: Converted SavedSearchService to use IDbContextFactory<CastellanDbContext> for connection pooling
+  - All 8 service methods now use pooled database contexts
+  - Includes: GetUserSavedSearchesAsync, GetSavedSearchAsync, CreateSavedSearchAsync, UpdateSavedSearchAsync, DeleteSavedSearchAsync, RecordSearchUsageAsync, GetMostUsedSearchesAsync, SearchSavedSearchesAsync
+- **Dashboard Performance**: Optimized dashboard widget loading to eliminate unnecessary loading states
+  - Initialize dashboard state from SignalR context data to avoid loading skeletons
+  - Fixed useMemo dependencies to use consolidated data instead of legacy state
+  - Removed duplicate SignalR context hook calls
+  - Dashboard now renders instantly if data is already in SignalR context
+- **Data Provider Fixes**: Removed 'dashboard' from predictive preloading to fix 404 errors
+  - Dashboard uses SignalR and direct fetch to `/api/dashboarddata/consolidated` instead of standard resource endpoint
+  - Cleaned up `getPredictedResources()`, `invalidateRelatedCaches()`, and `ttlConfig` in enhancedDataProvider.ts
+
 ### Added - Database Consolidation & YARA Improvements (September 29, 2025)
 - **Single Database Architecture**: Consolidated all database operations to use `/data/castellan.db` as the single source of truth
 - **Database Path Fixes**: Updated DatabaseYaraRuleStore, YaraImportTool, YaraConfigurationController, and DailyRefreshHostedService to use centralized database

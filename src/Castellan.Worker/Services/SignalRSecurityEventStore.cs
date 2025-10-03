@@ -108,6 +108,11 @@ public class SignalRSecurityEventStore : ISecurityEventStore
         return _innerStore.GetTotalCount(filters);
     }
 
+    public Dictionary<string, int> GetRiskLevelCounts()
+    {
+        return _innerStore.GetRiskLevelCounts();
+    }
+
     public void Clear()
     {
         _innerStore.Clear();

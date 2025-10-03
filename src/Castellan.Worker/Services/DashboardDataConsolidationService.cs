@@ -121,12 +121,12 @@ public class DashboardDataConsolidationService : IDashboardDataConsolidationServ
             var totalEventsWithEmptyFilters = _securityEventStore.GetTotalCount(new Dictionary<string, object>());
             _logger.LogInformation("🔍 Dashboard: GetTotalCount() returned {TotalEvents}, GetTotalCount(empty filters) returned {TotalEventsWithEmptyFilters}", totalEvents, totalEventsWithEmptyFilters);
 
-            // Get recent events for dashboard display (limit to 100 for risk level analysis)
-            var recentEvents = _securityEventStore.GetSecurityEvents(1, 100);
+            // Get risk level counts from ALL events in database (not just recent 100)
+            var riskLevelCounts = _securityEventStore.GetRiskLevelCounts();
+            _logger.LogInformation("🎯 Dashboard: Risk level distribution - {RiskLevelCounts}", string.Join(", ", riskLevelCounts.Select(kvp => $"{kvp.Key}: {kvp.Value}")));
 
-            var riskLevelCounts = recentEvents
-                .GroupBy(e => e.RiskLevel)
-                .ToDictionary(g => g.Key.ToLower(), g => g.Count());
+            // Get recent events for dashboard display (just 10 most recent)
+            var recentEvents = _securityEventStore.GetSecurityEvents(1, 10);
 
             // Only return essential fields for dashboard - reduces payload size (just 10 most recent)
             var basicEvents = recentEvents.Take(10).Select(e => new SecurityEventBasic

@@ -1,12 +1,13 @@
 import React from 'react';
 import { Layout as RaLayout, AppBar } from 'react-admin';
-import { Typography, Box, Chip } from '@mui/material';
+import { Typography, Box } from '@mui/material';
 import { Security } from '@mui/icons-material';
 import { MenuWithPreloading } from './MenuWithPreloading';
 
 const CustomAppBar = () => (
   <AppBar
     sx={{
+      backgroundColor: '#1976d2',
       '& .RaUserMenu-userButton': {
         whiteSpace: 'nowrap',
         overflow: 'hidden',
@@ -26,17 +27,6 @@ const CustomAppBar = () => (
       <Typography variant="h6" component="div" sx={{ mr: 2 }}>
         Castellan
       </Typography>
-      <Chip
-        label="Free Edition"
-        size="small"
-        sx={{
-          backgroundColor: 'rgba(255, 255, 255, 0.9)',
-          color: '#1976d2',
-          fontSize: '0.75rem',
-          fontWeight: 'bold',
-          mr: 2
-        }}
-      />
     </Box>
   </AppBar>
 );

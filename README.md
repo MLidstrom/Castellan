@@ -12,7 +12,7 @@
 [![Open Source](https://img.shields.io/badge/Open%20Source-100%25-brightgreen.svg?logo=github)](#-open-source--enterprise-grade)
 [![.NET](https://img.shields.io/badge/.NET-8.0-512BD4?logo=.net)](https://dotnet.microsoft.com/)
 [![Windows](https://img.shields.io/badge/Windows-Native-blue.svg?logo=windows)](https://www.microsoft.com/windows)
-[![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
+[![License](https://img.shields.io/badge/License-AGPL--3.0-blue.svg)](LICENSE)
 [![AI](https://img.shields.io/badge/AI-Powered-orange.svg)](https://openai.com/)
 [![MITRE](https://img.shields.io/badge/MITRE-ATT%26CK-darkred.svg)](https://attack.mitre.org/)
 
@@ -41,7 +41,7 @@
 - **📈 AI Trend Analysis** - ML.NET forecasting with predictions and confidence intervals
 - **📋 Timeline Visualization** - Interactive security event timeline with granular analysis
 - **📤 Data Export** - CSV, JSON, PDF export with filtering and background processing
-- **📱 Real-time Dashboard** - React admin interface with instant page loading and persistent SignalR live updates
+- **📱 Real-time Dashboard** - React admin interface with instant page loading, skeleton-based instant render, and persistent SignalR live updates
 - **🔒 Enterprise Security** - BCrypt passwords, JWT tokens, audit trails
 
 ## 🖼️ Screenshots
@@ -96,7 +96,7 @@
 ## 🔥 Why Castellan?
 
 ### 🎆 **Production-Ready Enterprise Platform**
-- **MIT Licensed** - 100% open source with complete transparency
+- **AGPL-3.0 Licensed** - 100% open source with complete transparency and strong copyleft
 - **5-Minute Setup** - From clone to monitoring in minutes
 - **Enterprise Scale** - 12K+ events/sec with instant page loading (sub-150ms)
 - **AI-First** - Vector search + LLM analysis built-in
@@ -138,7 +138,14 @@
 
 ## 📄 License
 
-This project is licensed under the **MIT License** - see the [LICENSE](LICENSE) file for details.
+This project is licensed under the **GNU Affero General Public License v3.0 (AGPL-3.0)** - see the [LICENSE](LICENSE) file for details.
+
+The AGPL-3.0 license ensures that any modifications to Castellan, including those used to provide network services, must be made available under the same license terms.
+
+## ™️ Trademark Notice
+
+The name **Castellan / CastellanAI** and the official logo are trademarks of Mats L. Canderfalk.
+Forks and derivatives must not use the same name or branding in a way that suggests official support.
 
 ---
 

@@ -190,7 +190,9 @@ public void Method_Scenario_ExpectedBehavior()
 
 ## 📄 License
 
-By contributing to Castellan, you agree that your contributions will be licensed under the MIT License.
+By contributing to Castellan, you agree that your contributions will be licensed under the GNU Affero General Public License v3.0 (AGPL-3.0).
+
+The AGPL-3.0 license is a strong copyleft license that requires any modified versions of the software, including those used to provide network services, to be released under the same license terms. This ensures the community benefits from all improvements.
 
 ## 🙏 Recognition
 

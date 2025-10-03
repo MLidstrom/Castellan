@@ -10,5 +10,6 @@ public interface ISecurityEventStore
     SecurityEvent? GetSecurityEvent(string id);
     int GetTotalCount();
     int GetTotalCount(Dictionary<string, object> filters);
+    Dictionary<string, int> GetRiskLevelCounts();
     void Clear();
 }

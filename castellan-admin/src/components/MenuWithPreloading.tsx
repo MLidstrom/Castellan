@@ -15,11 +15,12 @@ import SecurityIcon from '@mui/icons-material/Security';
 import BugReportIcon from '@mui/icons-material/BugReport';
 import RuleIcon from '@mui/icons-material/Rule';
 import FindInPageIcon from '@mui/icons-material/FindInPage';
-import TimelineIcon from '@mui/icons-material/Timeline';
+import CalendarMonthIcon from '@mui/icons-material/CalendarMonth';
 import TrendingUpIcon from '@mui/icons-material/TrendingUp';
 import MonitorHeartIcon from '@mui/icons-material/MonitorHeart';
 import RadarIcon from '@mui/icons-material/Radar';
 import SettingsIcon from '@mui/icons-material/Settings';
+import PolicyIcon from '@mui/icons-material/Policy';
 
 // Data prefetchers for each page - optimized queries
 const dataPrefetchers: Record<string, (q: ReturnType<typeof useQueryClient>, dp: any) => void> = {
@@ -93,6 +94,17 @@ const dataPrefetchers: Record<string, (q: ReturnType<typeof useQueryClient>, dp:
       queryKey: ['configuration'],
       queryFn: () => dp.custom('configuration', { method: 'GET' }),
       staleTime: 300000, // 5 minutes - rarely changes
+    });
+  },
+  'security-event-rules': (q, dp) => {
+    q.prefetchQuery({
+      queryKey: ['security-event-rules', 'list', { page: 1, perPage: 25 }],
+      queryFn: () => dp.getList('security-event-rules', {
+        pagination: { page: 1, perPage: 25 },
+        sort: { field: 'eventId', order: 'ASC' },
+        filter: {}
+      }),
+      staleTime: 60000, // 60 seconds
     });
   },
 };
@@ -199,6 +211,12 @@ export const MenuWithPreloading: React.FC = () => {
         onMouseEnter={() => handleHover('security-events')}
       />
       <Menu.Item
+        to="/security-event-rules"
+        primaryText="Security Event Rules"
+        leftIcon={<PolicyIcon />}
+        onMouseEnter={() => handleHover('security-event-rules')}
+      />
+      <Menu.Item
         to="/mitre-techniques"
         primaryText="MITRE Techniques"
         leftIcon={<BugReportIcon />}
@@ -217,10 +235,10 @@ export const MenuWithPreloading: React.FC = () => {
         onMouseEnter={() => handleHover('yara-matches')}
       />
       <Menu.Item
-        to="/timelines"
+        to="/timeline"
         primaryText="Timeline"
-        leftIcon={<TimelineIcon />}
-        onMouseEnter={() => handleHover('timelines')}
+        leftIcon={<CalendarMonthIcon />}
+        onMouseEnter={() => handleHover('timeline')}
       />
       <Menu.Item
         to="/trend-analysis"

@@ -15,12 +15,16 @@ import {
   RefreshButton,
   TopToolbar,
 } from 'react-admin';
-import { 
-  Chip, 
-  Box, 
-  Typography, 
+import {
+  Chip,
+  Box,
+  Typography,
   IconButton,
-  Tooltip 
+  Tooltip,
+  Card,
+  CardContent,
+  Grid,
+  Divider
 } from '@mui/material';
 import {
   CheckCircle as HealthyIcon,
@@ -317,24 +321,117 @@ export const SystemStatusList = () => (
   </Box>
 );
 
+// Custom show layout component for better card layout
+const SystemStatusShowLayout = () => {
+  const record = useRecordContext();
+
+  if (!record) return null;
+
+  return (
+    <Box sx={{ p: 2 }}>
+      <Grid container spacing={3}>
+        {/* Component Overview Card */}
+        <Grid item xs={12} md={6}>
+          <Card elevation={2}>
+            <CardContent>
+              <Box display="flex" alignItems="center" gap={1} mb={2}>
+                <SystemIcon color="primary" />
+                <Typography variant="h6">Component Overview</Typography>
+              </Box>
+              <Divider sx={{ mb: 3 }} />
+
+              <Box mb={2}>
+                <Typography variant="caption" color="textSecondary">Component Name</Typography>
+                <Box mt={0.5}>
+                  <ComponentTypeField source="component" />
+                </Box>
+              </Box>
+
+              <Box mb={2}>
+                <Typography variant="caption" color="textSecondary">Health Status</Typography>
+                <Box mt={0.5}>
+                  <HealthStatusField source="status" />
+                </Box>
+              </Box>
+
+              <Box mb={2}>
+                <Typography variant="caption" color="textSecondary">Uptime</Typography>
+                <Box mt={0.5}>
+                  <UptimeField source="uptime" />
+                </Box>
+              </Box>
+
+              <Box>
+                <Typography variant="caption" color="textSecondary">Response Time</Typography>
+                <Box mt={0.5}>
+                  <ResponseTimeField source="responseTime" />
+                </Box>
+              </Box>
+            </CardContent>
+          </Card>
+        </Grid>
+
+        {/* Monitoring Information Card */}
+        <Grid item xs={12} md={6}>
+          <Card elevation={2}>
+            <CardContent>
+              <Typography variant="h6" gutterBottom>Monitoring Information</Typography>
+              <Divider sx={{ mb: 3 }} />
+
+              <Box mb={2}>
+                <Typography variant="caption" color="textSecondary">Last Health Check</Typography>
+                <Typography variant="body1" sx={{ mt: 0.5 }}>
+                  {new Date(record.lastCheck).toLocaleString()}
+                </Typography>
+              </Box>
+
+              <Box mb={2}>
+                <Typography variant="caption" color="textSecondary">Error Count</Typography>
+                <Typography
+                  variant="h5"
+                  fontWeight="bold"
+                  color={record.errorCount > 0 ? 'error.main' : 'success.main'}
+                >
+                  {record.errorCount || 0}
+                </Typography>
+              </Box>
+
+              <Box>
+                <Typography variant="caption" color="textSecondary">Warning Count</Typography>
+                <Typography
+                  variant="h5"
+                  fontWeight="bold"
+                  color={record.warningCount > 0 ? 'warning.main' : 'success.main'}
+                >
+                  {record.warningCount || 0}
+                </Typography>
+              </Box>
+            </CardContent>
+          </Card>
+        </Grid>
+
+        {/* Component Details Card */}
+        <Grid item xs={12}>
+          <Card elevation={2}>
+            <CardContent>
+              <Typography variant="h6" gutterBottom>Component Details</Typography>
+              <Divider sx={{ mb: 3 }} />
+              <Typography variant="body1" sx={{ whiteSpace: 'pre-wrap', lineHeight: 1.7 }}>
+                {record.details || 'No additional details available'}
+              </Typography>
+            </CardContent>
+          </Card>
+        </Grid>
+      </Grid>
+    </Box>
+  );
+};
+
 export const SystemStatusShow = () => (
   <Box>
     <SystemStatusHeader />
     <Show title=" ">
-      <SimpleShowLayout>
-      <ComponentTypeField source="component" label="Component" />
-      <HealthStatusField source="status" label="Status" />
-      <UptimeField source="uptime" label="Uptime" />
-      <ResponseTimeField source="responseTime" label="Response Time" />
-      
-      <Typography variant="h6" sx={{ mt: 2, mb: 1 }}>Monitoring Information</Typography>
-      <DateField source="lastCheck" showTime label="Last Check" />
-      <NumberField source="errorCount" label="Error Count" />
-      <NumberField source="warningCount" label="Warning Count" />
-      
-      <Typography variant="h6" sx={{ mt: 2, mb: 1 }}>Component Details</Typography>
-      <TextField source="details" label="Details" />
-    </SimpleShowLayout>
+      <SystemStatusShowLayout />
     </Show>
   </Box>
 );

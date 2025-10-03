@@ -1,14 +1,21 @@
 using Microsoft.Extensions.Logging;
 using Castellan.Worker.Models;
 using Castellan.Worker.Abstractions;
+using System.Text.Json;
 
 namespace Castellan.Worker.Services;
 
 public sealed class SecurityEventDetector(
     ILogger<SecurityEventDetector> logger,
-    ICorrelationEngine correlationEngine)
+    ICorrelationEngine correlationEngine,
+    ISecurityEventRuleStore ruleStore)
 {
-    private static readonly Dictionary<int, SecurityEventRule> SecurityEventRules = new()
+    private Dictionary<string, SecurityEventRule>? _ruleCache;
+    private DateTime _lastCacheRefresh = DateTime.MinValue;
+    private static readonly TimeSpan CacheRefreshInterval = TimeSpan.FromMinutes(5);
+
+    // Legacy hard-coded rules dictionary kept as fallback
+    private static readonly Dictionary<int, SecurityEventRule> LegacySecurityEventRules = new()
     {
         // Authentication Events
         { 4624, new SecurityEventRule(SecurityEventType.AuthenticationSuccess, "medium", 85, 
@@ -77,8 +84,8 @@ public sealed class SecurityEventDetector(
             "Filtering Platform connection blocked", new[] { "T1071" }, new[] { "Review blocked connections", "Check firewall rules" }) }
     };
 
-    // PowerShell Operational Event Rules
-    private static readonly Dictionary<int, SecurityEventRule> PowerShellEventRules = new()
+    // Legacy PowerShell Operational Event Rules kept as fallback
+    private static readonly Dictionary<int, SecurityEventRule> LegacyPowerShellEventRules = new()
     {
         // PowerShell Script Block Logging
         { 4104, new SecurityEventRule(SecurityEventType.PowerShellExecution, "medium", 80, 
@@ -111,21 +118,100 @@ public sealed class SecurityEventDetector(
             "PowerShell engine stopped", new[] { "T1059.001" }, new[] { "Correlate with engine start events", "Review engine activity" }) }
     };
 
+    /// <summary>
+    /// Loads rules from database into cache
+    /// </summary>
+    private async Task<Dictionary<string, SecurityEventRule>> LoadRulesFromDatabaseAsync()
+    {
+        try
+        {
+            var rules = await ruleStore.GetAllEnabledRulesAsync();
+            var ruleDict = new Dictionary<string, SecurityEventRule>(StringComparer.OrdinalIgnoreCase);
+
+            foreach (var rule in rules)
+            {
+                var key = $"{rule.EventId}:{rule.Channel}";
+                var mitreTechniques = JsonSerializer.Deserialize<string[]>(rule.MitreTechniques) ?? Array.Empty<string>();
+                var recommendedActions = JsonSerializer.Deserialize<string[]>(rule.RecommendedActions) ?? Array.Empty<string>();
+
+                if (!Enum.TryParse<SecurityEventType>(rule.EventType, out var eventType))
+                {
+                    logger.LogWarning("Invalid event type {EventType} for rule {RuleId}", rule.EventType, rule.Id);
+                    continue;
+                }
+
+                ruleDict[key] = new SecurityEventRule(
+                    eventType,
+                    rule.RiskLevel,
+                    rule.Confidence,
+                    rule.Summary,
+                    mitreTechniques,
+                    recommendedActions
+                );
+            }
+
+            logger.LogInformation("Loaded {Count} security event rules from database", ruleDict.Count);
+            return ruleDict;
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Error loading security event rules from database, using legacy rules");
+            return new Dictionary<string, SecurityEventRule>(StringComparer.OrdinalIgnoreCase);
+        }
+    }
+
+    /// <summary>
+    /// Gets the cached rules, refreshing if needed
+    /// </summary>
+    private async Task<Dictionary<string, SecurityEventRule>> GetRulesAsync()
+    {
+        if (_ruleCache == null || (DateTime.UtcNow - _lastCacheRefresh) > CacheRefreshInterval)
+        {
+            _ruleCache = await LoadRulesFromDatabaseAsync();
+            _lastCacheRefresh = DateTime.UtcNow;
+        }
+        return _ruleCache;
+    }
+
+    /// <summary>
+    /// Detects a security event from a log event using database-backed rules
+    /// </summary>
     public SecurityEvent? DetectSecurityEvent(LogEvent logEvent)
     {
+        // Use async over sync bridge for rule loading
+        var rules = GetRulesAsync().GetAwaiter().GetResult();
+
         SecurityEventRule? rule = null;
-        
-        // Check for Security channel events
-        if (string.Equals(logEvent.Channel, "Security", StringComparison.OrdinalIgnoreCase))
+        var key = $"{logEvent.EventId}:{logEvent.Channel}";
+
+        // Try to get rule from database cache
+        if (rules.TryGetValue(key, out rule))
         {
-            SecurityEventRules.TryGetValue(logEvent.EventId, out rule);
+            logger.LogDebug("Found rule in database for Event {EventId} on {Channel}", logEvent.EventId, logEvent.Channel);
         }
-        // Check for PowerShell Operational channel events
-        else if (string.Equals(logEvent.Channel, "Microsoft-Windows-PowerShell/Operational", StringComparison.OrdinalIgnoreCase))
+        // Fallback to legacy hard-coded rules
+        else
         {
-            PowerShellEventRules.TryGetValue(logEvent.EventId, out rule);
+            // Check for Security channel events
+            if (string.Equals(logEvent.Channel, "Security", StringComparison.OrdinalIgnoreCase))
+            {
+                LegacySecurityEventRules.TryGetValue(logEvent.EventId, out rule);
+                if (rule != null)
+                {
+                    logger.LogDebug("Using legacy rule for Security Event {EventId}", logEvent.EventId);
+                }
+            }
+            // Check for PowerShell Operational channel events
+            else if (string.Equals(logEvent.Channel, "Microsoft-Windows-PowerShell/Operational", StringComparison.OrdinalIgnoreCase))
+            {
+                LegacyPowerShellEventRules.TryGetValue(logEvent.EventId, out rule);
+                if (rule != null)
+                {
+                    logger.LogDebug("Using legacy rule for PowerShell Event {EventId}", logEvent.EventId);
+                }
+            }
         }
-        
+
         if (rule == null)
         {
             return null;

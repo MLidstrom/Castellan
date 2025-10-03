@@ -31,6 +31,9 @@ public static class SecurityServiceExtensions
         services.Configure<YaraScanningOptions>(
             configuration.GetSection(YaraScanningOptions.SectionName));
 
+        // Register security event rule store
+        services.AddSingleton<ISecurityEventRuleStore, SecurityEventRuleStore>();
+
         // Register core security services
         services.AddSingleton<SecurityEventDetector>();
         services.AddSingleton<RulesEngine>();

@@ -1,6 +1,6 @@
 import React, { Suspense } from 'react';
 import { Admin, Resource } from 'react-admin';
-import { Box, CircularProgress, Typography } from '@mui/material';
+import { Box, CircularProgress, Typography, createTheme } from '@mui/material';
 import {
   Security as SecurityIcon,
   Computer as SystemIcon,
@@ -9,8 +9,9 @@ import {
   Settings as ConfigurationIcon,
   Shield as YaraRulesIcon,
   FindInPage as YaraMatchesIcon,
-  Schedule as TimelineIcon,
+  CalendarMonth as TimelineIcon,
   TrendingUp as TrendAnalysisIcon,
+  Rule as RuleIcon,
 } from '@mui/icons-material';
 // Using production providers with real backend API
 import { enhancedCastellanDataProvider } from './dataProvider/castellanDataProvider';
@@ -19,6 +20,33 @@ import { enhancedAuthProvider } from './auth/authProvider';
 import { Layout } from './components/Layout';
 import { SignalRProvider } from './contexts/SignalRContext';
 import { DashboardDataProvider } from './contexts/DashboardDataContext';
+
+// Create custom theme with enhanced active menu item visibility
+const theme = createTheme({
+  components: {
+    RaMenuItemLink: {
+      styleOverrides: {
+        root: {
+          '&.RaMenuItemLink-active': {
+            backgroundColor: '#1976d2',
+            color: '#ffffff',
+            fontWeight: 600,
+            borderLeft: '4px solid #ffffff',
+            '& .MuiListItemIcon-root': {
+              color: '#ffffff',
+            },
+            '&:hover': {
+              backgroundColor: '#1565c0',
+            },
+          },
+          '&:hover': {
+            backgroundColor: 'rgba(25, 118, 210, 0.08)',
+          },
+        },
+      },
+    },
+  },
+});
 
 // Lazy load Dashboard with webpack prefetch for better performance
 const Dashboard = React.lazy(() => import(/* webpackPrefetch: true */ './components/Dashboard').then(module => ({ default: module.Dashboard })));
@@ -49,6 +77,11 @@ const YaraRulesEdit = React.lazy(() => import(/* webpackPrefetch: true */ './res
 
 const YaraMatchesList = React.lazy(() => import(/* webpackPrefetch: true */ './resources/YaraMatches').then(module => ({ default: module.YaraMatchesList })));
 const YaraMatchesShow = React.lazy(() => import(/* webpackPrefetch: true */ './resources/YaraMatches').then(module => ({ default: module.YaraMatchesShow })));
+
+const SecurityEventRuleList = React.lazy(() => import(/* webpackPrefetch: true */ './resources/SecurityEventRules').then(module => ({ default: module.SecurityEventRuleList })));
+const SecurityEventRuleShow = React.lazy(() => import(/* webpackPrefetch: true */ './resources/SecurityEventRules').then(module => ({ default: module.SecurityEventRuleShow })));
+const SecurityEventRuleCreate = React.lazy(() => import(/* webpackPrefetch: true */ './resources/SecurityEventRules').then(module => ({ default: module.SecurityEventRuleCreate })));
+const SecurityEventRuleEdit = React.lazy(() => import(/* webpackPrefetch: true */ './resources/SecurityEventRules').then(module => ({ default: module.SecurityEventRuleEdit })));
 
 const TimelineList = React.lazy(() => import(/* webpackPrefetch: true */ './resources/Timelines').then(module => ({ default: module.TimelineList })));
 
@@ -90,6 +123,7 @@ const App = () => {
             layout={Layout}
             dashboard={Dashboard}
             loginPage={Login}
+            theme={theme}
           >
             {/* Security Events Resource - Available in CastellanProFree */}
             <Resource
@@ -131,9 +165,20 @@ const App = () => {
               recordRepresentation={(record) => `${record.ruleName} - ${record.targetFile}`}
             />
 
+            {/* Security Event Rules Resource - Detection Rule Management */}
+            <Resource
+              name="security-event-rules"
+              list={SecurityEventRuleList}
+              show={SecurityEventRuleShow}
+              create={SecurityEventRuleCreate}
+              edit={SecurityEventRuleEdit}
+              icon={RuleIcon}
+              recordRepresentation={(record) => `Event ${record.eventId} - ${record.summary}`}
+            />
+
             {/* Timeline Resource - Available in CastellanProFree */}
             <Resource
-              name="timelines"
+              name="timeline"
               list={TimelineList}
               icon={TimelineIcon}
               recordRepresentation={() => 'Security Event Timeline'}

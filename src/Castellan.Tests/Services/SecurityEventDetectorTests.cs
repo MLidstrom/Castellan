@@ -12,13 +12,20 @@ public class SecurityEventDetectorTests
 {
     private readonly Mock<ILogger<SecurityEventDetector>> _mockLogger;
     private readonly Mock<ICorrelationEngine> _mockCorrelationEngine;
+    private readonly Mock<ISecurityEventRuleStore> _mockRuleStore;
     private readonly SecurityEventDetector _detector;
 
     public SecurityEventDetectorTests()
     {
         _mockLogger = new Mock<ILogger<SecurityEventDetector>>();
         _mockCorrelationEngine = new Mock<ICorrelationEngine>();
-        _detector = new SecurityEventDetector(_mockLogger.Object, _mockCorrelationEngine.Object);
+        _mockRuleStore = new Mock<ISecurityEventRuleStore>();
+
+        // Setup mock rule store to return empty list (will use legacy rules as fallback)
+        _mockRuleStore.Setup(x => x.GetAllEnabledRulesAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<SecurityEventRuleEntity>());
+
+        _detector = new SecurityEventDetector(_mockLogger.Object, _mockCorrelationEngine.Object, _mockRuleStore.Object);
     }
 
     [Fact]
