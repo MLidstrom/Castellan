@@ -1,8 +1,10 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { Card, CardContent, CardHeader, Grid, Typography, Box, Divider } from '@mui/material';
 import { useDataProvider, Title } from 'react-admin';
+import { useQuery, keepPreviousData } from '@tanstack/react-query';
 import { TimelineToolbar, Granularity } from './TimelineToolbar';
 import { TimelineChart, TimelinePoint } from './TimelineChart';
+import { getResourceCacheConfig, queryKeys } from '../config/reactQueryConfig';
 
 const toLocalDateTimeInput = (d: Date) => {
   // yyyy-MM-ddTHH:mm
@@ -25,21 +27,26 @@ export const TimelinePanel: React.FC = () => {
   const [from, setFrom] = useState<string>(defaultFrom);
   const [to, setTo] = useState<string>(defaultTo);
 
-  const [loading, setLoading] = useState<boolean>(false);
-  const [error, setError] = useState<string | null>(null);
-  const [timelineData, setTimelineData] = useState<TimelinePoint[]>([]);
-  const [stats, setStats] = useState<any>(null);
+  // Get cache config for timeline resource
+  const cacheConfig = getResourceCacheConfig('timeline');
 
-  const fetchAll = async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      // Load aggregated timeline
-      const { data: series } = await dataProvider.getTimelineData({
-        granularity,
-        from: new Date(from).toISOString(),
-        to: new Date(to).toISOString(),
-      });
+  // Build query params for consistent cache keys
+  const timelineParams = useMemo(() => ({
+    granularity,
+    from: new Date(from).toISOString(),
+    to: new Date(to).toISOString(),
+  }), [granularity, from, to]);
+
+  const statsParams = useMemo(() => ({
+    from: new Date(from).toISOString(),
+    to: new Date(to).toISOString(),
+  }), [from, to]);
+
+  // React Query for timeline data - CACHED with instant snapshots!
+  const { data: timelineResponse, isLoading: timelineLoading, error: timelineError, refetch: refetchTimeline } = useQuery({
+    queryKey: queryKeys.custom('timeline', 'data', timelineParams),
+    queryFn: async () => {
+      const { data: series } = await dataProvider.getTimelineData(timelineParams);
 
       // Normalize series -> TimelinePoint[]
       const points: TimelinePoint[] = (Array.isArray(series) ? series : series?.data || []).map((p: any) => ({
@@ -47,26 +54,33 @@ export const TimelinePanel: React.FC = () => {
         count: p.count ?? p.total ?? 0,
       }));
 
-      setTimelineData(points);
+      return points;
+    },
+    placeholderData: keepPreviousData, // Show previous data while fetching - instant feel!
+    ...cacheConfig, // Apply centralized cache config (30s fresh, 30min memory, 60s polling)
+  });
 
-      // Load stats
-      const statsResp = await dataProvider.getTimelineStats({
-        from: new Date(from).toISOString(),
-        to: new Date(to).toISOString(),
-      });
-      setStats(statsResp.data || statsResp);
-    } catch (e: any) {
-      console.error('[TimelinePanel] Error fetching timeline:', e);
-      setError(e?.message || 'Failed to load timeline');
-    } finally {
-      setLoading(false);
-    }
+  // React Query for timeline stats - CACHED with instant snapshots!
+  const { data: stats, isLoading: statsLoading, error: statsError, refetch: refetchStats } = useQuery({
+    queryKey: queryKeys.custom('timeline', 'stats', statsParams),
+    queryFn: async () => {
+      const statsResp = await dataProvider.getTimelineStats(statsParams);
+      return statsResp.data || statsResp;
+    },
+    placeholderData: keepPreviousData, // Show previous data while fetching - instant feel!
+    ...cacheConfig,
+  });
+
+  // Combine loading states
+  const loading = timelineLoading || statsLoading;
+  const error = timelineError || statsError;
+  const timelineData = timelineResponse || [];
+
+  // Refresh function for toolbar
+  const handleRefresh = () => {
+    refetchTimeline();
+    refetchStats();
   };
-
-  useEffect(() => {
-    fetchAll();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
 
   return (
     <Box>
@@ -78,7 +92,7 @@ export const TimelinePanel: React.FC = () => {
         to={to}
         setFrom={setFrom}
         setTo={setTo}
-        onRefresh={fetchAll}
+        onRefresh={handleRefresh}
       />
 
       <Grid container spacing={2} sx={{ p: 2 }}>
@@ -90,7 +104,7 @@ export const TimelinePanel: React.FC = () => {
               <TimelineChart data={timelineData} loading={loading} />
               {error && (
                 <Typography color="error" variant="body2" sx={{ mt: 1 }}>
-                  {error}
+                  {error instanceof Error ? error.message : 'Failed to load timeline'}
                 </Typography>
               )}
             </CardContent>

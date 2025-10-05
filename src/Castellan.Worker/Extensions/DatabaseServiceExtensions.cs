@@ -92,6 +92,11 @@ public static class DatabaseServiceExtensions
         services.AddScoped<DatabaseSchemaUpdateService>();
         services.AddScoped<IEventBookmarkStore, DatabaseEventBookmarkStore>();
 
+        // Configure and add warmup service
+        services.Configure<WarmupOptions>(configuration.GetSection("Warmup"));
+        services.AddHttpClient("WarmupClient");
+        services.AddHostedService<WarmupHostedService>();
+
         return services;
     }
 }

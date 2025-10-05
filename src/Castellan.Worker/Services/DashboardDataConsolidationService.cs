@@ -1,3 +1,4 @@
+﻿using System.Linq;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging;
 using Castellan.Worker.Models;
@@ -11,7 +12,7 @@ namespace Castellan.Worker.Services;
 public interface IDashboardDataConsolidationService
 {
     Task<ConsolidatedDashboardData> GetConsolidatedDashboardDataAsync(string timeRange = "24h");
-    Task<SecurityEventsSummary> GetSecurityEventsSummaryAsync();
+    Task<SecurityEventsSummary> GetSecurityEventsSummaryAsync(string timeRange = "24h");
     Task<SystemStatusSummary> GetSystemStatusSummaryAsync();
     Task<ThreatScannerSummary> GetThreatScannerSummaryAsync();
     Task InvalidateCache();
@@ -68,7 +69,7 @@ public class DashboardDataConsolidationService : IDashboardDataConsolidationServ
             // This is the key optimization - single parallel fetch instead of 4+ sequential API calls
             var stopwatch = System.Diagnostics.Stopwatch.StartNew();
 
-            var securityEventsTask = GetSecurityEventsSummaryAsync();
+            var securityEventsTask = GetSecurityEventsSummaryAsync(timeRange);
             var systemStatusTask = GetSystemStatusSummaryAsync();
             var threatScannerTask = GetThreatScannerSummaryAsync();
 
@@ -112,39 +113,68 @@ public class DashboardDataConsolidationService : IDashboardDataConsolidationServ
     /// <summary>
     /// Get security events summary optimized for dashboard display
     /// </summary>
-    public async Task<SecurityEventsSummary> GetSecurityEventsSummaryAsync()
+    public async Task<SecurityEventsSummary> GetSecurityEventsSummaryAsync(string timeRange = "24h")
     {
         try
         {
-            // Get total count of all events in the store
-            var totalEvents = _securityEventStore.GetTotalCount();
-            var totalEventsWithEmptyFilters = _securityEventStore.GetTotalCount(new Dictionary<string, object>());
-            _logger.LogInformation("🔍 Dashboard: GetTotalCount() returned {TotalEvents}, GetTotalCount(empty filters) returned {TotalEventsWithEmptyFilters}", totalEvents, totalEventsWithEmptyFilters);
+            var filters = BuildTimeRangeFilters(timeRange);
+            DateTime? startDate = null;
+            DateTime? endDate = null;
 
-            // Get risk level counts from ALL events in database (not just recent 100)
-            var riskLevelCounts = _securityEventStore.GetRiskLevelCounts();
-            _logger.LogInformation("🎯 Dashboard: Risk level distribution - {RiskLevelCounts}", string.Join(", ", riskLevelCounts.Select(kvp => $"{kvp.Key}: {kvp.Value}")));
-
-            // Get recent events for dashboard display (just 10 most recent)
-            var recentEvents = _securityEventStore.GetSecurityEvents(1, 10);
-
-            // Only return essential fields for dashboard - reduces payload size (just 10 most recent)
-            var basicEvents = recentEvents.Take(10).Select(e => new SecurityEventBasic
+            if (filters != null)
             {
-                Id = e.Id,
-                EventType = e.EventType.ToString(),
-                Timestamp = e.OriginalEvent.Time.DateTime,
-                RiskLevel = e.RiskLevel,
-                Source = e.OriginalEvent.Channel,
-                Machine = e.OriginalEvent.Host
-            }).ToList();
+                if (filters.TryGetValue("startDate", out var startObj) && startObj is DateTime start)
+                {
+                    startDate = start;
+                }
+
+                if (filters.TryGetValue("endDate", out var endObj) && endObj is DateTime end)
+                {
+                    endDate = end;
+                }
+            }
+
+            _logger.LogDebug("Dashboard summary filters: Start={Start} End={End}", startDate, endDate);
+
+            List<SecurityEvent> recentEvents;
+            int totalEvents;
+            Dictionary<string, int> riskLevelCounts;
+
+            if (filters != null && filters.Count > 0)
+            {
+                totalEvents = _securityEventStore.GetTotalCount(filters);
+                riskLevelCounts = _securityEventStore.GetRiskLevelCounts(filters);
+                recentEvents = _securityEventStore.GetSecurityEvents(1, 25, filters).ToList();
+            }
+            else
+            {
+                totalEvents = _securityEventStore.GetTotalCount();
+                riskLevelCounts = _securityEventStore.GetRiskLevelCounts();
+                recentEvents = _securityEventStore.GetSecurityEvents(1, 25).ToList();
+            }
+
+            _logger.LogDebug("Dashboard summary count for {TimeRange}: {Count}", timeRange, totalEvents);
+
+            var basicEvents = recentEvents
+                .OrderByDescending(e => e.OriginalEvent.Time)
+                .Take(10)
+                .Select(e => new SecurityEventBasic
+                {
+                    Id = e.Id,
+                    EventType = e.EventType.ToString(),
+                    Timestamp = e.OriginalEvent.Time.DateTime,
+                    RiskLevel = e.RiskLevel,
+                    Source = e.OriginalEvent.Channel,
+                    Machine = e.OriginalEvent.Host ?? string.Empty
+                })
+                .ToList();
 
             return new SecurityEventsSummary
             {
-                TotalEvents = totalEvents, // Show actual total count from store
+                TotalEvents = totalEvents,
                 RiskLevelCounts = riskLevelCounts,
                 RecentEvents = basicEvents,
-                LastEventTime = recentEvents.FirstOrDefault()?.OriginalEvent.Time.DateTime ?? DateTime.MinValue
+                LastEventTime = basicEvents.FirstOrDefault()?.Timestamp ?? DateTime.MinValue
             };
         }
         catch (Exception ex)
@@ -153,7 +183,6 @@ public class DashboardDataConsolidationService : IDashboardDataConsolidationServ
             return new SecurityEventsSummary();
         }
     }
-
     /// <summary>
     /// Get system status summary optimized for dashboard display
     /// </summary>
@@ -225,6 +254,38 @@ public class DashboardDataConsolidationService : IDashboardDataConsolidationServ
         }
     }
 
+    private Dictionary<string, object>? BuildTimeRangeFilters(string timeRange)
+    {
+        if (string.IsNullOrWhiteSpace(timeRange))
+        {
+            return null;
+        }
+
+        var now = DateTime.UtcNow;
+        DateTime? start = timeRange.ToLowerInvariant() switch
+        {
+            "1h" => now.AddHours(-1),
+            "24h" => now.AddHours(-24),
+            "7d" => now.AddDays(-7),
+            "30d" => now.AddDays(-30),
+            _ when timeRange.EndsWith("h", StringComparison.OrdinalIgnoreCase) && int.TryParse(timeRange[..^1], out var hours)
+                => now.AddHours(-hours),
+            _ when timeRange.EndsWith("d", StringComparison.OrdinalIgnoreCase) && int.TryParse(timeRange[..^1], out var days)
+                => now.AddDays(-days),
+            _ => null
+        };
+
+        if (!start.HasValue)
+        {
+            return null;
+        }
+
+        return new Dictionary<string, object>
+        {
+            ["startDate"] = start.Value,
+            ["endDate"] = now
+        };
+    }
     /// <summary>
     /// Invalidate cached dashboard data to force fresh fetch
     /// </summary>
@@ -241,3 +302,23 @@ public class DashboardDataConsolidationService : IDashboardDataConsolidationServ
         await Task.CompletedTask;
     }
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

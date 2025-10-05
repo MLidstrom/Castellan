@@ -2,11 +2,9 @@ import React from 'react';
 import {
   List,
   Datagrid,
-  TextField,
   DateField,
   ShowButton,
   Show,
-  SimpleShowLayout,
   Filter,
   SelectInput,
   TextInput,

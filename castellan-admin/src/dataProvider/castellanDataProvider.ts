@@ -28,7 +28,7 @@ const httpClient = (url: string, options: fetchUtils.Options = {}) => {
         if (error.status === 401) {
             localStorage.removeItem('auth_token');
             localStorage.removeItem('user_permissions');
-            window.location.href = '/login';
+            window.location.replace('/#/login');
             return Promise.reject(new HttpError('Authentication required', 401));
         }
 
@@ -155,13 +155,15 @@ const transformResponse = (resource: string, response: any) => {
         };
     }
 
-    // Handle standard response formats
-    if (response.data) {
-        return {
-            data: response.data,
-            total: response.total || response.data.length
-        };
-    }
+        // Handle standard response formats
+        if (response.data) {
+            // Some endpoints return a single object in data; normalize to array for list contexts
+            const data = Array.isArray(response.data) ? response.data : [response.data];
+            return {
+                data,
+                total: response.total || data.length
+            };
+        }
 
     // Handle array responses
     if (Array.isArray(response)) {
@@ -194,13 +196,15 @@ export const castellanDataProvider: DataProvider = {
 
         // Special handling for configuration resource list
         if (resource === 'configuration') {
+            // Return known config sections so the UI can navigate correctly
             return {
-                data: [{
-                    id: 'threat-intelligence',
-                    name: 'Threat Intelligence Configuration',
-                    description: 'Configure threat intelligence providers and settings'
-                }],
-                total: 1
+                data: [
+                    { id: 'threat-intelligence', name: 'Threat Intelligence Configuration' },
+                    { id: 'notifications', name: 'Notification Settings' },
+                    { id: 'ip-enrichment', name: 'IP Enrichment' },
+                    { id: 'yara-rules', name: 'YARA Rules' },
+                ],
+                total: 4
             };
         }
 
@@ -231,7 +235,10 @@ export const castellanDataProvider: DataProvider = {
             console.log(`[DataProvider] Raw response:`, json);
             const transformed = transformResponse(resource, json);
             console.log(`[DataProvider] Transformed response:`, transformed);
-            
+
+            // Log database row count
+            console.log(`📊 [Database Rows] ${resource}: Total=${transformed.total}, Page=${transformed.data.length}, PageSize=${perPage}, CurrentPage=${page}`);
+
             return {
                 data: transformed.data,
                 total: transformed.total
@@ -404,17 +411,46 @@ export const castellanDataProvider: DataProvider = {
         }
 
         const backendResource = RESOURCE_MAP[resource] || resource;
+
+        console.log(`[DataProvider.getMany] Fetching ${params.ids.length} ${resource} records`);
+
+        // Try batch endpoint first
         const query = new URLSearchParams({
             ids: params.ids.join(',')
         });
-        
         const url = `${API_URL}/${backendResource}/batch?${query}`;
-        
+
         try {
             const { json } = await httpClient(url);
             const transformed = transformResponse(resource, json);
+            console.log(`[DataProvider.getMany] Batch fetch successful: ${transformed.data.length} records`);
             return { data: transformed.data };
-        } catch (error) {
+        } catch (error: any) {
+            // If batch endpoint doesn't exist (404), silently fall back to individual fetches
+            // This is expected behavior - not all resources have batch endpoints
+            if (error.status === 404 || error.message?.includes('404')) {
+                // Fetch all items in parallel (no console logging for expected fallback)
+                const fetchPromises = params.ids.map(async (id: any) => {
+                    try {
+                        const itemUrl = `${API_URL}/${backendResource}/${id}`;
+                        const { json } = await httpClient(itemUrl);
+                        return json;
+                    } catch (err) {
+                        // Only log actual errors (not 404s for missing items)
+                        if (!(err instanceof HttpError && err.status === 404)) {
+                            console.warn(`[DataProvider.getMany] Failed to fetch ${resource}/${id}:`, err);
+                        }
+                        return null;
+                    }
+                });
+
+                const results = await Promise.all(fetchPromises);
+                const data = results.filter(item => item !== null);
+
+                return { data };
+            }
+
+            // Log unexpected errors
             console.error(`Error fetching multiple ${resource}:`, error);
             throw error;
         }
@@ -452,7 +488,10 @@ export const castellanDataProvider: DataProvider = {
             order: order.toLowerCase()
           })
         });
-        
+
+        // Log database row count
+        console.log(`📊 [Database Rows] ${resource} (POST search): Total=${json.total || 0}, Page=${(json.data || []).length}, PageSize=${perPage}, CurrentPage=${page}`);
+
         return {
           data: json.data || [],
           total: json.total || 0
@@ -477,7 +516,10 @@ export const castellanDataProvider: DataProvider = {
         try {
             const { json } = await httpClient(url);
             const transformed = transformResponse(resource, json);
-            
+
+            // Log database row count
+            console.log(`📊 [Database Rows] ${resource} (references): Total=${transformed.total}, Page=${transformed.data.length}, PageSize=${perPage}, CurrentPage=${page}`);
+
             return {
                 data: transformed.data,
                 total: transformed.total
@@ -1053,3 +1095,4 @@ const baseEnhancedCastellanDataProvider = {
 export const enhancedCastellanDataProvider = baseEnhancedCastellanDataProvider;
 
 export default enhancedCastellanDataProvider;
+

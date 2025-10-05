@@ -19,33 +19,20 @@ import {
 import { MetricCardSkeleton, ChartSkeleton } from './skeletons';
 import { useNotify } from 'react-admin';
 import { useNavigate } from 'react-router-dom';
+import { useQuery, keepPreviousData } from '@tanstack/react-query';
+import { getResourceCacheConfig, queryKeys } from '../config/reactQueryConfig';
 import { 
-  XAxis, 
-  YAxis, 
-  CartesianGrid, 
-  Tooltip, 
   ResponsiveContainer,
   PieChart,
   Pie,
   Cell,
-  BarChart,
-  Bar,
-  AreaChart,
-  Area,
-  Legend
+  Tooltip
 } from 'recharts';
 import {
   Security as SecurityIcon,
-  Warning as WarningIcon,
-  CheckCircle as HealthyIcon,
-  Error as ErrorIcon,
-  TrendingUp as TrendingUpIcon,
   Refresh as RefreshIcon,
-  Download as DownloadIcon,
-  Fullscreen as FullscreenIcon,
-  Shield as ShieldIcon,
+  CheckCircle as HealthyIcon,
   Scanner as ScannerIcon,
-  Circle as ConnectionIcon,
   SignalWifi4Bar as ConnectedIcon,
   SignalWifiOff as DisconnectedIcon
 } from '@mui/icons-material';
@@ -64,6 +51,9 @@ import { SystemMetricsUpdate, ConsolidatedDashboardData } from '../hooks/useSign
 
 // Import Dashboard data caching context
 import { useDashboardDataContext } from '../contexts/DashboardDataContext';
+
+// Import background polling hook for automatic cache refresh
+import { useAutoBackgroundPolling } from '../hooks/useBackgroundPolling';
 
 // API Configuration - Use same base URL as data provider
 const API_URL = process.env.REACT_APP_CASTELLANPRO_API_URL || 'http://localhost:5000/api';
@@ -107,7 +97,12 @@ interface ThreatScan {
 }
 
 export const Dashboard = React.memo(() => {
+  // Enable automatic background polling for all critical resources
+  // This keeps dashboard data fresh without manual refresh
+  useAutoBackgroundPolling();
+
   const [timeRange, setTimeRange] = useState('24h');
+  const timeRangeRef = useRef(timeRange);
   const [refreshing, setRefreshing] = useState(false);
   const [lastRefresh, setLastRefresh] = useState(new Date());
   const [initialLoad, setInitialLoad] = useState(true);
@@ -159,11 +154,43 @@ export const Dashboard = React.memo(() => {
     requestDashboardData
   } = useSignalRContext();
 
-  // State for consolidated dashboard data - now using SignalR real-time updates
-  // Initialize loading to false if we already have data from context
+  // Get dashboard cache config
+  const dashboardCacheConfig = getResourceCacheConfig('dashboard');
+
+  // React Query for consolidated dashboard data - CACHED with instant snapshots!
+  const {
+    data: queryDashboardData,
+    isLoading: dashboardDataLoading,
+    error: dashboardDataError,
+    refetch: refetchDashboard
+  } = useQuery({
+    queryKey: queryKeys.custom('dashboard', 'consolidated', { timeRange }),
+    queryFn: async () => {
+      if (!authToken) {
+        throw new Error('No authentication token');
+      }
+
+      const response = await fetch(`${API_URL}/dashboarddata/consolidated?timeRange=${timeRange}`, {
+        headers: {
+          Authorization: `Bearer ${authToken}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error(`REST API failed: ${response.status}`);
+      }
+
+      const data = await response.json();
+      return data;
+    },
+    placeholderData: keepPreviousData, // Show previous data while fetching - instant feel!
+    ...dashboardCacheConfig, // 15s fresh, 30min memory, 30s polling
+    enabled: !!authToken, // Only run query if authenticated
+  });
+
+  // State for consolidated dashboard data - now using React Query + SignalR real-time updates
   const [consolidatedData, setConsolidatedData] = useState<ConsolidatedDashboardData | null>(contextDashboardData);
-  const [dashboardDataLoading, setDashboardDataLoading] = useState(!contextDashboardData);
-  const [dashboardDataError, setDashboardDataError] = useState<string | null>(null);
 
   // Legacy state for backward compatibility with existing components
   const [securityEventsData, setSecurityEventsData] = useState<{ events: SecurityEvent[], total: number }>({ events: [], total: 0 });
@@ -171,72 +198,22 @@ export const Dashboard = React.memo(() => {
   const [threatScanner, setThreatScanner] = useState<ThreatScan[]>([]);
   const [scanInProgress, setScanInProgress] = useState(false);
   const [scanProgress, setScanProgress] = useState<any>(null);
+
+  useEffect(() => {
+    timeRangeRef.current = timeRange;
+  }, [timeRange]);
   const [currentScanType, setCurrentScanType] = useState<string>('');
 
+  // Apply React Query dashboard data when it changes
+  useEffect(() => {
+    if (queryDashboardData) {
+      applyConsolidatedData(queryDashboardData);
+      setInitialLoad(false);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [queryDashboardData]); // applyConsolidatedData is stable (useCallback)
+
   // Update consolidated data when SignalR provides it
-  useEffect(() => {
-    if (contextDashboardData) {
-      console.log('📡 Received consolidated dashboard data from context:', contextDashboardData);
-      setConsolidatedData(contextDashboardData);
-      setDashboardDataLoading(false);
-      setDashboardDataError(null);
-      setInitialLoad(false); // Important: Mark initial load as complete
-
-      // Update legacy state for backward compatibility
-      setSecurityEventsData({
-        events: contextDashboardData.securityEvents.recentEvents.map(event => ({
-          id: event.id,
-          timestamp: event.timestamp,
-          eventType: event.eventType,
-          riskLevel: event.riskLevel as 'critical' | 'high' | 'medium' | 'low',
-          source: event.source,
-          machine: event.machine
-        })),
-        total: contextDashboardData.securityEvents.totalEvents
-      });
-
-
-      setSystemStatus(contextDashboardData.systemStatus.components.map(component => ({
-        id: component.component,
-        component: component.component,
-        status: component.status.toLowerCase(),
-        responseTime: component.responseTime,
-        errorCount: component.status.toLowerCase() === 'healthy' ? 0 : 1,
-        warningCount: 0,
-        lastCheck: component.lastCheck,
-        uptime: '0m',
-        details: component.status
-      })));
-
-      setThreatScanner(contextDashboardData.threatScanner.recentScans.map(scan => ({
-        id: scan.id,
-        status: scan.status.toLowerCase(),
-        threatsFound: scan.threatsFound,
-        timestamp: scan.timestamp
-      })));
-
-      setLastRefresh(new Date());
-      console.log('✅ Dashboard data updated from consolidated SignalR context');
-    }
-  }, [contextDashboardData]);
-
-  // Join dashboard updates on connection and cleanup on unmount
-  useEffect(() => {
-    if (connectionState === 'Connected') {
-      console.log('🔗 Dashboard: Joining dashboard updates and requesting initial data');
-      joinDashboardUpdates();
-      requestDashboardData(timeRange);
-    }
-
-    // Cleanup function runs when component unmounts or dependencies change
-    return () => {
-      if (connectionState === 'Connected') {
-        console.log('🔌 Dashboard: Leaving dashboard updates');
-        leaveDashboardUpdates();
-      }
-    };
-  }, [connectionState, timeRange, joinDashboardUpdates, leaveDashboardUpdates, requestDashboardData]);
-
   // Check scan progress function
   const checkScanProgress = async () => {
     try {
@@ -380,16 +357,108 @@ export const Dashboard = React.memo(() => {
         clearInterval(interval);
       }
     };
-  }, [scanInProgress, authToken, hasCheckedInitialScan]);
+  }, [scanInProgress, authToken, hasCheckedInitialScan, checkScanProgress]);
 
 
   // Use dashboard data caching context (kept for compatibility with other components)
   const {
-    getCachedData,
-    setCachedData,
-    isCacheValid,
     clearCache
   } = useDashboardDataContext();
+
+  const resetDashboardState = useCallback(() => {
+    clearCache();
+    setConsolidatedData(null);
+    setSecurityEventsData({ events: [], total: 0 });
+    setSystemStatus([]);
+    setThreatScanner([]);
+    // React Query manages loading/error state automatically
+    setInitialLoad(true);
+  }, [clearCache]);
+
+  const applyConsolidatedData = useCallback((data: ConsolidatedDashboardData) => {
+    setConsolidatedData(data);
+    setSecurityEventsData({
+      events: (data.securityEvents?.recentEvents ?? []).map((event: any) => ({
+        id: event.id,
+        timestamp: event.timestamp,
+        eventType: event.eventType,
+        riskLevel: event.riskLevel as 'critical' | 'high' | 'medium' | 'low',
+        source: event.source,
+        machine: event.machine
+      })),
+      total: data.securityEvents?.totalEvents ?? 0
+    });
+
+    setSystemStatus((data.systemStatus?.components ?? []).map((component: any) => ({
+      id: component.component,
+      component: component.component,
+      status: (component.status ?? '').toLowerCase(),
+      responseTime: component.responseTime,
+      errorCount: component.status && component.status.toLowerCase() === 'healthy' ? 0 : 1,
+      warningCount: 0,
+      lastCheck: component.lastCheck,
+      uptime: component.uptime ?? '0m',
+      details: component.status
+    })));
+
+    setThreatScanner((data.threatScanner?.recentScans ?? []).map((scan: any) => ({
+      id: scan.id,
+      status: (scan.status ?? '').toLowerCase(),
+      threatsFound: scan.threatsFound,
+      timestamp: scan.timestamp
+    })));
+
+    // React Query manages error state automatically
+  }, []);
+
+  // loadDashboardData replaced by React Query - refetchDashboard() now handles this
+
+  const handleTimeRangeChange = useCallback((range: string) => {
+    if (range === timeRangeRef.current) {
+      return;
+    }
+
+    timeRangeRef.current = range;
+    setTimeRange(range); // React Query will auto-refetch when timeRange changes (it's in the query key)
+    resetDashboardState();
+
+    if (connectionState === 'Connected') {
+      requestDashboardData(range);
+    }
+  }, [connectionState, requestDashboardData, resetDashboardState]);
+
+  useEffect(() => {
+    if (!contextDashboardData) {
+      return;
+    }
+
+    const contextRange = contextDashboardData.timeRange ?? '24h';
+    if (contextRange !== timeRangeRef.current) {
+      console.debug('Ignoring SignalR dashboard data for range', contextRange, 'while current range is', timeRangeRef.current);
+      return;
+    }
+
+    applyConsolidatedData(contextDashboardData);
+    // React Query manages loading state automatically
+    setInitialLoad(false);
+  }, [contextDashboardData, applyConsolidatedData]);
+
+  // Join dashboard updates on connection and cleanup on unmount
+  useEffect(() => {
+    if (connectionState === 'Connected') {
+      console.log('[Dashboard] Joining dashboard updates and requesting initial data');
+      joinDashboardUpdates();
+      // React Query automatically fetches on mount - no manual call needed
+      requestDashboardData(timeRange);
+    }
+
+    return () => {
+      if (connectionState === 'Connected') {
+        console.log('[Dashboard] Leaving dashboard updates');
+        leaveDashboardUpdates();
+      }
+    };
+  }, [connectionState, timeRange, joinDashboardUpdates, leaveDashboardUpdates, requestDashboardData]);
 
   const [lastRealTimeUpdate, setLastRealTimeUpdate] = useState<Date | null>(null);
 
@@ -548,92 +617,27 @@ export const Dashboard = React.memo(() => {
   }, [pollingEnabled, isConnected, authToken]);
 
   // Fallback to REST API when SignalR is not available
-  useEffect(() => {
-    const fetchFallbackData = async () => {
-      if (!authToken || connectionState === 'Connected') return;
-
-      console.log('🔄 SignalR unavailable, using REST API fallback');
-      setDashboardDataLoading(true);
-
-      try {
-        const response = await fetch(`${API_URL}/dashboarddata/consolidated?timeRange=${timeRange}`, {
-          headers: {
-            'Authorization': `Bearer ${authToken}`,
-            'Content-Type': 'application/json'
-          }
-        });
-
-        if (response.ok) {
-          const data = await response.json();
-          setConsolidatedData(data);
-          setDashboardDataError(null);
-
-          // Update legacy state for backward compatibility
-          setSecurityEventsData({
-            events: data.securityEvents.recentEvents.map((event: any) => ({
-              id: event.id,
-              timestamp: event.timestamp,
-              eventType: event.eventType,
-              riskLevel: event.riskLevel as 'critical' | 'high' | 'medium' | 'low',
-              source: event.source,
-              machine: event.machine
-            })),
-            total: data.securityEvents.totalEvents
-          });
-
-
-          setSystemStatus(data.systemStatus.components.map((component: any) => ({
-            id: component.component,
-            component: component.component,
-            status: component.status.toLowerCase(),
-            responseTime: component.responseTime,
-            errorCount: component.status.toLowerCase() === 'healthy' ? 0 : 1,
-            warningCount: 0,
-            lastCheck: component.lastCheck,
-            uptime: '0m',
-            details: component.status
-          })));
-
-          setThreatScanner(data.threatScanner.recentScans.map((scan: any) => ({
-            id: scan.id,
-            status: scan.status.toLowerCase(),
-            threatsFound: scan.threatsFound,
-            timestamp: scan.timestamp
-          })));
-
-          console.log('✅ Fallback data loaded successfully');
-        } else {
-          throw new Error(`REST API failed: ${response.status}`);
-        }
-      } catch (error) {
-        console.error('❌ Fallback data fetch failed:', error);
-        setDashboardDataError(error instanceof Error ? error.message : 'Failed to fetch data');
-      } finally {
-        setDashboardDataLoading(false);
-        setInitialLoad(false);
-      }
-    };
-
-    fetchFallbackData();
-  }, [authToken, timeRange, connectionState]);
+  // React Query automatically handles data fetching - no manual useEffect needed
+  // Data fetches when: component mounts, timeRange changes, or cache becomes stale
 
   // Extract derived data
   const securityEvents = securityEventsData?.events || [];
   const securityEventsTotal = securityEventsData?.total || 0;
+  const displayTotalEvents = consolidatedData?.securityEvents?.totalEvents ?? securityEventsTotal;
   
   // Debug logging for consolidated data
   useEffect(() => {
-    if (consolidatedData) {
+    if (consolidatedData?.securityEvents && consolidatedData?.systemStatus && consolidatedData?.threatScanner) {
       console.group('📊 Consolidated Dashboard Data Status');
       console.log('Security Events:', {
         totalEvents: consolidatedData.securityEvents.totalEvents,
-        recentEventsCount: consolidatedData.securityEvents.recentEvents.length,
+        recentEventsCount: consolidatedData.securityEvents.recentEvents?.length ?? 0,
         riskLevelCounts: consolidatedData.securityEvents.riskLevelCounts
       });
       console.log('System Status:', {
         totalComponents: consolidatedData.systemStatus.totalComponents,
         healthyComponents: consolidatedData.systemStatus.healthyComponents,
-        componentsCount: consolidatedData.systemStatus.components.length
+        componentsCount: consolidatedData.systemStatus.components?.length ?? 0
       });
       console.log('Threat Scanner:', {
         totalScans: consolidatedData.threatScanner.totalScans,
@@ -656,20 +660,20 @@ export const Dashboard = React.memo(() => {
     }
   }, [securityEvents]);
 
-  // Refresh all data - now uses consolidated SignalR or REST API fallback
+  // Refresh all data - now uses React Query + SignalR
   const handleRefresh = async () => {
     setRefreshing(true);
     setLastRefresh(new Date());
 
     try {
       if (connectionState === 'Connected') {
-        // Request fresh data via SignalR
-        console.log('📡 Requesting fresh dashboard data via SignalR...');
+        console.log('[Dashboard] Refresh requested while SignalR is connected');
+        await refetchDashboard(); // React Query refetch - instant from cache!
+
         await requestDashboardData(timeRange);
         notify('Dashboard data refreshed via SignalR', { type: 'success' });
       } else {
-        // Fallback to REST API
-        console.log('🔄 Refreshing via REST API fallback...');
+        console.log('[Dashboard] Refreshing via REST API fallback...');
         const response = await fetch(`${API_URL}/dashboarddata/refresh`, {
           method: 'POST',
           headers: {
@@ -678,24 +682,15 @@ export const Dashboard = React.memo(() => {
           }
         });
 
-        if (response.ok) {
-          // Re-fetch data after cache invalidation
-          const dataResponse = await fetch(`${API_URL}/dashboarddata/consolidated?timeRange=${timeRange}`, {
-            headers: {
-              'Authorization': `Bearer ${authToken}`,
-              'Content-Type': 'application/json'
-            }
-          });
-
-          if (dataResponse.ok) {
-            const data = await dataResponse.json();
-            setConsolidatedData(data);
-            notify('Dashboard data refreshed', { type: 'success' });
-          }
-        } else {
+        if (!response.ok) {
           throw new Error('Failed to refresh data');
         }
+
+        await refetchDashboard(); // React Query refetch - instant from cache!
+
+        notify('Dashboard data refreshed', { type: 'success' });
       }
+
     } catch (error) {
       console.error('Refresh failed:', error);
       notify('Failed to refresh dashboard data', { type: 'error' });
@@ -716,7 +711,7 @@ export const Dashboard = React.memo(() => {
 
   // Chart data - memoized to prevent unnecessary re-renders and use consolidated data
   const securityEventsChartData = useMemo(() => {
-    if (consolidatedData?.securityEvents.riskLevelCounts) {
+    if (consolidatedData?.securityEvents?.riskLevelCounts) {
       return Object.entries(consolidatedData.securityEvents.riskLevelCounts)
         .map(([name, value]) => ({ name, value }));
     }
@@ -755,7 +750,7 @@ export const Dashboard = React.memo(() => {
   }, [consolidatedData, systemStatus]);
 
   const threatScanChartData = useMemo(() => {
-    if (consolidatedData?.threatScanner.recentScans) {
+    if (consolidatedData?.threatScanner?.recentScans) {
       return consolidatedData.threatScanner.recentScans.slice(0, 10).map((scan, index) => ({
         name: `${scan.scanType} ${index + 1}`,
         threats: scan.threatsFound,
@@ -792,7 +787,7 @@ export const Dashboard = React.memo(() => {
             {['1h', '24h', '7d', '30d'].map((range) => (
               <Button
                 key={range}
-                onClick={() => setTimeRange(range)}
+                onClick={() => handleTimeRangeChange(range)}
                 variant={timeRange === range ? 'contained' : 'outlined'}
               >
                 {range}
@@ -861,12 +856,12 @@ export const Dashboard = React.memo(() => {
               <MetricCardSkeleton delay={0} />
             ) : dashboardDataError ? (
               <Typography color="error" variant="body2">
-                Error: {dashboardDataError}
+                Error: {dashboardDataError instanceof Error ? dashboardDataError.message : 'Failed to load dashboard'}
               </Typography>
             ) : (
               <Box>
                 <Typography variant="h4" color="primary">
-                  {consolidatedData?.securityEvents.totalEvents || securityEventsData.total}
+                  {displayTotalEvents}
                 </Typography>
                 <Typography variant="body2" color="text.secondary">
                   Total Events
@@ -888,12 +883,12 @@ export const Dashboard = React.memo(() => {
               <MetricCardSkeleton delay={0.1} />
             ) : dashboardDataError ? (
               <Typography color="error" variant="body2">
-                Error: {dashboardDataError}
+                Error: {dashboardDataError instanceof Error ? dashboardDataError.message : 'Failed to load dashboard'}
               </Typography>
             ) : (
               <Box>
                 <Typography variant="h4" color="success.main">
-                  {consolidatedData
+                  {consolidatedData?.systemStatus
                     ? `${consolidatedData.systemStatus.healthyComponents}/${consolidatedData.systemStatus.totalComponents}`
                     : (() => {
                         const healthyCount = systemStatus.filter(s => s.status && s.status.toLowerCase() === 'healthy').length;
@@ -931,12 +926,12 @@ export const Dashboard = React.memo(() => {
               <MetricCardSkeleton delay={0.2} />
             ) : dashboardDataError ? (
               <Typography color="error" variant="body2">
-                Error: {dashboardDataError}
+                Error: {dashboardDataError instanceof Error ? dashboardDataError.message : 'Failed to load dashboard'}
               </Typography>
             ) : (
               <Box>
                 <Typography variant="h4" color="warning.main">
-                  {consolidatedData?.threatScanner.totalScans || threatScanner.length}
+                  {consolidatedData?.threatScanner?.totalScans || threatScanner.length}
                 </Typography>
                 <Typography variant="body2" color="text.secondary">
                   Total Scans
@@ -1059,9 +1054,9 @@ export const Dashboard = React.memo(() => {
                 securityEventsData={securityEvents}
                 systemStatusData={systemStatus}
                 threatScannerData={threatScanner}
-                securityEventsError={dashboardDataError}
-                systemStatusError={dashboardDataError}
-                threatScannerError={dashboardDataError}
+                securityEventsError={dashboardDataError instanceof Error ? dashboardDataError.message : null}
+                systemStatusError={dashboardDataError instanceof Error ? dashboardDataError.message : null}
+                threatScannerError={dashboardDataError instanceof Error ? dashboardDataError.message : null}
               />
             )}
           </CardContent>

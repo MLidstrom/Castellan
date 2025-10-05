@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import {
   useDataProvider,
   useNotify,
@@ -18,18 +18,10 @@ import {
   TableContainer,
   TableHead,
   TableRow,
-  Paper,
-  LinearProgress,
   IconButton,
   Tooltip,
   ButtonGroup,
   Button,
-  Alert,
-  Divider,
-  List,
-  ListItem,
-  ListItemText,
-  ListItemIcon,
 } from '@mui/material';
 import {
   PieChart,
@@ -41,23 +33,16 @@ import {
   YAxis,
   CartesianGrid,
   Tooltip as RechartsTooltip,
-  Legend,
   ResponsiveContainer,
-  LineChart,
-  Line,
   Area,
   AreaChart,
 } from 'recharts';
 import {
   Refresh as RefreshIcon,
-  TrendingUp as TrendingUpIcon,
-  TrendingDown as TrendingDownIcon,
   Assessment as StatsIcon,
   Speed as PerformanceIcon,
   Security as SecurityIcon,
   CheckCircle as ValidIcon,
-  Error as InvalidIcon,
-  Warning as WarningIcon,
   Timeline as TimelineIcon,
 } from '@mui/icons-material';
 
@@ -121,7 +106,7 @@ export const YaraAnalyticsDashboard: React.FC = React.memo(() => {
   const dataProvider = useDataProvider();
   const notify = useNotify();
 
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     setLoading(true);
     try {
       // Load statistics
@@ -145,11 +130,11 @@ export const YaraAnalyticsDashboard: React.FC = React.memo(() => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [dataProvider, notify, timeRange]);
 
   useEffect(() => {
     loadData();
-  }, [timeRange]);
+  }, [timeRange, loadData]);
 
   if (loading && !statistics && !analytics) {
     return <Loading />;

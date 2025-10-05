@@ -1,4 +1,4 @@
-using System.Collections.Concurrent;
+﻿using System.Collections.Concurrent;
 using Castellan.Worker.Abstractions;
 using Castellan.Worker.Models;
 using Castellan.Worker.Hubs;
@@ -112,6 +112,11 @@ public class SignalRSecurityEventStore : ISecurityEventStore
     {
         return _innerStore.GetRiskLevelCounts();
     }
+    public Dictionary<string, int> GetRiskLevelCounts(Dictionary<string, object> filters)
+    {
+        return _innerStore.GetRiskLevelCounts(filters);
+    }
+
 
     public void Clear()
     {

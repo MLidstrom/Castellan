@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import {
   useDataProvider,
   useNotify,
@@ -18,10 +18,8 @@ import {
   TableContainer,
   TableHead,
   TableRow,
-  Paper,
   LinearProgress,
   IconButton,
-  Tooltip,
   Alert,
   AlertTitle,
   List,
@@ -39,7 +37,7 @@ import {
   Refresh as RefreshIcon,
   Speed as PerformanceIcon,
   Build as CompilationIcon,
-  Timeline as UptimeIcon,
+  
   BugReport as IssueIcon,
 } from '@mui/icons-material';
 
@@ -75,7 +73,7 @@ export const YaraHealthMonitor: React.FC = () => {
   const dataProvider = useDataProvider();
   const notify = useNotify();
 
-  const loadHealthData = async () => {
+  const loadHealthData = useCallback(async () => {
     setLoading(true);
     try {
       const result = await dataProvider.getOne('yara-rules/health', { id: 'health' });
@@ -86,7 +84,7 @@ export const YaraHealthMonitor: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [dataProvider, notify]);
 
   const handleRefreshRules = async () => {
     setRefreshing(true);
@@ -107,7 +105,7 @@ export const YaraHealthMonitor: React.FC = () => {
     // Auto-refresh every 30 seconds
     const interval = setInterval(loadHealthData, 30000);
     return () => clearInterval(interval);
-  }, []);
+  }, [loadHealthData]);
 
   if (loading && !healthData) {
     return <Loading />;

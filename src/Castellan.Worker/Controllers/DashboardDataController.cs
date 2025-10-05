@@ -1,4 +1,4 @@
-using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Authorization;
 using Castellan.Worker.Models;
 using Castellan.Worker.Services;
@@ -63,11 +63,12 @@ public class DashboardDataController : ControllerBase
     /// Get security events summary only
     /// </summary>
     [HttpGet("security-events")]
-    public async Task<ActionResult<SecurityEventsSummary>> GetSecurityEventsSummary()
+    public async Task<ActionResult<SecurityEventsSummary>> GetSecurityEventsSummary([FromQuery] string timeRange = "24h")
     {
         try
         {
-            var data = await _dashboardDataService.GetSecurityEventsSummaryAsync();
+            _logger.LogInformation("REST API request for security events summary, time range: {TimeRange}", timeRange);
+            var data = await _dashboardDataService.GetSecurityEventsSummaryAsync(timeRange);
             return Ok(data);
         }
         catch (Exception ex)

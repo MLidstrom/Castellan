@@ -1,4 +1,4 @@
-using System.Text.Json;
+﻿using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
 using Castellan.Worker.Abstractions;
 using Castellan.Worker.Models;
@@ -97,9 +97,21 @@ public class DatabaseSecurityEventStore : ISecurityEventStore
 
     public Dictionary<string, int> GetRiskLevelCounts()
     {
+        return GetRiskLevelCounts(new Dictionary<string, object>());
+    }
+
+    public Dictionary<string, int> GetRiskLevelCounts(Dictionary<string, object> filters)
+    {
         try
         {
-            return _context.SecurityEvents
+            var query = _context.SecurityEvents.AsQueryable();
+
+            if (filters != null && filters.Count > 0)
+            {
+                query = ApplyFilters(query, filters);
+            }
+
+            return query
                 .GroupBy(e => e.RiskLevel)
                 .Select(g => new { RiskLevel = g.Key, Count = g.Count() })
                 .AsEnumerable()

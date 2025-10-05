@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   List,
   Datagrid,
@@ -17,6 +17,7 @@ import {
   Filter,
   useRecordContext,
   useDataProvider,
+  useGetMany,
   TopToolbar,
   FilterButton,
   ExportButton,
@@ -103,116 +104,31 @@ function getTechniqueDisplayName(techniqueId: string): string {
   return commonTechniques[techniqueId] || techniqueId;
 }
 
-// Cache for MITRE technique lookups to avoid repeated API calls
-const mitreTechniqueCache: { [key: string]: MitreTechnique } = {};
-
-// Hook to fetch MITRE technique data from the database
-const useMitreTechniques = () => {
-  const [techniques, setTechniques] = useState<{ [key: string]: MitreTechnique }>({});
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const dataProvider = useDataProvider();
-  
-  // Function to create a fallback technique entry
-  const createFallbackTechnique = (techniqueId: string): MitreTechnique => {
-    const displayName = getTechniqueDisplayName(techniqueId);
-    const tacticMap: { [key: string]: string } = {
-      'T1552': 'Credential Access',
-      'T1059': 'Execution',
-      'T1078': 'Initial Access, Persistence, Privilege Escalation',
-      'T1055': 'Defense Evasion, Privilege Escalation',
-      'T1003': 'Credential Access',
-      'T1021': 'Lateral Movement',
-      'T1547': 'Persistence, Privilege Escalation'
-    };
-    
-    // Get base technique ID (before the dot)
-    const baseTechniqueId = techniqueId.split('.')[0];
-    
-    return {
-      id: 0,
-      techniqueId,
-      name: displayName || `MITRE ATT&CK Technique: ${techniqueId}`,
-      description: `MITRE ATT&CK Technique ${techniqueId}: ${displayName || 'No description available'}`,
-      tactic: tacticMap[baseTechniqueId] || 'Unknown',
-      platform: 'Windows, Linux, macOS, Cloud',
-      createdAt: new Date().toISOString()
-    };
+// Helper function to create fallback technique when not found in database
+const createFallbackTechnique = (techniqueId: string): MitreTechnique => {
+  const displayName = getTechniqueDisplayName(techniqueId);
+  const tacticMap: { [key: string]: string } = {
+    'T1552': 'Credential Access',
+    'T1059': 'Execution',
+    'T1078': 'Initial Access, Persistence, Privilege Escalation',
+    'T1055': 'Defense Evasion, Privilege Escalation',
+    'T1003': 'Credential Access',
+    'T1021': 'Lateral Movement',
+    'T1547': 'Persistence, Privilege Escalation',
+    'T1548': 'Privilege Escalation, Defense Evasion'
   };
 
-  const fetchTechniques = async (techniqueIds: string[]) => {
-    if (techniqueIds.length === 0) return;
-    
-    // Filter out techniques we already have and invalid IDs
-    const missingTechniques = techniqueIds
-      .filter(id => !techniques[id] && id && id !== 'undefined')
-      .filter(id => id.startsWith('T') && !id.startsWith('TA')); // Only get techniques, not tactics
-      
-    if (missingTechniques.length === 0) return;
+  const baseTechniqueId = techniqueId.split('.')[0];
 
-    setLoading(true);
-    setError(null);
-
-    try {
-      // Process techniques in parallel but with batching
-      const batchSize = 5;
-      const batches = [];
-      for (let i = 0; i < missingTechniques.length; i += batchSize) {
-        batches.push(missingTechniques.slice(i, i + batchSize));
-      }
-
-      const newTechniques = {};
-      
-      for (const batch of batches) {
-        const batchResults = await Promise.all(
-          batch.map(async (techniqueId) => {
-            try {
-              const response = await dataProvider.getOne('mitre/techniques', { id: techniqueId });
-              return { [techniqueId]: response.data };
-            } catch (err: any) {
-              // Create fallback with proper tactic mapping
-              const baseTechniqueId = techniqueId.split('.')[0];
-              const tacticMap: { [key: string]: string } = {
-                'T1552': 'Credential Access',
-                'T1059': 'Execution',
-                'T1078': 'Initial Access, Persistence, Privilege Escalation',
-                'T1055': 'Defense Evasion, Privilege Escalation',
-                'T1003': 'Credential Access',
-                'T1021': 'Lateral Movement',
-                'T1547': 'Persistence, Privilege Escalation'
-              };
-
-              const displayName = getTechniqueDisplayName(techniqueId);
-              const fallback = {
-                id: 0,
-                techniqueId,
-                name: displayName || `MITRE ATT&CK Technique: ${techniqueId}`,
-                description: `${displayName || techniqueId}: ${tacticMap[baseTechniqueId] || 'Unknown Tactic'}`,
-                tactic: tacticMap[baseTechniqueId] || 'Unknown',
-                platform: 'Windows, Linux, macOS, Cloud',
-                createdAt: new Date().toISOString()
-              };
-
-              console.warn(`MITRE technique ${techniqueId} not found in database - may need to import MITRE data`);
-              return { [techniqueId]: fallback };
-            }
-          })
-        );
-
-        // Merge batch results
-        Object.assign(newTechniques, ...batchResults);
-      }
-      
-      setTechniques(prev => ({ ...prev, ...newTechniques }));
-    } catch (err) {
-      console.error('Error fetching MITRE techniques:', err);
-      setError('Failed to load technique descriptions');
-    } finally {
-      setLoading(false);
-    }
+  return {
+    id: 0, // Fallback ID
+    techniqueId,
+    name: displayName || `MITRE ATT&CK Technique: ${techniqueId}`,
+    description: `MITRE ATT&CK Technique ${techniqueId}: ${displayName || 'No description available'}`,
+    tactic: tacticMap[baseTechniqueId] || 'Unknown',
+    platform: 'Windows, Linux, macOS, Cloud',
+    createdAt: new Date().toISOString()
   };
-
-  return { techniques, loading, error, fetchTechniques };
 };
 
 // Custom header component with shield icon - memoized for performance
@@ -336,80 +252,94 @@ const CorrelationField = React.memo(({ source }: any) => {
   );
 });
 
-// Custom component for MITRE ATT&CK techniques with database-driven tooltips
+// Optimized MITRE Techniques Field using useGetMany for batch fetching
 const MitreTechniquesField = React.memo(({ source }: any) => {
   const record = useRecordContext();
-  const techniques = record?.[source] || record?.mitreAttack || record?.MitreAttack || [];
-  const { techniques: mitreData, loading, error, fetchTechniques } = useMitreTechniques();
-  
-  // Extract technique IDs and fetch data when component mounts or techniques change
-  useEffect(() => {
-    if (techniques.length > 0) {
-      // Filter out tactic IDs (TA*) and only fetch technique IDs (T*)
-      const techniqueIds = techniques
-        .map((t: string) => t?.trim().toUpperCase())
-        .filter(Boolean)
-        .filter((id: string) => id.startsWith('T') && !id.startsWith('TA')); // Only techniques, not tactics
-      
-      if (techniqueIds.length > 0) {
-        fetchTechniques(techniqueIds);
-      }
-    }
-  }, [techniques.join(','), fetchTechniques]);
+  const rawTechniques = record?.[source] || record?.mitreAttack || record?.MitreAttack || [];
 
-  // Helper function to get description for a technique/tactic from database
-  const getTechniqueTooltip = (technique: string): React.ReactNode => {
-    const cleanTechnique = technique?.trim().toUpperCase() || '';
-    
-    // Check if this is a tactic (TA*) or technique (T*)
-    if (cleanTechnique.startsWith('TA')) {
-      // Handle tactic IDs - provide static information
-      const tacticNames: { [key: string]: string } = {
-        'TA0001': 'Initial Access',
-        'TA0002': 'Execution', 
-        'TA0003': 'Persistence',
-        'TA0004': 'Privilege Escalation',
-        'TA0005': 'Defense Evasion',
-        'TA0006': 'Credential Access',
-        'TA0007': 'Discovery',
-        'TA0008': 'Lateral Movement',
-        'TA0009': 'Collection',
-        'TA0010': 'Exfiltration',
-        'TA0011': 'Command and Control',
-        'TA0040': 'Impact',
-        'TA0042': 'Resource Development',
-        'TA0043': 'Reconnaissance'
-      };
-      
-      const tacticName = tacticNames[cleanTechnique] || 'Unknown Tactic';
+  // Filter and clean technique IDs - only get techniques (T*), not tactics (TA*)
+  const techniqueIds = useMemo(() => {
+    return rawTechniques
+      .map((t: string) => t?.trim().toUpperCase())
+      .filter(Boolean)
+      .filter((id: string) => id.startsWith('T') && !id.startsWith('TA'));
+  }, [rawTechniques.join(',')]);
+
+  // Use useGetMany for optimized batch fetching - React Admin handles deduplication
+  const { data: mitreData, isLoading, error } = useGetMany(
+    'mitre/techniques',
+    { ids: techniqueIds },
+    {
+      enabled: techniqueIds.length > 0,
+      // React Query will cache these - MITRE techniques rarely change
+      staleTime: 600000 // 10 minutes
+    }
+  );
+
+  // Create a lookup map for quick access
+  const mitreMap = useMemo(() => {
+    const map: { [key: string]: MitreTechnique } = {};
+    mitreData?.forEach((technique: any) => {
+      // Handle both id and techniqueId as keys
+      if (technique.techniqueId) {
+        map[technique.techniqueId.toUpperCase()] = technique;
+      }
+      if (technique.id && typeof technique.id === 'string') {
+        map[technique.id.toUpperCase()] = technique;
+      }
+    });
+    return map;
+  }, [mitreData]);
+
+  // Tactic names for TA* IDs
+  const tacticNames: { [key: string]: string } = {
+    'TA0001': 'Initial Access',
+    'TA0002': 'Execution',
+    'TA0003': 'Persistence',
+    'TA0004': 'Privilege Escalation',
+    'TA0005': 'Defense Evasion',
+    'TA0006': 'Credential Access',
+    'TA0007': 'Discovery',
+    'TA0008': 'Lateral Movement',
+    'TA0009': 'Collection',
+    'TA0010': 'Exfiltration',
+    'TA0011': 'Command and Control',
+    'TA0040': 'Impact',
+    'TA0042': 'Resource Development',
+    'TA0043': 'Reconnaissance'
+  };
+
+  // Helper to get tooltip content
+  const getTechniqueTooltip = (techniqueId: string): React.ReactNode => {
+    const cleanId = techniqueId?.trim().toUpperCase() || '';
+
+    // Handle tactics (TA*)
+    if (cleanId.startsWith('TA')) {
+      const tacticName = tacticNames[cleanId] || 'Unknown Tactic';
       return (
         <Box>
           <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }}>
             {tacticName}
           </Typography>
           <Typography variant="body2" sx={{ mt: 0.5 }}>
-            MITRE ATT&CK Tactic: {cleanTechnique}
+            MITRE ATT&CK Tactic: {cleanId}
           </Typography>
         </Box>
       );
     }
-    
-    // Handle technique IDs
-    const mitreInfo = mitreData[cleanTechnique];
-    
-    if (loading) {
+
+    // Handle techniques (T*)
+    const mitreInfo = mitreMap[cleanId];
+
+    if (isLoading) {
       return (
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
           <CircularProgress size={16} />
-          <span>Loading technique details...</span>
+          <span>Loading...</span>
         </Box>
       );
     }
-    
-    if (error) {
-      return `${cleanTechnique} - Error loading details`;
-    }
-    
+
     if (mitreInfo) {
       return (
         <Box>
@@ -424,67 +354,51 @@ const MitreTechniquesField = React.memo(({ source }: any) => {
               Tactic: {mitreInfo.tactic}
             </Typography>
           )}
-          {mitreInfo.platform && (
-            <Typography variant="caption" sx={{ display: 'block', fontStyle: 'italic' }}>
-              Platform: {mitreInfo.platform}
-            </Typography>
-          )}
         </Box>
       );
     }
-    
-    return `MITRE ATT&CK Technique: ${cleanTechnique}`;
+
+    // Fallback to display name if not in database
+    const fallback = createFallbackTechnique(cleanId);
+    return (
+      <Box>
+        <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }}>
+          {fallback.name}
+        </Typography>
+        <Typography variant="body2" sx={{ mt: 0.5 }}>
+          {fallback.description}
+        </Typography>
+      </Box>
+    );
   };
 
-  const getAdditionalTechniquesTooltip = (additionalTechniques: string[]): React.ReactNode => {
-    const tacticNames: { [key: string]: string } = {
-      'TA0001': 'Initial Access',
-      'TA0002': 'Execution', 
-      'TA0003': 'Persistence',
-      'TA0004': 'Privilege Escalation',
-      'TA0005': 'Defense Evasion',
-      'TA0006': 'Credential Access',
-      'TA0007': 'Discovery',
-      'TA0008': 'Lateral Movement',
-      'TA0009': 'Collection',
-      'TA0010': 'Exfiltration',
-      'TA0011': 'Command and Control',
-      'TA0040': 'Impact',
-      'TA0042': 'Resource Development',
-      'TA0043': 'Reconnaissance'
-    };
-    
-    const techniquesList = additionalTechniques.map((t: string) => {
-      const cleanTechnique = t?.trim().toUpperCase() || '';
-      
-      if (cleanTechnique.startsWith('TA')) {
-        // Handle tactics
-        const tacticName = tacticNames[cleanTechnique] || 'Unknown Tactic';
-        return `${cleanTechnique}: ${tacticName}`;
-      } else {
-        // Handle techniques
-        const mitreInfo = mitreData[cleanTechnique];
-        return mitreInfo ? `${cleanTechnique}: ${mitreInfo.name}` : cleanTechnique;
-      }
-    });
-
+  const getAdditionalTechniquesTooltip = (techniques: string[]): React.ReactNode => {
     return (
       <Box>
         <Typography variant="subtitle2" sx={{ fontWeight: 'bold', mb: 1 }}>
           Additional Techniques:
         </Typography>
-        {techniquesList.map((technique, index) => (
-          <Typography key={index} variant="body2" sx={{ mb: 0.5 }}>
-            • {technique}
-          </Typography>
-        ))}
+        {techniques.map((techniqueId, index) => {
+          const cleanId = techniqueId?.trim().toUpperCase() || '';
+          const mitreInfo = mitreMap[cleanId];
+          const name = mitreInfo?.name || tacticNames[cleanId] || getTechniqueDisplayName(cleanId);
+          return (
+            <Typography key={index} variant="body2" sx={{ mb: 0.5 }}>
+              • {cleanId}: {name}
+            </Typography>
+          );
+        })}
       </Box>
     );
   };
-  
+
+  if (error) {
+    console.error('[MitreTechniquesField] Error loading MITRE techniques:', error);
+  }
+
   return (
     <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap' }}>
-      {techniques.slice(0, 3).map((technique: string, index: number) => (
+      {rawTechniques.slice(0, 3).map((technique: string, index: number) => (
         <Tooltip
           key={index}
           title={getTechniqueTooltip(technique)}
@@ -496,16 +410,16 @@ const MitreTechniquesField = React.memo(({ source }: any) => {
             }
           }}
         >
-          <Chip 
+          <Chip
             label={technique.trim()}
             variant="outlined"
             size="small"
           />
         </Tooltip>
       ))}
-      {techniques.length > 3 && (
+      {rawTechniques.length > 3 && (
         <Tooltip
-          title={getAdditionalTechniquesTooltip(techniques.slice(3))}
+          title={getAdditionalTechniquesTooltip(rawTechniques.slice(3))}
           arrow
           placement="top"
           componentsProps={{
@@ -514,8 +428,8 @@ const MitreTechniquesField = React.memo(({ source }: any) => {
             }
           }}
         >
-          <Chip 
-            label={`+${techniques.length - 3} more`}
+          <Chip
+            label={`+${rawTechniques.length - 3} more`}
             variant="outlined"
             size="small"
             color="primary"

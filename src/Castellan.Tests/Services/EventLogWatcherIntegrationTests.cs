@@ -1,4 +1,4 @@
-using Microsoft.Extensions.DependencyInjection;
+﻿using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -235,6 +235,18 @@ public class MockSecurityEventStore : ISecurityEventStore
         return GetTotalCount();
     }
 
+    public Dictionary<string, int> GetRiskLevelCounts()
+    {
+        return AddedEvents
+            .GroupBy(e => e.RiskLevel.ToLower())
+            .ToDictionary(g => g.Key, g => g.Count());
+    }
+
+    public Dictionary<string, int> GetRiskLevelCounts(Dictionary<string, object> filters)
+    {
+        return GetRiskLevelCounts();
+    }
+
     public void Clear()
     {
         while (AddedEvents.TryTake(out _)) { }
@@ -364,3 +376,4 @@ public class MockLogger : ILogger<WindowsEventLogWatcherService>
     public bool IsEnabled(LogLevel logLevel) => true;
     public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception? exception, Func<TState, Exception?, string> formatter) { }
 }
+

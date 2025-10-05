@@ -1,4 +1,4 @@
-using System.Text.Json;
+﻿using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Collections.Concurrent;
 using Castellan.Worker.Abstractions;
@@ -103,7 +103,19 @@ public class FileBasedSecurityEventStore : ISecurityEventStore, IDisposable
 
     public Dictionary<string, int> GetRiskLevelCounts()
     {
-        return _events.ToArray()
+        return GetRiskLevelCounts(new Dictionary<string, object>());
+    }
+
+    public Dictionary<string, int> GetRiskLevelCounts(Dictionary<string, object> filters)
+    {
+        var events = _events.ToArray().AsEnumerable();
+
+        if (filters != null && filters.Count > 0)
+        {
+            events = ApplyFilters(events, filters);
+        }
+
+        return events
             .GroupBy(e => e.RiskLevel.ToLower())
             .ToDictionary(g => g.Key, g => g.Count());
     }

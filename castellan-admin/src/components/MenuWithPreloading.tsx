@@ -1,6 +1,6 @@
 import * as React from 'react';
 import { useEffect } from 'react';
-import { Menu, useDataProvider, usePermissions, useResourceDefinitions } from 'react-admin';
+import { Menu, useDataProvider } from 'react-admin';
 import { useQueryClient } from '@tanstack/react-query';
 import {
   preloadMap,
@@ -10,6 +10,7 @@ import {
   predictNextPages,
   canPreload
 } from '../utils/preload';
+import { getResourceCacheConfig, queryKeys } from '../config/reactQueryConfig';
 import DashboardIcon from '@mui/icons-material/Dashboard';
 import SecurityIcon from '@mui/icons-material/Security';
 import BugReportIcon from '@mui/icons-material/BugReport';
@@ -22,89 +23,107 @@ import RadarIcon from '@mui/icons-material/Radar';
 import SettingsIcon from '@mui/icons-material/Settings';
 import PolicyIcon from '@mui/icons-material/Policy';
 
-// Data prefetchers for each page - optimized queries
+// Data prefetchers for each page - using centralized React Query config
 const dataPrefetchers: Record<string, (q: ReturnType<typeof useQueryClient>, dp: any) => void> = {
   'dashboard': (q, dp) => {
+    const config = getResourceCacheConfig('dashboard');
     q.prefetchQuery({
-      queryKey: ['dashboard', 'summary'],
-      queryFn: () => dp.custom('dashboard/summary', { method: 'GET' }),
-      staleTime: 30000, // 30 seconds
+      queryKey: queryKeys.custom('dashboard', 'consolidated', { timeRange: '24h' }),
+      queryFn: () => dp.custom({ url: 'dashboarddata/consolidated?timeRange=24h', method: 'GET' }),
+      ...config, // Apply centralized config
     });
   },
   'security-events': (q, dp) => {
+    const config = getResourceCacheConfig('security-events');
+    const params = {
+      pagination: { page: 1, perPage: 25 },
+      sort: { field: 'timestamp', order: 'DESC' },
+      filter: {}
+    };
     q.prefetchQuery({
-      queryKey: ['events', 'list', { page: 1, perPage: 25 }],
-      queryFn: () => dp.getList('security-events', {
-        pagination: { page: 1, perPage: 25 },
-        sort: { field: 'timestamp', order: 'DESC' },
-        filter: {}
-      }),
-      staleTime: 15000, // 15 seconds
+      queryKey: queryKeys.list('security-events', params),
+      queryFn: () => dp.getList('security-events', params),
+      ...config, // Same config as the actual page uses
     });
   },
   'yara-rules': (q, dp) => {
+    const config = getResourceCacheConfig('yara-rules');
+    const params = {
+      pagination: { page: 1, perPage: 25 },
+      sort: { field: 'updatedAt', order: 'DESC' },
+      filter: {}
+    };
     q.prefetchQuery({
-      queryKey: ['yara-rules', 'list', { page: 1, perPage: 25 }],
-      queryFn: () => dp.getList('yara-rules', {
-        pagination: { page: 1, perPage: 25 },
-        sort: { field: 'updatedAt', order: 'DESC' },
-        filter: {}
-      }),
-      staleTime: 60000, // 60 seconds
+      queryKey: queryKeys.list('yara-rules', params),
+      queryFn: () => dp.getList('yara-rules', params),
+      ...config,
     });
   },
   'system-status': (q, dp) => {
+    const config = getResourceCacheConfig('system-status');
     q.prefetchQuery({
-      queryKey: ['system-status'],
-      queryFn: () => dp.custom('system-status', { method: 'GET' }),
-      staleTime: 10000, // 10 seconds
+      queryKey: queryKeys.custom('system-status', 'current'),
+      queryFn: () => dp.custom({ url: 'system-status', method: 'GET' }),
+      ...config,
     });
   },
   'mitre/techniques': (q, dp) => {
+    const config = getResourceCacheConfig('mitre/techniques');
+    const params = {
+      pagination: { page: 1, perPage: 25 },
+      sort: { field: 'techniqueId', order: 'ASC' },
+      filter: {}
+    };
     q.prefetchQuery({
-      queryKey: ['mitre/techniques', 'list', { page: 1, perPage: 25 }],
-      queryFn: () => dp.getList('mitre/techniques', {
-        pagination: { page: 1, perPage: 25 },
-        sort: { field: 'techniqueId', order: 'ASC' },
-        filter: {}
-      }),
-      staleTime: 120000, // 2 minutes - rarely changes
+      queryKey: queryKeys.list('mitre/techniques', params),
+      queryFn: () => dp.getList('mitre/techniques', params),
+      ...config,
     });
   },
   'yara-matches': (q, dp) => {
+    const config = getResourceCacheConfig('yara-matches');
+    const params = {
+      pagination: { page: 1, perPage: 25 },
+      sort: { field: 'detectedAt', order: 'DESC' },
+      filter: {}
+    };
     q.prefetchQuery({
-      queryKey: ['yara-matches', 'list', { page: 1, perPage: 25 }],
-      queryFn: () => dp.getList('yara-matches', {
-        pagination: { page: 1, perPage: 25 },
-        sort: { field: 'detectedAt', order: 'DESC' },
-        filter: {}
-      }),
-      staleTime: 20000, // 20 seconds
+      queryKey: queryKeys.list('yara-matches', params),
+      queryFn: () => dp.getList('yara-matches', params),
+      ...config,
     });
   },
   'threat-scanner': (q, dp) => {
+    const config = getResourceCacheConfig('threat-scanner');
     q.prefetchQuery({
-      queryKey: ['threat-scanner', 'status'],
-      queryFn: () => dp.custom('threat-scanner/status', { method: 'GET' }),
-      staleTime: 5000, // 5 seconds - real-time updates
+      queryKey: queryKeys.custom('threat-scanner', 'status'),
+      queryFn: () => dp.custom({ url: 'threat-scanner/status', method: 'GET' }),
+      ...config,
     });
   },
   'configuration': (q, dp) => {
+    const config = getResourceCacheConfig('configuration');
     q.prefetchQuery({
-      queryKey: ['configuration'],
-      queryFn: () => dp.custom('configuration', { method: 'GET' }),
-      staleTime: 300000, // 5 minutes - rarely changes
+      queryKey: queryKeys.one('configuration', { id: 'threat-intelligence' }),
+      queryFn: async () => {
+        // Use getOne to hit the correct mapped endpoint
+        const res = await dp.getOne('configuration', { id: 'threat-intelligence' });
+        return res;
+      },
+      ...config,
     });
   },
   'security-event-rules': (q, dp) => {
+    const config = getResourceCacheConfig('security-event-rules');
+    const params = {
+      pagination: { page: 1, perPage: 25 },
+      sort: { field: 'eventId', order: 'ASC' },
+      filter: {}
+    };
     q.prefetchQuery({
-      queryKey: ['security-event-rules', 'list', { page: 1, perPage: 25 }],
-      queryFn: () => dp.getList('security-event-rules', {
-        pagination: { page: 1, perPage: 25 },
-        sort: { field: 'eventId', order: 'ASC' },
-        filter: {}
-      }),
-      staleTime: 60000, // 60 seconds
+      queryKey: queryKeys.list('security-event-rules', params),
+      queryFn: () => dp.getList('security-event-rules', params),
+      ...config,
     });
   },
 };

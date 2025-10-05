@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { useNotify, fetchUtils } from 'react-admin';
+import { useNotify } from 'react-admin';
 import axios, { AxiosResponse, InternalAxiosRequestConfig, AxiosHeaders } from 'axios';
 import {
   AdvancedSearchRequest,

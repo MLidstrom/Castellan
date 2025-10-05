@@ -19,7 +19,6 @@ import {
 } from '@mui/icons-material';
 import {
   ResponsiveContainer,
-  LineChart,
   Line,
   XAxis,
   YAxis,

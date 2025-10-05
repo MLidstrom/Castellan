@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react';
 import {
   useLogin,
   useNotify,
@@ -25,7 +25,7 @@ import {
 export const Login: React.FC = () => {
   const [loading, setLoading] = useSafeSetState(false);
   const login = useLogin();
-  const notify = useNotify();
+  useNotify();
 
   const handleSubmit = async (data: any) => {
     setLoading(true);

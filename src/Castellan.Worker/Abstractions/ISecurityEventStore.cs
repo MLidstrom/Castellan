@@ -1,4 +1,4 @@
-using Castellan.Worker.Models;
+﻿using Castellan.Worker.Models;
 
 namespace Castellan.Worker.Abstractions;
 
@@ -11,5 +11,6 @@ public interface ISecurityEventStore
     int GetTotalCount();
     int GetTotalCount(Dictionary<string, object> filters);
     Dictionary<string, int> GetRiskLevelCounts();
+    Dictionary<string, int> GetRiskLevelCounts(Dictionary<string, object> filters);
     void Clear();
 }

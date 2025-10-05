@@ -9,6 +9,8 @@ import {
   useRedirect,
   useShowContext,
 } from 'react-admin';
+import { useQuery, keepPreviousData } from '@tanstack/react-query';
+import { getResourceCacheConfig, queryKeys } from '../config/reactQueryConfig';
 import {
   Typography,
   Box,
@@ -2400,62 +2402,112 @@ export const ConfigurationList = () => {
   const [notificationConfig, setNotificationConfig] = useState<NotificationConfigType>(DEFAULT_NOTIFICATION_CONFIG);
   const [ipEnrichmentConfig, setIpEnrichmentConfig] = useState<IPEnrichmentConfigType>(DEFAULT_IP_ENRICHMENT_CONFIG);
   const [yaraConfig, setYaraConfig] = useState<YaraConfigType>(DEFAULT_YARA_CONFIG);
-  const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState(0);
   const dataProvider = useDataProvider();
 
-  // Load configuration data
-  useEffect(() => {
-    const loadConfig = async () => {
+  // Get cache config for configuration resource
+  const cacheConfig = getResourceCacheConfig('configuration');
+
+  // React Query for threat intelligence config - CACHED with instant snapshots!
+  const { data: threatIntelData, isLoading: threatIntelLoading } = useQuery({
+    queryKey: queryKeys.one('configuration', { id: 'threat-intelligence' }),
+    queryFn: async () => {
       try {
-        // Load threat intelligence config
-        const threatIntelResult = await dataProvider.getOne('configuration', { id: 'threat-intelligence' });
-        setConfig({ ...DEFAULT_CONFIG, ...threatIntelResult.data });
+        const result = await dataProvider.getOne('configuration', { id: 'threat-intelligence' });
+        return result.data;
       } catch (error) {
         console.log('No existing threat intelligence configuration found, using defaults');
+        return DEFAULT_CONFIG;
       }
+    },
+    placeholderData: keepPreviousData,
+    ...cacheConfig, // 5min fresh, 30min memory
+  });
 
+  // React Query for notification config - CACHED with instant snapshots!
+  const { data: notificationData, isLoading: notificationLoading } = useQuery({
+    queryKey: queryKeys.one('configuration', { id: 'notifications' }),
+    queryFn: async () => {
       try {
-        // Load notification config
-        const notificationResult = await dataProvider.getOne('configuration', { id: 'notifications' });
-        setNotificationConfig({ ...DEFAULT_NOTIFICATION_CONFIG, ...notificationResult.data });
+        const result = await dataProvider.getOne('configuration', { id: 'notifications' });
+        return result.data;
       } catch (error) {
         console.log('No existing notification configuration found, using defaults');
+        return DEFAULT_NOTIFICATION_CONFIG;
       }
+    },
+    placeholderData: keepPreviousData,
+    ...cacheConfig,
+  });
 
+  // React Query for IP enrichment config - CACHED with instant snapshots!
+  const { data: ipEnrichmentData, isLoading: ipEnrichmentLoading } = useQuery({
+    queryKey: queryKeys.one('configuration', { id: 'ip-enrichment' }),
+    queryFn: async () => {
       try {
-        // Load IP enrichment config
-        const ipEnrichmentResult = await dataProvider.getOne('configuration', { id: 'ip-enrichment' });
-        setIpEnrichmentConfig({ ...DEFAULT_IP_ENRICHMENT_CONFIG, ...ipEnrichmentResult.data });
+        const result = await dataProvider.getOne('configuration', { id: 'ip-enrichment' });
+        return result.data;
       } catch (error) {
         console.log('No existing IP enrichment configuration found, using defaults');
+        return DEFAULT_IP_ENRICHMENT_CONFIG;
       }
+    },
+    placeholderData: keepPreviousData,
+    ...cacheConfig,
+  });
 
+  // React Query for YARA config - CACHED with instant snapshots!
+  const { data: yaraData, isLoading: yaraLoading } = useQuery({
+    queryKey: queryKeys.one('configuration', { id: 'yara-rules' }),
+    queryFn: async () => {
       try {
-        // Load YARA config
-        const yaraResponse = await fetch('http://localhost:5000/api/yara-configuration', {
+        const response = await fetch('http://localhost:5000/api/yara-configuration', {
           headers: {
             'Authorization': `Bearer ${localStorage.getItem('auth_token')}`
           }
         });
 
-        if (yaraResponse.ok) {
-          const yaraResult = await yaraResponse.json();
-          setYaraConfig({ ...DEFAULT_YARA_CONFIG, ...yaraResult });
-        } else {
-          console.log('No existing YARA configuration found, using defaults');
-          setYaraConfig(DEFAULT_YARA_CONFIG);
+        if (response.ok) {
+          const result = await response.json();
+          return { ...DEFAULT_YARA_CONFIG, ...result };
         }
+        return DEFAULT_YARA_CONFIG;
       } catch (error) {
         console.log('No existing YARA configuration found, using defaults');
-        setYaraConfig(DEFAULT_YARA_CONFIG);
-      } finally {
-        setLoading(false);
+        return DEFAULT_YARA_CONFIG;
       }
-    };
+    },
+    placeholderData: keepPreviousData,
+    ...cacheConfig,
+  });
 
-    loadConfig();
-  }, [dataProvider]);
+  // Apply query data to state when loaded
+  useEffect(() => {
+    if (threatIntelData) {
+      setConfig({ ...DEFAULT_CONFIG, ...threatIntelData });
+    }
+  }, [threatIntelData]);
+
+  useEffect(() => {
+    if (notificationData) {
+      setNotificationConfig({ ...DEFAULT_NOTIFICATION_CONFIG, ...notificationData });
+    }
+  }, [notificationData]);
+
+  useEffect(() => {
+    if (ipEnrichmentData) {
+      setIpEnrichmentConfig({ ...DEFAULT_IP_ENRICHMENT_CONFIG, ...ipEnrichmentData });
+    }
+  }, [ipEnrichmentData]);
+
+  useEffect(() => {
+    if (yaraData) {
+      setYaraConfig(yaraData);
+    }
+  }, [yaraData]);
+
+  // Combine loading states
+  const loading = threatIntelLoading || notificationLoading || ipEnrichmentLoading || yaraLoading;
 
   const handleTabChange = (newValue: number) => {
     setActiveTab(newValue);

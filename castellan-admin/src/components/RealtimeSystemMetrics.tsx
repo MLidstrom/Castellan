@@ -16,7 +16,6 @@ import {
 import {
   Memory as MemoryIcon,
   Speed as CpuIcon,
-  Storage as DiskIcon,
   Timeline as UptimeIcon,
   CheckCircle as HealthyIcon,
   Error as ErrorIcon
@@ -51,9 +50,7 @@ export const RealtimeSystemMetrics: React.FC<RealtimeSystemMetricsProps> = ({
     return uptime;
   };
   
-  const getHealthColor = (isHealthy: boolean) => {
-    return isHealthy ? 'success' : 'error';
-  };
+  
   
   if (!metrics) {
     return (

@@ -33,6 +33,9 @@ public static class MonitoringServiceExtensions
         // Register system health service
         services.AddSingleton<SystemHealthService>();
 
+        // Register cache warming background service for instant page loads
+        services.AddHostedService<CacheWarmingBackgroundService>();
+
         return services;
     }
 }

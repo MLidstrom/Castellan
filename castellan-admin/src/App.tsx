@@ -1,6 +1,8 @@
 import React, { Suspense } from 'react';
 import { Admin, Resource } from 'react-admin';
 import { Box, CircularProgress, Typography, createTheme } from '@mui/material';
+import { QueryClientProvider } from '@tanstack/react-query';
+import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
 import {
   Security as SecurityIcon,
   Computer as SystemIcon,
@@ -15,14 +17,19 @@ import {
 } from '@mui/icons-material';
 // Using production providers with real backend API
 import { enhancedCastellanDataProvider } from './dataProvider/castellanDataProvider';
-import { createEnhancedDataProvider } from './dataProvider/enhancedDataProvider';
+import { createSimplifiedDataProvider } from './dataProvider/simplifiedDataProvider';
+import { createConfiguredQueryClient, setupCachePersistence } from './config/reactQueryConfig';
 import { enhancedAuthProvider } from './auth/authProvider';
 import { Layout } from './components/Layout';
 import { SignalRProvider } from './contexts/SignalRContext';
 import { DashboardDataProvider } from './contexts/DashboardDataContext';
+import { useDashboardWarmup } from './hooks/useDashboardWarmup';
 
-// Create custom theme with enhanced active menu item visibility
-const theme = createTheme({
+// Create custom themes with enhanced active menu item visibility
+const lightTheme = createTheme({
+  palette: {
+    mode: 'light',
+  },
   components: {
     RaMenuItemLink: {
       styleOverrides: {
@@ -41,6 +48,38 @@ const theme = createTheme({
           },
           '&:hover': {
             backgroundColor: 'rgba(25, 118, 210, 0.08)',
+          },
+        },
+      },
+    },
+  },
+});
+
+const darkTheme = createTheme({
+  palette: {
+    mode: 'dark',
+    primary: {
+      main: '#1e1e1e', // Darker gray for dark theme (between #121212 and #202124)
+    },
+  },
+  components: {
+    RaMenuItemLink: {
+      styleOverrides: {
+        root: {
+          '&.RaMenuItemLink-active': {
+            backgroundColor: '#1e1e1e', // Darker gray
+            color: '#ffffff',
+            fontWeight: 600,
+            borderLeft: '4px solid #ffffff',
+            '& .MuiListItemIcon-root': {
+              color: '#ffffff',
+            },
+            '&:hover': {
+              backgroundColor: '#2a2a2a',
+            },
+          },
+          '&:hover': {
+            backgroundColor: 'rgba(30, 30, 30, 0.15)',
           },
         },
       },
@@ -112,19 +151,38 @@ const LoadingFallback = () => (
   </Box>
 );
 
+// Dashboard Warmup Initializer - runs early prefetch after login
+// This component must be inside Admin component to access React Admin context
+const WarmupInitializer: React.FC = () => {
+  useDashboardWarmup();
+  return null;
+};
+
+// Create configured QueryClient (SINGLE instance for entire app)
+// This is the single source of truth for all data caching
+const queryClient = createConfiguredQueryClient();
+
+// Setup cache persistence to localStorage (survives page refresh)
+// Snapshots persist for 24 hours, treated as fresh for 5 minutes
+setupCachePersistence(queryClient);
+
 const App = () => {
   return (
-    <Suspense fallback={<LoadingFallback />}>
-      <SignalRProvider>
-        <DashboardDataProvider>
-          <Admin
-            dataProvider={createEnhancedDataProvider(enhancedCastellanDataProvider)}
-            authProvider={enhancedAuthProvider}
-            layout={Layout}
-            dashboard={Dashboard}
-            loginPage={Login}
-            theme={theme}
-          >
+    <QueryClientProvider client={queryClient}>
+      <Suspense fallback={<LoadingFallback />}>
+        <SignalRProvider>
+          <DashboardDataProvider>
+            <Admin
+              dataProvider={createSimplifiedDataProvider(enhancedCastellanDataProvider)}
+              authProvider={enhancedAuthProvider}
+              layout={Layout}
+              dashboard={Dashboard}
+              loginPage={Login}
+              lightTheme={lightTheme}
+              darkTheme={darkTheme}
+              queryClient={queryClient}
+            >
+            <WarmupInitializer />
             {/* Security Events Resource - Available in CastellanProFree */}
             <Resource
               name="security-events"
@@ -225,6 +283,12 @@ const App = () => {
         </DashboardDataProvider>
       </SignalRProvider>
     </Suspense>
+
+    {/* React Query DevTools - useful for debugging cache (dev mode only) */}
+    {process.env.NODE_ENV === 'development' && (
+      <ReactQueryDevtools initialIsOpen={false} position="bottom" />
+    )}
+  </QueryClientProvider>
   );
 };
 

@@ -1,7 +1,6 @@
 
 import React, { useEffect, useState } from 'react';
 import { Card, CardContent, CardHeader, Typography, Box, CircularProgress, Alert, Chip, Grid } from '@mui/material';
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { getTrends, getForecast, HistoricalDataPoint } from '../dataProvider/analyticsService';
 
 const TrendAnalysisPage: React.FC = () => {
@@ -54,14 +53,7 @@ const TrendAnalysisPage: React.FC = () => {
       );
     }
 
-    // Transform data for Recharts - format timestamp for display
-    const chartData = data.map(point => ({
-      ...point,
-      formattedDate: new Date(point.timestamp).toLocaleDateString('en-US', {
-        month: 'short',
-        day: 'numeric'
-      })
-    }));
+    // Prepare formatted date strings for list display only
 
     return (
       <Grid container spacing={3}>

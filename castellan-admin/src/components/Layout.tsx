@@ -7,12 +7,21 @@ import { MenuWithPreloading } from './MenuWithPreloading';
 const CustomAppBar = () => (
   <AppBar
     sx={{
-      backgroundColor: '#1976d2',
+      backgroundColor: (theme) => theme.palette.mode === 'light' ? '#1976d2' : theme.palette.primary.main,
       '& .RaUserMenu-userButton': {
         whiteSpace: 'nowrap',
         overflow: 'hidden',
         textOverflow: 'ellipsis',
         maxWidth: '300px'
+      },
+      '& .RaLoadingIndicator-loader': {
+        display: 'none !important'
+      },
+      '& .RaLoadingIndicator-root': {
+        display: 'none !important'
+      },
+      '& [class*="RaLoadingIndicator"]': {
+        display: 'none !important'
       }
     }}
   >

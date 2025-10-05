@@ -91,7 +91,7 @@ export const YaraSummaryCard = React.memo(() => {
     // Refresh every 60 seconds for summary
     const interval = setInterval(loadYaraSummary, 60000);
     return () => clearInterval(interval);
-  }, []);
+  }, [loadYaraSummary]);
 
   if (loading) {
     return (

@@ -363,7 +363,7 @@ export const useSignalR = (options: UseSignalROptions = {}) => {
       // Build SignalR connection with proper authentication
       console.log('🔍 Connecting to SignalR hub: http://localhost:5000/hubs/scan-progress');
       console.log('🔑 Auth token: Present (' + authToken.substring(0, 20) + '...)');
-      
+
       const connection = new HubConnectionBuilder()
         .withUrl('http://localhost:5000/hubs/scan-progress', {
           accessTokenFactory: () => {
@@ -554,7 +554,7 @@ export const useSignalR = (options: UseSignalROptions = {}) => {
         console.warn('⚠️ Failed to join SystemMetrics group:', invokeError);
         // Continue anyway, connection is still valid
       }
-      
+
     } catch (error) {
       // Increment connection attempts for exponential backoff
       connectionAttemptsRef.current += 1;
@@ -576,32 +576,43 @@ export const useSignalR = (options: UseSignalROptions = {}) => {
           await connectionRef.current.stop();
         } catch (stopError) {
           console.error('Error stopping failed connection:', stopError);
+        } finally {
+          connectionRef.current = null;
         }
-        connectionRef.current = null;
       }
-      
-      callbacksRef.current.onError?.(error as Error);
-      console.log('📊 Falling back to polling mode due to SignalR connection failure');
-      
-      // Exponential backoff with max attempts limit
-      const maxAttempts = 5;
-      if (connectionAttemptsRef.current >= maxAttempts) {
-        console.log(`🚫 Max connection attempts reached (${maxAttempts}), stopping retries`);
-        return;
-      }
-      
-      const retryDelay = Math.min(60000, 5000 * Math.pow(2, connectionAttemptsRef.current - 1)); // 5s, 10s, 20s, 40s, 60s max
-      console.log(`⏳ Will retry SignalR connection in ${retryDelay}ms (attempt ${connectionAttemptsRef.current}/${maxAttempts})`);
-      
-      retryTimeoutRef.current = setTimeout(() => {
-        retryTimeoutRef.current = null;
-        if (enabled && !connectionRef.current && connectionAttemptsRef.current < maxAttempts) {
-          console.log(`🔄 Retrying SignalR connection (attempt ${connectionAttemptsRef.current + 1}/${maxAttempts})...`);
-          connect();
-        }
-      }, retryDelay);
+
     }
-  }, [enabled]);
+  }, [enabled, notify]);
+
+  // Handle retry logic for failed connections
+  useEffect(() => {
+    if (!enabled) return;
+
+    // Exponential backoff with max attempts limit
+    const maxAttempts = 5;
+    if (connectionAttemptsRef.current >= maxAttempts) {
+      console.log(`🚫 Max connection attempts reached (${maxAttempts}), stopping retries`);
+      return;
+    }
+
+    const retryDelay = Math.min(60000, 5000 * Math.pow(2, connectionAttemptsRef.current - 1)); // 5s, 10s, 20s, 40s, 60s max
+    console.log(`⏳ Will retry SignalR connection in ${retryDelay}ms (attempt ${connectionAttemptsRef.current}/${maxAttempts})`);
+
+    retryTimeoutRef.current = setTimeout(() => {
+      retryTimeoutRef.current = null;
+      if (enabled && !connectionRef.current && connectionAttemptsRef.current < maxAttempts) {
+        console.log(`🔄 Retrying SignalR connection (attempt ${connectionAttemptsRef.current + 1}/${maxAttempts})...`);
+        connect();
+      }
+    }, retryDelay);
+
+    return () => {
+      if (retryTimeoutRef.current) {
+        clearTimeout(retryTimeoutRef.current);
+        retryTimeoutRef.current = null;
+      }
+    };
+  }, [enabled, connect]);
 
   const disconnect = useCallback(async () => {
     // Clear retry timeout
@@ -738,7 +749,7 @@ export const useSignalR = (options: UseSignalROptions = {}) => {
     return () => {
       disconnect();
     };
-  }, [enabled]); // Removed connect and disconnect from dependencies to prevent loops
+  }, [enabled, connect, disconnect]);
 
   return {
     connectionState,

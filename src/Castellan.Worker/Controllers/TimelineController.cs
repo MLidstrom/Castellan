@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Caching.Memory;
 using Castellan.Worker.Services;
 using System.ComponentModel.DataAnnotations;
 
@@ -11,11 +12,16 @@ namespace Castellan.Worker.Controllers;
 public class TimelineController : ControllerBase
 {
     private readonly ITimelineService _timelineService;
+    private readonly IMemoryCache _cache;
     private readonly ILogger<TimelineController> _logger;
 
-    public TimelineController(ITimelineService timelineService, ILogger<TimelineController> logger)
+    public TimelineController(
+        ITimelineService timelineService,
+        IMemoryCache cache,
+        ILogger<TimelineController> logger)
     {
         _timelineService = timelineService;
+        _cache = cache;
         _logger = logger;
     }
 
@@ -55,9 +61,25 @@ public class TimelineController : ControllerBase
                 EventTypes = eventTypes?.ToList() ?? new List<string>()
             };
 
-            _logger.LogInformation("Calling timeline service...");
-            var result = await _timelineService.GetTimelineDataAsync(request);
-            _logger.LogInformation("Timeline service returned {DataPointCount} data points", result.DataPoints.Count);
+            // Check cache first for instant response (warmed by background service)
+            var cacheKey = $"timeline_data_{request.Granularity}_{request.StartTime:yyyy-MM-dd}_{request.EndTime:yyyy-MM-dd}";
+
+            TimelineResponse result;
+
+            if (_cache.TryGetValue(cacheKey, out TimelineResponse? cachedResult) && cachedResult != null)
+            {
+                _logger.LogInformation("⚡ Returning cached timeline data ({DataPointCount} points) - INSTANT!", cachedResult.DataPoints.Count);
+                result = cachedResult;
+            }
+            else
+            {
+                _logger.LogInformation("Calling timeline service (cache miss)...");
+                result = await _timelineService.GetTimelineDataAsync(request);
+                _logger.LogInformation("Timeline service returned {DataPointCount} data points", result.DataPoints.Count);
+
+                // Cache for 5 minutes
+                _cache.Set(cacheKey, result, TimeSpan.FromMinutes(5));
+            }
 
             // Transform to format expected by frontend
             var timelineData = result.DataPoints.Select(dp => new
@@ -126,7 +148,26 @@ public class TimelineController : ControllerBase
                 EndTime = endTime ?? DateTime.UtcNow
             };
 
-            var result = await _timelineService.GetTimelineStatsAsync(request);
+            // Check cache first for instant response (warmed by background service)
+            var cacheKey = $"timeline_stats_{request.StartTime:yyyy-MM-dd}_{request.EndTime:yyyy-MM-dd}";
+
+            TimelineStatsResponse result;
+
+            if (_cache.TryGetValue(cacheKey, out TimelineStatsResponse? cachedResult) && cachedResult != null)
+            {
+                _logger.LogInformation("⚡ Returning cached timeline stats ({TotalEvents} events) - INSTANT!", cachedResult.TotalEvents);
+                result = cachedResult;
+            }
+            else
+            {
+                _logger.LogInformation("Calling timeline service for stats (cache miss)...");
+                result = await _timelineService.GetTimelineStatsAsync(request);
+                _logger.LogInformation("Timeline service returned stats: {TotalEvents} total events", result.TotalEvents);
+
+                // Cache for 5 minutes
+                _cache.Set(cacheKey, result, TimeSpan.FromMinutes(5));
+            }
+
             return Ok(result);
         }
         catch (Exception ex)
