@@ -2388,9 +2388,51 @@ const ThreatScannerConfig = ({ record }: { record: any }) => {
   );
 };
 
+// Custom hook for unified tab state management with persistence
+const useConfigurationTab = () => {
+  const [searchParams, setSearchParams] = useState(() => {
+    const params = new URLSearchParams(window.location.hash.split('?')[1] || '');
+    return params;
+  });
+
+  // Initialize from URL or localStorage, default to 0
+  const getInitialTab = () => {
+    const urlTab = searchParams.get('tab');
+    if (urlTab !== null) {
+      const tabNum = parseInt(urlTab, 10);
+      if (!isNaN(tabNum) && tabNum >= 0 && tabNum < 8) {
+        return tabNum;
+      }
+    }
+    const storedTab = localStorage.getItem('castellan_config_active_tab');
+    if (storedTab !== null) {
+      const tabNum = parseInt(storedTab, 10);
+      if (!isNaN(tabNum) && tabNum >= 0 && tabNum < 8) {
+        return tabNum;
+      }
+    }
+    return 0;
+  };
+
+  const [activeTab, setActiveTab] = useState(getInitialTab);
+
+  // Update both URL and localStorage when tab changes
+  const handleTabChange = (newTab: number) => {
+    setActiveTab(newTab);
+    localStorage.setItem('castellan_config_active_tab', newTab.toString());
+
+    // Update URL without page reload
+    const hash = window.location.hash.split('?')[0];
+    const newUrl = `${hash}?tab=${newTab}`;
+    window.history.replaceState(null, '', newUrl);
+  };
+
+  return { activeTab, handleTabChange };
+};
+
 // Configuration List Component (for sidebar navigation)
 export const ConfigurationList = () => {
-  const [activeTab, setActiveTab] = useState(0);
+  const { activeTab, handleTabChange } = useConfigurationTab();
   const dataProvider = useDataProvider();
 
   // Get cache config for configuration resource
@@ -2478,10 +2520,6 @@ export const ConfigurationList = () => {
 
   // Combine loading states
   const loading = threatIntelLoading || notificationLoading || ipEnrichmentLoading || yaraLoading;
-
-  const handleTabChange = (newValue: number) => {
-    setActiveTab(newValue);
-  };
 
   if (loading) {
     return (

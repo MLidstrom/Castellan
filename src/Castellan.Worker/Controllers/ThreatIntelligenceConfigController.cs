@@ -25,9 +25,11 @@ public class ThreatIntelligenceConfigController : ControllerBase
         _threatIntelOptions = threatIntelOptions;
         // Use ContentRootPath so configs persist under the app's root /data directory
         _configFilePath = Path.Combine(env.ContentRootPath, "data", "threat-intelligence-config.json");
-        
+
         // Ensure data directory exists
         Directory.CreateDirectory(Path.GetDirectoryName(_configFilePath)!);
+
+        _logger.LogInformation("ThreatIntelligence config file path: {ConfigFilePath}", _configFilePath);
     }
 
     [HttpGet]
@@ -35,22 +37,27 @@ public class ThreatIntelligenceConfigController : ControllerBase
     {
         try
         {
-            _logger.LogInformation("Getting threat intelligence configuration");
+            _logger.LogInformation("Getting threat intelligence configuration from: {FilePath}", _configFilePath);
 
             ThreatIntelligenceConfigDto config;
 
             // Try to load from file first
             if (System.IO.File.Exists(_configFilePath))
             {
+                _logger.LogInformation("Config file exists, loading from file");
                 var json = await System.IO.File.ReadAllTextAsync(_configFilePath);
+                _logger.LogDebug("File content length: {Length} bytes", json.Length);
+
                 var options = new JsonSerializerOptions
                 {
                     PropertyNameCaseInsensitive = true
                 };
                 config = JsonSerializer.Deserialize<ThreatIntelligenceConfigDto>(json, options) ?? GetDefaultConfiguration();
+                _logger.LogInformation("Successfully loaded config from file. VirusTotal enabled: {VtEnabled}", config.VirusTotal?.Enabled);
             }
             else
             {
+                _logger.LogWarning("Config file not found at {FilePath}, using defaults", _configFilePath);
                 // Use default configuration if file doesn't exist
                 config = GetDefaultConfiguration();
             }
@@ -101,9 +108,10 @@ public class ThreatIntelligenceConfigController : ControllerBase
                 WriteIndented = true,
                 PropertyNamingPolicy = JsonNamingPolicy.CamelCase
             });
-            await System.IO.File.WriteAllTextAsync(_configFilePath, json);
 
-            _logger.LogInformation("Threat intelligence configuration updated successfully");
+            _logger.LogInformation("Saving threat intelligence config to: {FilePath}", _configFilePath);
+            await System.IO.File.WriteAllTextAsync(_configFilePath, json);
+            _logger.LogInformation("Threat intelligence configuration updated successfully. File size: {Size} bytes", json.Length);
 
             return Ok(new { data = config });
         }

@@ -3,17 +3,24 @@
 # Compatible with Windows PowerShell 5.1 and PowerShell 7+
 #
 # Usage:
-#   .\scripts\start.ps1                    # Start all services (default)
-#   .\scripts\start.ps1 -NoBuild           # Skip build step
-#   .\scripts\start.ps1 -Foreground        # Run Worker in foreground (for debugging)
-#   .\scripts\start.ps1 -NoReactAdmin      # Skip React Admin startup
-#   .\scripts\start.ps1 -ProductionBuild   # Use production build instead of dev server
+#   .\scripts\start.ps1                       # Start all services (default)
+#   .\scripts\start.ps1 -NoBuild              # Skip build step
+#   .\scripts\start.ps1 -Foreground           # Run Worker in foreground (for debugging)
+#   .\scripts\start.ps1 -NoReactAdmin         # Skip React Admin startup
+#   .\scripts\start.ps1 -ProductionBuild      # Use production build instead of dev server
+#   .\scripts\start.ps1 -Worker               # Start only Worker (no React Admin, no SystemTray)
+#   .\scripts\start.ps1 -ReactAdmin           # Start only React Admin
+#   .\scripts\start.ps1 -SystemTray           # Start only System Tray
+#   .\scripts\start.ps1 -Worker -ReactAdmin   # Start Worker and React Admin (no SystemTray)
 #
 param(
-    [switch]$NoBuild = $false,        # Skip building the project
+    [switch]$NoBuild = $false,         # Skip building the project
     [switch]$Foreground = $false,      # Run Worker in foreground instead of background
-    [switch]$NoReactAdmin = $false,    # Skip starting React Admin UI
-    [switch]$ProductionBuild = $false  # Use production build instead of dev server (default: dev)
+    [switch]$NoReactAdmin = $false,    # Skip starting React Admin UI (deprecated, use -Worker instead)
+    [switch]$ProductionBuild = $false, # Use production build instead of dev server (default: dev)
+    [switch]$Worker = $false,          # Start only Worker service
+    [switch]$ReactAdmin = $false,      # Start only React Admin
+    [switch]$SystemTray = $false       # Start only System Tray
 )
 
 # Ensure we're using TLS 1.2 for web requests on older PowerShell versions
@@ -21,9 +28,23 @@ if ($PSVersionTable.PSVersion.Major -lt 6) {
     [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
 }
 
-Write-Host "Starting All Castellan Services" -ForegroundColor Cyan
-Write-Host "=============================" -ForegroundColor Cyan
-Write-Host "Will start: Qdrant, Ollama, Worker API, and React Admin UI" -ForegroundColor Gray
+# Determine which components to start
+$selectiveMode = $Worker -or $ReactAdmin -or $SystemTray
+$startWorker = -not $selectiveMode -or $Worker
+$startReactAdmin = (-not $selectiveMode -or $ReactAdmin) -and -not $NoReactAdmin
+$startSystemTray = -not $selectiveMode -or $SystemTray
+
+Write-Host "Starting Castellan Services" -ForegroundColor Cyan
+Write-Host "============================" -ForegroundColor Cyan
+if ($selectiveMode) {
+    $components = @()
+    if ($startWorker) { $components += "Worker API" }
+    if ($startReactAdmin) { $components += "React Admin UI" }
+    if ($startSystemTray) { $components += "System Tray" }
+    Write-Host "Selected components: $($components -join ', ')" -ForegroundColor Yellow
+} else {
+    Write-Host "Will start: Qdrant, Ollama, Worker API, and React Admin UI" -ForegroundColor Gray
+}
 Write-Host ""
 
 # Function to check if .NET is installed
@@ -235,113 +256,158 @@ function Start-Worker {
 # Main execution flow
 Write-Host "Performing startup checks..." -ForegroundColor Cyan
 
-# Step 1: Check and start prerequisites (Qdrant and Ollama)
-Write-Host "`nChecking prerequisites..." -ForegroundColor Cyan
+# Step 1: Check and start prerequisites (Qdrant and Ollama) - only if starting Worker
+if ($startWorker) {
+    Write-Host "`nChecking prerequisites..." -ForegroundColor Cyan
 
-# Check Qdrant
-Write-Host "Checking Qdrant vector database..." -ForegroundColor Yellow
-try {
-    $qdrantRunning = & docker ps --filter "name=qdrant" --format "{{.Names}}" 2>$null
-    if ($qdrantRunning -eq "qdrant") {
-        Write-Host "OK: Qdrant is already running" -ForegroundColor Green
-    } else {
-        Write-Host "Starting Qdrant container..." -ForegroundColor Yellow
-        $startResult = & docker start qdrant 2>$null
-        if ($LASTEXITCODE -eq 0) {
-            Write-Host "OK: Started existing Qdrant container" -ForegroundColor Green
+    # Check Qdrant
+    Write-Host "Checking Qdrant vector database..." -ForegroundColor Yellow
+    try {
+        $qdrantRunning = & docker ps --filter "name=qdrant" --format "{{.Names}}" 2>$null
+        if ($qdrantRunning -eq "qdrant") {
+            Write-Host "OK: Qdrant is already running" -ForegroundColor Green
         } else {
-            Write-Host "Creating new Qdrant container..." -ForegroundColor Yellow
-            $createResult = & docker run -d --name qdrant -p 6333:6333 qdrant/qdrant 2>&1
+            Write-Host "Starting Qdrant container..." -ForegroundColor Yellow
+            $startResult = & docker start qdrant 2>$null
             if ($LASTEXITCODE -eq 0) {
-                Write-Host "OK: Created and started new Qdrant container" -ForegroundColor Green
+                Write-Host "OK: Started existing Qdrant container" -ForegroundColor Green
             } else {
-                Write-Host "WARNING: Failed to start Qdrant - vector search may not work" -ForegroundColor Yellow
+                Write-Host "Creating new Qdrant container..." -ForegroundColor Yellow
+                $createResult = & docker run -d --name qdrant -p 6333:6333 qdrant/qdrant 2>&1
+                if ($LASTEXITCODE -eq 0) {
+                    Write-Host "OK: Created and started new Qdrant container" -ForegroundColor Green
+                } else {
+                    Write-Host "WARNING: Failed to start Qdrant - vector search may not work" -ForegroundColor Yellow
+                }
             }
         }
+    } catch {
+        Write-Host "WARNING: Docker not available - Qdrant will not be started" -ForegroundColor Yellow
     }
-} catch {
-    Write-Host "WARNING: Docker not available - Qdrant will not be started" -ForegroundColor Yellow
-}
 
-# Check Ollama
-Write-Host "Checking Ollama LLM service..." -ForegroundColor Yellow
-try {
-    $ollamaResponse = Invoke-WebRequest -Uri "http://localhost:11434/api/tags" -UseBasicParsing -TimeoutSec 5 -ErrorAction SilentlyContinue
-    if ($ollamaResponse.StatusCode -eq 200) {
-        Write-Host "OK: Ollama is already running" -ForegroundColor Green
-    } else {
-        throw "Not responding"
-    }
-} catch {
-    Write-Host "Starting Ollama service..." -ForegroundColor Yellow
+    # Check Ollama
+    Write-Host "Checking Ollama LLM service..." -ForegroundColor Yellow
     try {
-        $ollamaProcess = Start-Process -FilePath "ollama" -ArgumentList "serve" -WindowStyle Hidden -PassThru
-        if ($ollamaProcess) {
-            Write-Host "OK: Started Ollama service (PID: $($ollamaProcess.Id))" -ForegroundColor Green
-            # Wait a moment for Ollama to initialize
-            Start-Sleep -Seconds 3
+        $ollamaResponse = Invoke-WebRequest -Uri "http://localhost:11434/api/tags" -UseBasicParsing -TimeoutSec 5 -ErrorAction SilentlyContinue
+        if ($ollamaResponse.StatusCode -eq 200) {
+            Write-Host "OK: Ollama is already running" -ForegroundColor Green
         } else {
-            Write-Host "WARNING: Failed to start Ollama - AI analysis may not work" -ForegroundColor Yellow
+            throw "Not responding"
         }
     } catch {
-        Write-Host "WARNING: Ollama not installed or not accessible - AI analysis may not work" -ForegroundColor Yellow
+        Write-Host "Starting Ollama service..." -ForegroundColor Yellow
+        try {
+            $ollamaProcess = Start-Process -FilePath "ollama" -ArgumentList "serve" -WindowStyle Hidden -PassThru
+            if ($ollamaProcess) {
+                Write-Host "OK: Started Ollama service (PID: $($ollamaProcess.Id))" -ForegroundColor Green
+                # Wait a moment for Ollama to initialize
+                Start-Sleep -Seconds 3
+            } else {
+                Write-Host "WARNING: Failed to start Ollama - AI analysis may not work" -ForegroundColor Yellow
+            }
+        } catch {
+            Write-Host "WARNING: Ollama not installed or not accessible - AI analysis may not work" -ForegroundColor Yellow
+        }
     }
 }
 
-# Step 2: Validate .NET installation
-if (-not (Test-DotNetInstalled)) {
+# Step 2: Validate .NET installation (only if starting Worker or SystemTray)
+if (($startWorker -or $startSystemTray) -and -not (Test-DotNetInstalled)) {
     exit 1
 }
 
-# Step 3: Validate project exists
-if (-not (Test-ProjectExists)) {
+# Step 3: Validate project exists (only if starting Worker or SystemTray)
+if (($startWorker -or $startSystemTray) -and -not (Test-ProjectExists)) {
     exit 1
 }
 
-# Step 4: Optionally build the project
-if (-not $NoBuild) {
+# Step 4: Optionally build the project (only if starting Worker or SystemTray)
+if (($startWorker -or $startSystemTray) -and -not $NoBuild) {
     if (-not (Build-Project)) {
         Write-Host "`nStartup failed due to build errors" -ForegroundColor Red
         exit 1
     }
 }
-else {
+elseif (($startWorker -or $startSystemTray) -and $NoBuild) {
     Write-Host "WARNING: Skipping build (--NoBuild specified)" -ForegroundColor Yellow
 }
 
-# Step 5: Start the Worker service and React Admin UI
+# Step 5: Start selected services
+$workerStarted = $false
+$uiStarted = $false
+$trayStarted = $false
+
 # Background is now the default; -Foreground overrides this
 $runInBackground = -not $Foreground
 
-Write-Host "`nStarting core services..." -ForegroundColor Cyan
-$workerStarted = Start-Worker -RunInBackground:$runInBackground
+# Start Worker if requested
+if ($startWorker) {
+    Write-Host "`nStarting Worker service..." -ForegroundColor Cyan
+    $workerStarted = Start-Worker -RunInBackground:$runInBackground
+}
 
-if ($runInBackground -and $workerStarted) {
-    # Only start React Admin if Worker is running in background
-    Write-Host "`nStarting web interface..." -ForegroundColor Cyan
+# Start React Admin if requested (only in background mode)
+if ($startReactAdmin -and ($runInBackground -or -not $startWorker)) {
+    Write-Host "`nStarting React Admin..." -ForegroundColor Cyan
     $uiStarted = Start-ReactAdmin -UseProductionBuild:$ProductionBuild
-    
-    if ($workerStarted -and $uiStarted) {
-        Write-Host "`n✅ Castellan successfully started!" -ForegroundColor Green
-        Write-Host "All services are running in the background." -ForegroundColor Gray
+}
+
+# Start System Tray if requested
+if ($startSystemTray) {
+    Write-Host "`nStarting System Tray..." -ForegroundColor Cyan
+    try {
+        $trayPath = Join-Path $PSScriptRoot "..\src\Castellan.Tray\bin\Release\net8.0-windows\Castellan.Tray.exe"
+        if (Test-Path $trayPath) {
+            $trayProcess = Start-Process -FilePath $trayPath -PassThru -WindowStyle Hidden
+            if ($trayProcess) {
+                Write-Host "OK: System Tray started (PID: $($trayProcess.Id))" -ForegroundColor Green
+                $trayStarted = $true
+            } else {
+                Write-Host "WARNING: Failed to start System Tray" -ForegroundColor Yellow
+            }
+        } else {
+            Write-Host "WARNING: System Tray executable not found at: $trayPath" -ForegroundColor Yellow
+            Write-Host "Build the project first with 'dotnet build'" -ForegroundColor Yellow
+        }
+    } catch {
+        Write-Host "WARNING: Failed to start System Tray: $_" -ForegroundColor Yellow
+    }
+}
+
+# Summary
+$componentsStarted = @()
+$componentsFailed = @()
+
+if ($startWorker) {
+    if ($workerStarted) { $componentsStarted += "Worker" } else { $componentsFailed += "Worker" }
+}
+if ($startReactAdmin) {
+    if ($uiStarted) { $componentsStarted += "React Admin" } else { $componentsFailed += "React Admin" }
+}
+if ($startSystemTray) {
+    if ($trayStarted) { $componentsStarted += "System Tray" } else { $componentsFailed += "System Tray" }
+}
+
+# Display results
+if ($componentsStarted.Count -gt 0 -and $componentsFailed.Count -eq 0) {
+    Write-Host "`n✅ Castellan successfully started!" -ForegroundColor Green
+    Write-Host "Started: $($componentsStarted -join ', ')" -ForegroundColor Gray
+    if ($uiStarted) {
         Write-Host "Web UI: http://localhost:8080" -ForegroundColor Gray
-    } elseif ($workerStarted) {
-        Write-Host "`n✅ Castellan core services started!" -ForegroundColor Green
-        Write-Host "Worker service is running. Web UI startup was skipped or failed." -ForegroundColor Yellow
-    } else {
-        Write-Host "`n⚠️  Castellan partially started" -ForegroundColor Yellow
-        Write-Host "Worker service failed to start. Some functionality may be limited." -ForegroundColor Yellow
-        exit 1
     }
     exit 0
 }
-elseif ($workerStarted) {
-    # Worker started in foreground mode
-    Write-Host "`nWorker service stopped" -ForegroundColor Cyan
-    exit 0
+elseif ($componentsStarted.Count -gt 0) {
+    Write-Host "`n⚠️  Castellan partially started" -ForegroundColor Yellow
+    Write-Host "Started: $($componentsStarted -join ', ')" -ForegroundColor Green
+    Write-Host "Failed: $($componentsFailed -join ', ')" -ForegroundColor Red
+    exit 1
 }
 else {
-    Write-Host "`nFailed to start Castellan Worker" -ForegroundColor Red
+    Write-Host "`n❌ Failed to start Castellan components" -ForegroundColor Red
+    if ($componentsFailed.Count -gt 0) {
+        Write-Host "Failed: $($componentsFailed -join ', ')" -ForegroundColor Red
+    }
     Write-Host "Check the error messages above for details" -ForegroundColor Yellow
     exit 1
 }

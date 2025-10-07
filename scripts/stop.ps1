@@ -3,16 +3,23 @@
 # Compatible with Windows PowerShell 5.1 and PowerShell 7+
 #
 # Usage:
-#   .\scripts\stop.ps1                    # Stop only Castellan apps (default)
-#   .\scripts\stop.ps1 -Force             # Force kill if graceful shutdown fails
-#   .\scripts\stop.ps1 -StopQdrant        # Also stop Qdrant container
-#   .\scripts\stop.ps1 -StopOllama        # Also stop Ollama service
+#   .\scripts\stop.ps1                          # Stop all Castellan apps (default)
+#   .\scripts\stop.ps1 -Force                   # Force kill if graceful shutdown fails
+#   .\scripts\stop.ps1 -StopQdrant              # Also stop Qdrant container
+#   .\scripts\stop.ps1 -StopOllama              # Also stop Ollama service
+#   .\scripts\stop.ps1 -Worker                  # Stop only Worker
+#   .\scripts\stop.ps1 -ReactAdmin              # Stop only React Admin
+#   .\scripts\stop.ps1 -SystemTray              # Stop only System Tray
+#   .\scripts\stop.ps1 -Worker -ReactAdmin      # Stop Worker and React Admin
 #   .\scripts\stop.ps1 -StopQdrant -StopOllama -Force  # Stop everything
 param(
     [switch]$Force = $false,      # Force kill processes if graceful shutdown fails
     [switch]$KeepQdrant = $true,  # Default: Keep Qdrant running
     [switch]$StopQdrant = $false, # Explicit flag to stop Qdrant container
-    [switch]$StopOllama = $false  # Explicit flag to stop Ollama service
+    [switch]$StopOllama = $false, # Explicit flag to stop Ollama service
+    [switch]$Worker = $false,     # Stop only Worker service
+    [switch]$ReactAdmin = $false, # Stop only React Admin
+    [switch]$SystemTray = $false  # Stop only System Tray
 )
 
 # Ensure we're using TLS 1.2 for web requests on older PowerShell versions
@@ -20,9 +27,23 @@ if ($PSVersionTable.PSVersion.Major -lt 6) {
     [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
 }
 
+# Determine which components to stop
+$selectiveMode = $Worker -or $ReactAdmin -or $SystemTray
+$stopWorker = -not $selectiveMode -or $Worker
+$stopReactAdmin = -not $selectiveMode -or $ReactAdmin
+$stopSystemTray = -not $selectiveMode -or $SystemTray
+
 Write-Host "Stopping Castellan Applications" -ForegroundColor Cyan
-Write-Host "==============================" -ForegroundColor Cyan
-Write-Host "Qdrant and Ollama will remain running" -ForegroundColor Gray
+Write-Host "================================" -ForegroundColor Cyan
+if ($selectiveMode) {
+    $components = @()
+    if ($stopWorker) { $components += "Worker" }
+    if ($stopReactAdmin) { $components += "React Admin" }
+    if ($stopSystemTray) { $components += "System Tray" }
+    Write-Host "Selected components: $($components -join ', ')" -ForegroundColor Yellow
+} else {
+    Write-Host "Qdrant and Ollama will remain running" -ForegroundColor Gray
+}
 Write-Host ""
 
 $stoppedComponents = @()
@@ -65,19 +86,22 @@ function Stop-SafeProcess {
 }
 
 # Stop Worker API (attempts graceful shutdown first)
-Write-Host "Stopping Worker API..." -ForegroundColor Yellow
-try {
-    # Try graceful shutdown via API first
-    $shutdownResponse = Invoke-WebRequest -Uri "http://localhost:5000/shutdown" -Method POST -UseBasicParsing -TimeoutSec 5 -ErrorAction SilentlyContinue
-    if ($shutdownResponse.StatusCode -eq 200) {
-        Write-Host "OK: Sent graceful shutdown signal to Worker API" -ForegroundColor Green
-        Start-Sleep -Seconds 2
+if ($stopWorker) {
+    Write-Host "Stopping Worker API..." -ForegroundColor Yellow
+    try {
+        # Try graceful shutdown via API first
+        $shutdownResponse = Invoke-WebRequest -Uri "http://localhost:5000/shutdown" -Method POST -UseBasicParsing -TimeoutSec 5 -ErrorAction SilentlyContinue
+        if ($shutdownResponse.StatusCode -eq 200) {
+            Write-Host "OK: Sent graceful shutdown signal to Worker API" -ForegroundColor Green
+            Start-Sleep -Seconds 2
+        }
+    } catch {
+        # API not responding or endpoint doesn't exist
     }
-} catch {
-    # API not responding or endpoint doesn't exist
 }
 
 # Stop Worker process (using multiple detection methods)
+if ($stopWorker) {
 $workerStopped = $false
 try {
     # Method 1: Check for processes listening on Worker API port (5000)
@@ -184,13 +208,17 @@ try {
 } catch {
     Write-Host "WARNING: Error during Worker process detection: $_" -ForegroundColor Yellow
 }
+}
 
 # Stop System Tray
-Write-Host "`nStopping System Tray..." -ForegroundColor Yellow
-Stop-SafeProcess -ProcessName "Castellan.Tray" -DisplayName "System Tray"
+if ($stopSystemTray) {
+    Write-Host "`nStopping System Tray..." -ForegroundColor Yellow
+    Stop-SafeProcess -ProcessName "Castellan.Tray" -DisplayName "System Tray"
+}
 
 # Stop React Admin
-Write-Host "`nStopping React Admin..." -ForegroundColor Yellow
+if ($stopReactAdmin) {
+    Write-Host "`nStopping React Admin..." -ForegroundColor Yellow
 $nodeProcesses = Get-CimInstance Win32_Process -Filter "Name='node.exe'" -ErrorAction SilentlyContinue | Where-Object {
     $_.CommandLine -like "*castellan-admin*" -or $_.CommandLine -like "*:8080*"
 }
@@ -208,6 +236,7 @@ if ($nodeProcesses) {
     }
 } else {
     Write-Host "WARNING: React Admin was not running" -ForegroundColor Yellow
+}
 }
 
 # Stop Qdrant Docker container (only if -StopQdrant is specified)
