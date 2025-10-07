@@ -49,7 +49,6 @@ class PreloadManager {
     ['threat-scanner', () => import('../resources/ThreatScanner')],
     ['timeline', () => import('../resources/Timelines')],
     ['configuration', () => import('../resources/Configuration')],
-    ['trend-analysis', () => import('../components/TrendAnalysisPage')],
   ]);
 
   private constructor() {
@@ -90,7 +89,6 @@ class PreloadManager {
       { componentPath: 'threat-scanner', priority: 'medium' },
       { componentPath: 'security-event-rules', priority: 'medium' },
       { componentPath: 'timeline', priority: 'medium' },
-      { componentPath: 'trend-analysis', priority: 'medium' },
     ];
 
     // Add to queue in priority order

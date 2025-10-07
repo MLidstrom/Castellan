@@ -41,16 +41,6 @@
 - **IP Reputation & Geolocation** - MaxMind GeoLite2 database integration with automated downloads, real IP geolocation, ASN data, and secure HTTP Basic Authentication
 
 ## 📊 **Monitoring & Analysis**
-- **Trend Analysis & Forecasting** - AI-powered predictive analytics with ML.NET time series forecasting
-  - **Historical Trend Analysis** - Security event volume trends with configurable time ranges (7d, 30d, 90d)
-  - **ML.NET Forecasting** - Singular Spectrum Analysis (SSA) for accurate 7-30 day predictions
-  - **Confidence Intervals** - Statistical bounds for forecast reliability assessment
-  - **Interactive Visualizations** - Two-panel responsive UI showing both historical data and AI predictions
-  - **Professional UI** - Material-UI components with color-coded sections and branded ML.NET chips
-  - **Real-time Data Display** - Live historical event counts with formatted dates and prediction ranges
-  - **Real-time API** - Dedicated analytics endpoints for trend data and forecast generation
-  - **Customizable Metrics** - Support for various event types and aggregation methods
-  - **Anomaly Detection** - Statistical identification of significant event volume deviations
 - **Advanced Search & Filtering** - Comprehensive security event search system with complete v0.5.0 implementation
   - **Enhanced Search Interface** - Advanced search drawer with collapsible sections and intuitive controls
   - **Multi-Criteria Filtering** - Date ranges, risk levels, event types, MITRE ATT&CK techniques, machines, users, sources
@@ -113,7 +103,6 @@
   - **YARA Rules Management** - Full CRUD operations with validation and performance tracking
   - **YARA Matches Analysis** - Detection history with forensic details and correlation
   - **Timeline Visualization** - Interactive security event timeline with granular time controls
-  - **Trend Analysis** - ML.NET powered forecasting with confidence intervals
   - **System Status Monitoring** - Component health with real-time indicators
   - **Threat Scanner** - Manual and automated threat scanning capabilities
   - **Configuration Management** - Teams/Slack webhook integration and system settings
@@ -153,7 +142,6 @@
 - **Authentication API** - Login, refresh, logout, and token validation endpoints
 - **Security Events API** - Full CRUD operations with advanced search and filtering
 - **Security Event Rules API** - Complete rule management with caching and role-based access (v0.7.0)
-- **Analytics API** - Trend analysis and forecasting endpoints with ML.NET predictions
 - **Advanced Search APIs** - Dedicated endpoints for search history and saved searches management
 - **System Monitoring APIs** - Performance metrics, system status, and health check endpoints
 - **Configuration APIs** - Threat intelligence, notifications, and IP enrichment configuration

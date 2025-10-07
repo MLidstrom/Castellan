@@ -9,7 +9,7 @@ import {
   useRedirect,
   useShowContext,
 } from 'react-admin';
-import { useQuery, keepPreviousData } from '@tanstack/react-query';
+import { useQuery, keepPreviousData, useQueryClient } from '@tanstack/react-query';
 import { getResourceCacheConfig, queryKeys } from '../config/reactQueryConfig';
 import {
   Typography,
@@ -291,12 +291,21 @@ const DEFAULT_YARA_CONFIG: YaraConfigType = {
   }
 };
 
+// Helper function to deep merge configurations
+const deepMergeConfig = (defaults: ConfigType, data: Partial<ConfigType>): ConfigType => {
+  return {
+    virusTotal: { ...defaults.virusTotal, ...(data.virusTotal || {}) },
+    malwareBazaar: { ...defaults.malwareBazaar, ...(data.malwareBazaar || {}) },
+    alienVaultOtx: { ...defaults.alienVaultOtx, ...(data.alienVaultOtx || {}) }
+  };
+};
+
 // Threat Intelligence Configuration Component
 const ThreatIntelligenceConfig = ({ record }: { record?: any }) => {
   const [config, setConfig] = useState<ConfigType>(() => {
     // Initialize with record data if available, otherwise use defaults
     if (record && record.id === 'threat-intelligence') {
-      return { ...DEFAULT_CONFIG, ...record };
+      return deepMergeConfig(DEFAULT_CONFIG, record);
     }
     return DEFAULT_CONFIG;
   });
@@ -305,36 +314,17 @@ const ThreatIntelligenceConfig = ({ record }: { record?: any }) => {
     virusTotal: false,
     alienVaultOtx: false
   });
-  
+
   const dataProvider = useDataProvider();
   const notify = useNotify();
   const refresh = useRefresh();
+  const queryClient = useQueryClient();
 
-  // Load configuration on mount
-  useEffect(() => {
-    const loadConfig = async () => {
-      try {
-        const { data } = await dataProvider.getOne('configuration', {
-          id: 'threat-intelligence'
-        });
-        console.log('[ThreatIntelligenceConfig] Loaded config from backend:', data);
-        if (data) {
-          setConfig((prevConfig: ConfigType) => ({ ...DEFAULT_CONFIG, ...data }));
-        }
-      } catch (error) {
-        console.error('[ThreatIntelligenceConfig] Failed to load config:', error);
-        // Keep using defaults
-      }
-    };
-
-    loadConfig();
-  }, [dataProvider]);
-
-  // Update config when record changes
+  // Update config when record prop changes (parent passes React Query data)
   useEffect(() => {
     console.log('[ThreatIntelligenceConfig] Record changed:', record);
     if (record && record.id === 'threat-intelligence') {
-      setConfig((prevConfig: ConfigType) => ({ ...DEFAULT_CONFIG, ...prevConfig, ...record }));
+      setConfig(deepMergeConfig(DEFAULT_CONFIG, record));
     }
   }, [record]);
 
@@ -347,8 +337,10 @@ const ThreatIntelligenceConfig = ({ record }: { record?: any }) => {
         previousData: {}
       });
       notify('Configuration saved successfully', { type: 'success' });
-      // Don't refresh - the dataProvider.update already returns the updated data
-      // and React Admin will use that to update the UI
+      // Invalidate React Query cache to force refetch of fresh data
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.one('configuration', { id: 'threat-intelligence' })
+      });
     } catch (error) {
       notify('Failed to save configuration', { type: 'error' });
     } finally {
@@ -2398,10 +2390,6 @@ const ThreatScannerConfig = ({ record }: { record: any }) => {
 
 // Configuration List Component (for sidebar navigation)
 export const ConfigurationList = () => {
-  const [config, setConfig] = useState<ConfigType>(DEFAULT_CONFIG);
-  const [notificationConfig, setNotificationConfig] = useState<NotificationConfigType>(DEFAULT_NOTIFICATION_CONFIG);
-  const [ipEnrichmentConfig, setIpEnrichmentConfig] = useState<IPEnrichmentConfigType>(DEFAULT_IP_ENRICHMENT_CONFIG);
-  const [yaraConfig, setYaraConfig] = useState<YaraConfigType>(DEFAULT_YARA_CONFIG);
   const [activeTab, setActiveTab] = useState(0);
   const dataProvider = useDataProvider();
 
@@ -2481,30 +2469,12 @@ export const ConfigurationList = () => {
     ...cacheConfig,
   });
 
-  // Apply query data to state when loaded
-  useEffect(() => {
-    if (threatIntelData) {
-      setConfig({ ...DEFAULT_CONFIG, ...threatIntelData });
-    }
-  }, [threatIntelData]);
-
-  useEffect(() => {
-    if (notificationData) {
-      setNotificationConfig({ ...DEFAULT_NOTIFICATION_CONFIG, ...notificationData });
-    }
-  }, [notificationData]);
-
-  useEffect(() => {
-    if (ipEnrichmentData) {
-      setIpEnrichmentConfig({ ...DEFAULT_IP_ENRICHMENT_CONFIG, ...ipEnrichmentData });
-    }
-  }, [ipEnrichmentData]);
-
-  useEffect(() => {
-    if (yaraData) {
-      setYaraConfig(yaraData);
-    }
-  }, [yaraData]);
+  // Use React Query data directly - no need for local state copies
+  // keepPreviousData ensures smooth transitions without flashing default values
+  const config = threatIntelData || DEFAULT_CONFIG;
+  const notificationConfig = notificationData || DEFAULT_NOTIFICATION_CONFIG;
+  const ipEnrichmentConfig = ipEnrichmentData || DEFAULT_IP_ENRICHMENT_CONFIG;
+  const yaraConfig = yaraData || DEFAULT_YARA_CONFIG;
 
   // Combine loading states
   const loading = threatIntelLoading || notificationLoading || ipEnrichmentLoading || yaraLoading;

@@ -176,19 +176,6 @@ export const resourceCacheConfig = {
     },
 
     /**
-     * Trend Analysis - Historical trends
-     * No background polling (heavy query)
-     * Snapshot: 30 minutes in memory + localStorage persistence
-     */
-    'trend-analysis': {
-        staleTime: 120000,          // 2 minutes
-        gcTime: 1800000,            // 30 minutes - keep snapshot
-        refetchOnWindowFocus: false,
-        refetchInterval: false,     // No background polling
-        retry: 2,
-    },
-
-    /**
      * Default for unlisted resources
      * Snapshot: 30 minutes in memory + localStorage persistence
      */

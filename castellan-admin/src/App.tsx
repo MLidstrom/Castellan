@@ -12,7 +12,6 @@ import {
   Shield as YaraRulesIcon,
   FindInPage as YaraMatchesIcon,
   CalendarMonth as TimelineIcon,
-  TrendingUp as TrendAnalysisIcon,
   Rule as RuleIcon,
 } from '@mui/icons-material';
 // Using production providers with real backend API
@@ -124,7 +123,6 @@ const SecurityEventRuleEdit = React.lazy(() => import(/* webpackPrefetch: true *
 
 const TimelineList = React.lazy(() => import(/* webpackPrefetch: true */ './resources/Timelines').then(module => ({ default: module.TimelineList })));
 
-const TrendAnalysisPage = React.lazy(() => import(/* webpackPrefetch: true */ './components/TrendAnalysisPage'));
 
 
 const ConfigurationList = React.lazy(() => import(/* webpackPrefetch: true */ './resources/Configuration').then(module => ({ default: module.ConfigurationList })));
@@ -240,14 +238,6 @@ const App = () => {
               list={TimelineList}
               icon={TimelineIcon}
               recordRepresentation={() => 'Security Event Timeline'}
-            />
-
-            {/* Trend Analysis Page - New in v0.6.0 */}
-            <Resource
-              name="trend-analysis"
-              list={TrendAnalysisPage}
-              icon={TrendAnalysisIcon}
-              recordRepresentation={() => 'Trend Analysis'}
             />
 
 

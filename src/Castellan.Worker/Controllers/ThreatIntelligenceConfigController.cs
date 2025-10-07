@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Options;
 using Castellan.Worker.Models.ThreatIntelligence;
 using System.Text.Json;
@@ -17,11 +18,13 @@ public class ThreatIntelligenceConfigController : ControllerBase
 
     public ThreatIntelligenceConfigController(
         ILogger<ThreatIntelligenceConfigController> logger,
-        IOptionsMonitor<ThreatIntelligenceOptions> threatIntelOptions)
+        IOptionsMonitor<ThreatIntelligenceOptions> threatIntelOptions,
+        IWebHostEnvironment env)
     {
         _logger = logger;
         _threatIntelOptions = threatIntelOptions;
-        _configFilePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "data", "threat-intelligence-config.json");
+        // Use ContentRootPath so configs persist under the app's root /data directory
+        _configFilePath = Path.Combine(env.ContentRootPath, "data", "threat-intelligence-config.json");
         
         // Ensure data directory exists
         Directory.CreateDirectory(Path.GetDirectoryName(_configFilePath)!);
@@ -40,12 +43,22 @@ public class ThreatIntelligenceConfigController : ControllerBase
             if (System.IO.File.Exists(_configFilePath))
             {
                 var json = await System.IO.File.ReadAllTextAsync(_configFilePath);
-                config = JsonSerializer.Deserialize<ThreatIntelligenceConfigDto>(json) ?? GetDefaultConfiguration();
+                var options = new JsonSerializerOptions
+                {
+                    PropertyNameCaseInsensitive = true
+                };
+                config = JsonSerializer.Deserialize<ThreatIntelligenceConfigDto>(json, options) ?? GetDefaultConfiguration();
             }
             else
             {
                 // Use default configuration if file doesn't exist
                 config = GetDefaultConfiguration();
+            }
+
+            // Ensure stable id for React Admin caching
+            if (string.IsNullOrEmpty(config.Id))
+            {
+                config.Id = "threat-intelligence";
             }
 
             return Ok(new { data = config });

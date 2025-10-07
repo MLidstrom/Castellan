@@ -1,0 +1,52 @@
+{
+  "enabled": true,
+  "virusTotal": {
+    "enabled": true,
+    "apiKey": "test-vt-key",
+    "baseUrl": "https://www.virustotal.com/vtapi/v2/",
+    "rateLimit": {
+      "requestsPerMinute": 4,
+      "requestsPerDay": 500,
+      "requestsPerMonth": 15500
+    },
+    "timeoutSeconds": 30,
+    "retryAttempts": 3,
+    "cacheExpiryHours": 24
+  },
+  "malwareBazaar": {
+    "enabled": true,
+    "baseUrl": "https://mb-api.abuse.ch/api/v1/",
+    "rateLimit": {
+      "requestsPerMinute": 100,
+      "requestsPerDay": 10000,
+      "requestsPerMonth": 100000
+    },
+    "timeoutSeconds": 15,
+    "retryAttempts": 3,
+    "cacheExpiryHours": 12
+  },
+  "alienVaultOTX": {
+    "enabled": true,
+    "apiKey": "test-otx-key",
+    "baseUrl": "https://otx.alienvault.com/api/v1/",
+    "rateLimit": {
+      "requestsPerMinute": 10,
+      "requestsPerDay": 1000,
+      "requestsPerMonth": 10000
+    },
+    "timeoutSeconds": 20,
+    "retryAttempts": 3,
+    "cacheExpiryHours": 6
+  },
+  "caching": {
+    "enabled": true,
+    "maxCacheSize": 10000,
+    "defaultCacheExpiryHours": 12
+  },
+  "fallbackBehavior": {
+    "continueOnApiFailure": true,
+    "maxConcurrentApiCalls": 3,
+    "circuitBreakerEnabled": true,
+    "circuitBreakerThreshold": 5
+  }
+}

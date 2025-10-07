@@ -38,7 +38,6 @@
 - **🎯 MITRE Integration** - Auto-updated 800+ ATT&CK techniques with threat mapping
 - **🔍 Threat Intelligence** - VirusTotal, MalwareBazaar, AlienVault OTX with configuration UI
 - **⚡ YARA Malware Detection** - Complete signature-based detection with automatic rule updates and deduplication
-- **📈 AI Trend Analysis** - ML.NET forecasting with predictions and confidence intervals
 - **📋 Timeline Visualization** - Interactive security event timeline with granular analysis
 - **📤 Data Export** - CSV, JSON, PDF export with filtering and background processing
 - **📱 Real-time Dashboard** - React admin interface with snapshot caching for <50ms instant page loads, skeleton-based instant render, 24-hour cache persistence, and persistent SignalR live updates

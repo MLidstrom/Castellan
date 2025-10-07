@@ -367,12 +367,9 @@ export const Dashboard = React.memo(() => {
 
   const resetDashboardState = useCallback(() => {
     clearCache();
-    setConsolidatedData(null);
-    setSecurityEventsData({ events: [], total: 0 });
-    setSystemStatus([]);
-    setThreatScanner([]);
+    // Don't reset state to empty values - keepPreviousData will show previous data while fetching
+    // This prevents the "0 Total Events" flash when changing time ranges or navigating to dashboard
     // React Query manages loading/error state automatically
-    setInitialLoad(true);
   }, [clearCache]);
 
   const applyConsolidatedData = useCallback((data: ConsolidatedDashboardData) => {

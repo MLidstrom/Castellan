@@ -265,21 +265,35 @@ If the system tray application doesn't start automatically:
 
 ### Slow Timeline Page Loading
 
-✅ **FIXED (October 2025)**: Timeline page performance has been optimized with database connection pooling.
+✅ **FIXED (October 2025)**: Timeline page performance has been fully optimized with connection pooling, database-level GROUP BY, MITRE optimization, and React Query caching.
 
-**Problem**: The `/timeline` endpoint was slow and didn't cache results properly.
+**Problem**: The `/timeline` endpoint was slow (25-32 seconds) and didn't cache results properly.
 
 **Solution Applied**:
-- Converted `TimelineService` to use `IDbContextFactory<CastellanDbContext>` for connection pooling
-- All database queries now benefit from the 100-connection pool with WAL mode
-- Added `AsNoTracking()` for read-only queries to improve performance
 
-**Performance Improvements**:
+**Backend Optimizations**:
+- Database-level GROUP BY aggregation using SQLite `strftime()` for date bucketing (TimelineService.cs:573-673)
+- Returns only 8-100 aggregated rows instead of loading 180K+ events into memory
+- MITRE technique optimization: reduced from 180K to 500 records (360x improvement)
+- Database indexes: IX_SecurityEvents_Timestamp and composite indexes for query optimization
+- Connection pooling: Converted `TimelineService` to use `IDbContextFactory<CastellanDbContext>`
+- Added `AsNoTracking()` for read-only queries to reduce memory overhead
+
+**Frontend Optimizations** (October 5, 2025):
+- React Query snapshot caching with `placeholderData: keepPreviousData`
+- 30-minute memory retention, 24-hour localStorage persistence
+- Background polling with automatic cache refresh
+
+**Performance Results**:
+- First visit: <2 seconds (database-optimized GROUP BY)
+- Repeat visits: <50ms (React Query cache)
+- Overall improvement: 94% faster than original 32-second load time
+
+**Implementation Details**:
 - Timeline data fetching: `GetTimelineDataAsync` (src/Castellan.Worker/Services/TimelineService.cs:36)
 - Statistics aggregation: `GetTimelineStatsAsync` (src/Castellan.Worker/Services/TimelineService.cs:114)
 - SQL aggregation: `GetTimelineDataPointsViaSqlAsync` (src/Castellan.Worker/Services/TimelineService.cs:576)
-
-**Expected Results**: Timeline page should now load significantly faster with proper caching.
+- Frontend caching: `TimelinePanel.tsx` converted to React Query hooks
 
 ### Slow Saved Searches Loading
 

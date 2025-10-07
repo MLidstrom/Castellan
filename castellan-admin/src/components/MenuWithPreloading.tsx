@@ -17,7 +17,6 @@ import BugReportIcon from '@mui/icons-material/BugReport';
 import RuleIcon from '@mui/icons-material/Rule';
 import FindInPageIcon from '@mui/icons-material/FindInPage';
 import CalendarMonthIcon from '@mui/icons-material/CalendarMonth';
-import TrendingUpIcon from '@mui/icons-material/TrendingUp';
 import MonitorHeartIcon from '@mui/icons-material/MonitorHeart';
 import RadarIcon from '@mui/icons-material/Radar';
 import SettingsIcon from '@mui/icons-material/Settings';
@@ -258,12 +257,6 @@ export const MenuWithPreloading: React.FC = () => {
         primaryText="Timeline"
         leftIcon={<CalendarMonthIcon />}
         onMouseEnter={() => handleHover('timeline')}
-      />
-      <Menu.Item
-        to="/trend-analysis"
-        primaryText="Trend Analysis"
-        leftIcon={<TrendingUpIcon />}
-        onMouseEnter={() => handleHover('trend-analysis')}
       />
       <Menu.Item
         to="/system-status"

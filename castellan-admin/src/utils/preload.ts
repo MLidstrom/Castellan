@@ -28,7 +28,6 @@ export const preloadMap: Record<string, () => Promise<any>> = {
   'system-status': () => import(/* webpackPrefetch: true */ '../resources/SystemStatus'),
   'yara-matches': () => import(/* webpackPrefetch: true */ '../resources/YaraMatches'),
   'timelines': () => import(/* webpackPrefetch: true */ '../resources/Timelines'),
-  'trend-analysis': () => import(/* webpackPrefetch: true */ '../components/TrendAnalysisPage'),
   'threat-scanner': () => import(/* webpackPrefetch: true */ '../resources/ThreatScanner'),
   'configuration': () => import(/* webpackPrefetch: true */ '../resources/Configuration'),
 };
@@ -42,7 +41,7 @@ export const bundleStrategy = {
   hover: ['mitre/techniques', 'system-status', 'yara-matches'],
 
   // Lazy load: Low frequency
-  lazy: ['threat-scanner', 'configuration', 'timelines', 'trend-analysis']
+  lazy: ['threat-scanner', 'configuration', 'timelines']
 };
 
 // Performance monitoring utilities
