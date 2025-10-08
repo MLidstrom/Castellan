@@ -181,4 +181,33 @@ public sealed class PipelineOptions
     /// </summary>
     [Range(1000, 300000, ErrorMessage = "VectorBatchProcessingTimeoutMs must be between 1000ms and 300000ms (5 minutes)")]
     public int VectorBatchProcessingTimeoutMs { get; set; } = 30000;
+
+    // --- CORRELATION FILTERING SETTINGS ---
+
+    /// <summary>
+    /// Minimum correlation score required to save an event (0.0 - 1.0)
+    /// Events must meet at least one threshold (correlation, burst, or anomaly) to be saved
+    /// Set to 0.0 to disable correlation score filtering
+    /// Only applies to non-deterministic, non-enhanced events (pure LLM events)
+    /// </summary>
+    [Range(0.0, 1.0, ErrorMessage = "MinCorrelationScoreThreshold must be between 0.0 and 1.0")]
+    public double MinCorrelationScoreThreshold { get; set; } = 0.1;
+
+    /// <summary>
+    /// Minimum burst score required to save an event (0.0 - 1.0)
+    /// Events must meet at least one threshold (correlation, burst, or anomaly) to be saved
+    /// Set to 0.0 to disable burst score filtering
+    /// Only applies to non-deterministic, non-enhanced events (pure LLM events)
+    /// </summary>
+    [Range(0.0, 1.0, ErrorMessage = "MinBurstScoreThreshold must be between 0.0 and 1.0")]
+    public double MinBurstScoreThreshold { get; set; } = 0.1;
+
+    /// <summary>
+    /// Minimum anomaly score required to save an event (0.0 - 1.0)
+    /// Events must meet at least one threshold (correlation, burst, or anomaly) to be saved
+    /// Set to 0.0 to disable anomaly score filtering
+    /// Only applies to non-deterministic, non-enhanced events (pure LLM events)
+    /// </summary>
+    [Range(0.0, 1.0, ErrorMessage = "MinAnomalyScoreThreshold must be between 0.0 and 1.0")]
+    public double MinAnomalyScoreThreshold { get; set; } = 0.1;
 }

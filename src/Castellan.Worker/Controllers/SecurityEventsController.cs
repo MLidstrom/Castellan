@@ -297,23 +297,61 @@ public class SecurityEventsController : ControllerBase
 
         try
         {
-            // Simple parsing - in production this would be more robust
-            return new[]
+            // Parse JSON enrichment data
+            var jsonDoc = System.Text.Json.JsonDocument.Parse(enrichmentData);
+            var root = jsonDoc.RootElement;
+
+            // Handle single object or array
+            if (root.ValueKind == System.Text.Json.JsonValueKind.Array)
             {
-                new IPEnrichmentDto
+                var results = new List<IPEnrichmentDto>();
+                foreach (var item in root.EnumerateArray())
                 {
-                    IP = "Unknown",
-                    Country = "Unknown",
-                    City = "Unknown",  
-                    ASN = "Unknown",
-                    IsHighRisk = false
+                    results.Add(ParseSingleEnrichment(item));
                 }
-            };
-        }
-        catch
-        {
+                return results.ToArray();
+            }
+            else if (root.ValueKind == System.Text.Json.JsonValueKind.Object)
+            {
+                return new[] { ParseSingleEnrichment(root) };
+            }
+
             return Array.Empty<IPEnrichmentDto>();
         }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Failed to parse enrichment data: {EnrichmentData}", enrichmentData);
+            return Array.Empty<IPEnrichmentDto>();
+        }
+    }
+
+    private IPEnrichmentDto ParseSingleEnrichment(System.Text.Json.JsonElement element)
+    {
+        return new IPEnrichmentDto
+        {
+            IP = GetJsonString(element, "ipAddress") ?? GetJsonString(element, "IP") ?? "Unknown",
+            Country = GetJsonString(element, "country") ?? GetJsonString(element, "Country") ?? "Unknown",
+            City = GetJsonString(element, "city") ?? GetJsonString(element, "City") ?? "Unknown",
+            ASN = GetJsonString(element, "asn") ?? GetJsonString(element, "ASN") ?? "Unknown",
+            IsHighRisk = GetJsonBool(element, "isHighRisk") ?? GetJsonBool(element, "IsHighRisk") ?? false
+        };
+    }
+
+    private string? GetJsonString(System.Text.Json.JsonElement element, string propertyName)
+    {
+        return element.TryGetProperty(propertyName, out var prop) && prop.ValueKind == System.Text.Json.JsonValueKind.String
+            ? prop.GetString()
+            : null;
+    }
+
+    private bool? GetJsonBool(System.Text.Json.JsonElement element, string propertyName)
+    {
+        if (element.TryGetProperty(propertyName, out var prop))
+        {
+            if (prop.ValueKind == System.Text.Json.JsonValueKind.True) return true;
+            if (prop.ValueKind == System.Text.Json.JsonValueKind.False) return false;
+        }
+        return null;
     }
 
     private List<SecurityEventDto> GenerateMockSecurityEvents()

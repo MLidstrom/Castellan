@@ -146,7 +146,7 @@ public class DatabaseSecurityEventStore : ISecurityEventStore
             Message = securityEvent.OriginalEvent?.Message,
             Summary = securityEvent.Summary,
             EventData = JsonSerializer.Serialize(securityEvent.OriginalEvent),
-            Timestamp = securityEvent.OriginalEvent?.Time.DateTime ?? DateTime.UtcNow,
+            Timestamp = securityEvent.OriginalEvent?.Time.UtcDateTime ?? DateTime.UtcNow,
             SourceIp = ExtractSourceIp(securityEvent.OriginalEvent),
             DestinationIp = ExtractDestinationIp(securityEvent.OriginalEvent),
             MitreTechniques = securityEvent.MitreTechniques?.Length > 0

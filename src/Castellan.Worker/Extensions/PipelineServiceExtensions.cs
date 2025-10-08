@@ -27,11 +27,13 @@ public static class PipelineServiceExtensions
         services.Configure<PipelineOptions>(configuration.GetSection("Pipeline"));
         services.Configure<AutomatedResponseOptions>(configuration.GetSection("AutomatedResponse"));
         services.Configure<WindowsEventLogOptions>(configuration.GetSection("WindowsEventLog"));
+        services.Configure<IgnorePatternOptions>(configuration.GetSection("IgnorePatterns"));
 
         // Register event collectors
         services.AddSingleton<ILogCollector, EvtxCollector>();
 
         // Register pipeline services
+        services.AddSingleton<EventIgnorePatternService>();
         services.AddSingleton<IExportService, ExportService>();
         services.AddScoped<ITimelineService, TimelineService>();
         services.AddScoped<IAdvancedSearchService, AdvancedSearchService>();

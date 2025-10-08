@@ -17,6 +17,7 @@ public class WindowsEventLogWatcherService : BackgroundService
     private readonly IServiceScopeFactory _serviceScopeFactory;
     private readonly IScanProgressBroadcaster _broadcaster;
     private readonly DashboardDataBroadcastService _dashboardBroadcast;
+    private readonly EventIgnorePatternService _ignorePatternService;
     private readonly ILogger<WindowsEventLogWatcherService> _logger;
     private readonly IServiceProvider _serviceProvider;
 
@@ -29,6 +30,7 @@ public class WindowsEventLogWatcherService : BackgroundService
         IServiceScopeFactory serviceScopeFactory,
         IScanProgressBroadcaster broadcaster,
         DashboardDataBroadcastService dashboardBroadcast,
+        EventIgnorePatternService ignorePatternService,
         ILogger<WindowsEventLogWatcherService> logger,
         IServiceProvider serviceProvider)
     {
@@ -36,6 +38,7 @@ public class WindowsEventLogWatcherService : BackgroundService
         _serviceScopeFactory = serviceScopeFactory;
         _broadcaster = broadcaster;
         _dashboardBroadcast = dashboardBroadcast;
+        _ignorePatternService = ignorePatternService;
         _logger = logger;
         _serviceProvider = serviceProvider;
         
@@ -200,6 +203,14 @@ public class WindowsEventLogWatcherService : BackgroundService
     {
         // Normalize the raw event to SecurityEvent
         var securityEvent = EventNormalizationHandler.Normalize(rawEvent, _logger);
+
+        // Check if event matches benign ignore patterns
+        if (_ignorePatternService.ShouldIgnoreEvent(securityEvent))
+        {
+            _logger.LogDebug("Skipping event {EventId} - matches ignore pattern (EventType={EventType}, MITRE={Techniques})",
+                rawEvent.EventId, securityEvent.EventType, string.Join(",", securityEvent.MitreTechniques));
+            return; // Skip this event entirely
+        }
 
         // Store in security event store (single source of truth for memory + database)
         // This automatically triggers SignalR broadcasting via SignalRSecurityEventStore

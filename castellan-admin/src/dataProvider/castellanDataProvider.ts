@@ -311,7 +311,7 @@ export const castellanDataProvider: DataProvider = {
                 }
             } else if (params.id === 'notifications') {
                 console.log('[DataProvider] Getting notification configuration');
-                const url = `${API_URL}/notifications/config`;
+                const url = `${API_URL}/settings/notification`;
 
                 try {
                     const { json } = await httpClient(url);
@@ -617,8 +617,8 @@ export const castellanDataProvider: DataProvider = {
             } else if (params.id === 'notifications') {
                 console.log('[DataProvider] Saving notification configuration:', params.data);
 
-                // The notifications endpoint expects the ID in the URL path
-                const url = `${API_URL}/notifications/config/${params.data.id || params.id}`;
+                // Use the new /settings/notification endpoint
+                const url = `${API_URL}/settings/notification`;
 
                 try {
                     const { json } = await httpClient(url, {

@@ -23,8 +23,9 @@ public class ThreatIntelligenceConfigController : ControllerBase
     {
         _logger = logger;
         _threatIntelOptions = threatIntelOptions;
-        // Use ContentRootPath so configs persist under the app's root /data directory
-        _configFilePath = Path.Combine(env.ContentRootPath, "data", "threat-intelligence-config.json");
+        // Use AppContext.BaseDirectory to get the actual runtime directory (bin/Debug or bin/Release)
+        var baseDir = AppContext.BaseDirectory;
+        _configFilePath = Path.Combine(baseDir, "data", "threat-intelligence-config.json");
 
         // Ensure data directory exists
         Directory.CreateDirectory(Path.GetDirectoryName(_configFilePath)!);

@@ -109,10 +109,10 @@ type NotificationConfigType = {
     notificationTypes: {
       criticalEvents: boolean;
       highRiskEvents: boolean;
+      mediumRiskEvents: boolean;
+      correlationAlerts: boolean;
       yaraMatches: boolean;
-      systemAlerts: boolean;
     };
-    rateLimitPerHour: number;
   };
   slack: {
     enabled: boolean;
@@ -121,10 +121,10 @@ type NotificationConfigType = {
     notificationTypes: {
       criticalEvents: boolean;
       highRiskEvents: boolean;
+      mediumRiskEvents: boolean;
+      correlationAlerts: boolean;
       yaraMatches: boolean;
-      systemAlerts: boolean;
     };
-    rateLimitPerHour: number;
   };
 };
 
@@ -212,10 +212,10 @@ const DEFAULT_NOTIFICATION_CONFIG: NotificationConfigType = {
     notificationTypes: {
       criticalEvents: true,
       highRiskEvents: true,
-      yaraMatches: true,
-      systemAlerts: true
-    },
-    rateLimitPerHour: 60
+      mediumRiskEvents: false,
+      correlationAlerts: true,
+      yaraMatches: true
+    }
   },
   slack: {
     enabled: false,
@@ -224,10 +224,10 @@ const DEFAULT_NOTIFICATION_CONFIG: NotificationConfigType = {
     notificationTypes: {
       criticalEvents: true,
       highRiskEvents: true,
-      yaraMatches: true,
-      systemAlerts: false
-    },
-    rateLimitPerHour: 60
+      mediumRiskEvents: false,
+      correlationAlerts: true,
+      yaraMatches: true
+    }
   }
 };
 
@@ -796,34 +796,33 @@ const NotificationsConfig = ({ record }: { record?: any }) => {
                     control={
                       <Switch
                         size="small"
+                        checked={config.teams.notificationTypes.mediumRiskEvents}
+                        onChange={(e) => handleNotificationTypeChange('teams', 'mediumRiskEvents', e.target.checked)}
+                      />
+                    }
+                    label="Medium Risk Events"
+                  />
+                  <FormControlLabel
+                    control={
+                      <Switch
+                        size="small"
+                        checked={config.teams.notificationTypes.correlationAlerts}
+                        onChange={(e) => handleNotificationTypeChange('teams', 'correlationAlerts', e.target.checked)}
+                      />
+                    }
+                    label="Correlation Alerts"
+                  />
+                  <FormControlLabel
+                    control={
+                      <Switch
+                        size="small"
                         checked={config.teams.notificationTypes.yaraMatches}
                         onChange={(e) => handleNotificationTypeChange('teams', 'yaraMatches', e.target.checked)}
                       />
                     }
                     label="YARA Matches"
                   />
-                  <FormControlLabel
-                    control={
-                      <Switch
-                        size="small"
-                        checked={config.teams.notificationTypes.systemAlerts}
-                        onChange={(e) => handleNotificationTypeChange('teams', 'systemAlerts', e.target.checked)}
-                      />
-                    }
-                    label="System Alerts"
-                  />
                 </Box>
-
-                <MuiTextField
-                  fullWidth
-                  label="Rate Limit (notifications/hour)"
-                  type="number"
-                  value={config.teams.rateLimitPerHour}
-                  onChange={(e) => handleConfigChange('teams', 'rateLimitPerHour', parseInt(e.target.value))}
-                  size="small"
-                  inputProps={{ min: 1, max: 100 }}
-                  helperText="Maximum notifications per hour"
-                />
               </Box>
             )}
           </Paper>
@@ -917,34 +916,33 @@ const NotificationsConfig = ({ record }: { record?: any }) => {
                     control={
                       <Switch
                         size="small"
+                        checked={config.slack.notificationTypes.mediumRiskEvents}
+                        onChange={(e) => handleNotificationTypeChange('slack', 'mediumRiskEvents', e.target.checked)}
+                      />
+                    }
+                    label="Medium Risk Events"
+                  />
+                  <FormControlLabel
+                    control={
+                      <Switch
+                        size="small"
+                        checked={config.slack.notificationTypes.correlationAlerts}
+                        onChange={(e) => handleNotificationTypeChange('slack', 'correlationAlerts', e.target.checked)}
+                      />
+                    }
+                    label="Correlation Alerts"
+                  />
+                  <FormControlLabel
+                    control={
+                      <Switch
+                        size="small"
                         checked={config.slack.notificationTypes.yaraMatches}
                         onChange={(e) => handleNotificationTypeChange('slack', 'yaraMatches', e.target.checked)}
                       />
                     }
                     label="YARA Matches"
                   />
-                  <FormControlLabel
-                    control={
-                      <Switch
-                        size="small"
-                        checked={config.slack.notificationTypes.systemAlerts}
-                        onChange={(e) => handleNotificationTypeChange('slack', 'systemAlerts', e.target.checked)}
-                      />
-                    }
-                    label="System Alerts"
-                  />
                 </Box>
-
-                <MuiTextField
-                  fullWidth
-                  label="Rate Limit (notifications/hour)"
-                  type="number"
-                  value={config.slack.rateLimitPerHour}
-                  onChange={(e) => handleConfigChange('slack', 'rateLimitPerHour', parseInt(e.target.value))}
-                  size="small"
-                  inputProps={{ min: 1, max: 100 }}
-                  helperText="Maximum notifications per hour"
-                />
               </Box>
             )}
           </Paper>

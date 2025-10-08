@@ -29,6 +29,7 @@ public sealed class Pipeline(
     IYaraScanService yaraScanService,
     IYaraRuleStore yaraRuleStore,
     IOptionsMonitor<YaraScanningOptions> yaraScanningOptions,
+    EventIgnorePatternService ignorePatternService,
     ILogger<Pipeline> log
 ) : BackgroundService
 {
@@ -741,7 +742,38 @@ public sealed class Pipeline(
     private async Task ProcessSecurityEvent(SecurityEvent securityEvent, CancellationToken ct)
     {
         var e = securityEvent.OriginalEvent;
-        
+
+        // Skip saving events that don't meet minimum correlation intelligence thresholds
+        // Only applies to non-deterministic, non-enhanced events (pure LLM events)
+        var options = _pipelineOptions.CurrentValue;
+        if (!securityEvent.IsDeterministic &&
+            !securityEvent.IsCorrelationBased &&
+            !securityEvent.IsEnhanced)
+        {
+            // Check if all scores are below their respective thresholds
+            bool belowCorrelationThreshold = securityEvent.CorrelationScore < options.MinCorrelationScoreThreshold;
+            bool belowBurstThreshold = securityEvent.BurstScore < options.MinBurstScoreThreshold;
+            bool belowAnomalyThreshold = securityEvent.AnomalyScore < options.MinAnomalyScoreThreshold;
+
+            if (belowCorrelationThreshold && belowBurstThreshold && belowAnomalyThreshold)
+            {
+                log.LogDebug("Skipping storage of event {EventId} - scores below thresholds (corr={Corr:F2}<{MinCorr:F2}, burst={Burst:F2}<{MinBurst:F2}, anomaly={Anomaly:F2}<{MinAnomaly:F2})",
+                    e.EventId,
+                    securityEvent.CorrelationScore, options.MinCorrelationScoreThreshold,
+                    securityEvent.BurstScore, options.MinBurstScoreThreshold,
+                    securityEvent.AnomalyScore, options.MinAnomalyScoreThreshold);
+                return; // Skip this event entirely
+            }
+        }
+
+        // Skip events that match benign ignore patterns
+        if (ignorePatternService.ShouldIgnoreEvent(securityEvent))
+        {
+            log.LogDebug("Skipping storage of event {EventId} - matches ignore pattern (EventType={EventType}, MITRE={Techniques})",
+                e.EventId, securityEvent.EventType, string.Join(",", securityEvent.MitreTechniques));
+            return; // Skip this event entirely
+        }
+
         // Store the security event for API access
         securityEventStore.AddSecurityEvent(securityEvent);
         
