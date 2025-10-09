@@ -7,6 +7,33 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added - Event Filtering System (October 8, 2025)
+- **Sequential Pattern Filtering**: Intelligent event filtering to reduce false positives
+  - `EventIgnorePatternService` with pattern matching for benign event sequences
+  - `IgnorePatternOptions` configuration for customizable filtering rules
+  - Support for filtering based on EventType, MITRE techniques, source machines, account names, logon types, and source IPs
+  - Time-window based pattern detection (configurable 30-second window)
+  - Option to filter ALL events from local machines with `FilterAllLocalEvents` setting
+  - Four pre-configured patterns for common benign scenarios (SYSTEM service logons, service accounts, DWM/UMFD, standalone T1078)
+  - Integration into Pipeline and WindowsEventLogWatcherService
+  - Registered in PipelineServiceExtensions for dependency injection
+
+### Fixed - IP Enrichment Parsing (October 8, 2025)
+- **SecurityEventsController IP Enrichment**: Fixed stub `ParseEnrichedIPs` method that returned hardcoded "Unknown" values
+  - Implemented proper JSON deserialization for enrichment data
+  - Added support for both single object and array enrichment formats
+  - Case-insensitive property matching (ipAddress/IP, country/Country, etc.)
+  - Enhanced error handling with detailed logging
+  - IP enrichment now displays: IP address, country, city, ASN, and high-risk indicators
+  - Created helper methods: `ParseSingleEnrichment()`, `GetJsonString()`, `GetJsonBool()`
+
+### Fixed - UTC Timestamp Bug (October 8, 2025)
+- **DatabaseSecurityEventStore Timezone Fix**: Fixed dashboard/events list discrepancy caused by timezone mismatch
+  - Changed `Time.DateTime` to `Time.UtcDateTime` in ConvertToEntity method (line 149)
+  - Events now consistently stored in UTC across all components
+  - Dashboard filtering now correctly uses UTC timestamps
+  - Eliminated 77 vs 677 event count discrepancies
+
 ### Changed - React Query Caching Refactor (October 5, 2025)
 - **Eliminated Duplicate Caching**: Removed EnhancedDataProvider in-memory cache, now using React Query exclusively
 - **Single Source of Truth**: All data caching managed by React Query with resource-specific TTLs

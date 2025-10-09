@@ -114,6 +114,149 @@ public class SecurityEventsControllerTests : IDisposable
         result.Should().BeOfType<NotFoundObjectResult>();
     }
 
+    [Fact]
+    public void ParseEnrichedIPs_WithValidSingleObject_ReturnsEnrichmentDto()
+    {
+        // Arrange
+        var enrichmentData = System.Text.Json.JsonSerializer.Serialize(new
+        {
+            ipAddress = "103.248.45.21",
+            country = "CN",
+            city = "Beijing",
+            asn = "AS4134",
+            isHighRisk = true
+        });
+
+        // Act
+        var result = InvokeParseEnrichedIPs(_controller, enrichmentData);
+
+        // Assert
+        result.Should().NotBeNull();
+        result.Should().HaveCount(1);
+        result[0].IP.Should().Be("103.248.45.21");
+        result[0].Country.Should().Be("CN");
+        result[0].City.Should().Be("Beijing");
+        result[0].ASN.Should().Be("AS4134");
+        result[0].IsHighRisk.Should().BeTrue();
+    }
+
+    [Fact]
+    public void ParseEnrichedIPs_WithArray_ReturnsMultipleEnrichmentDtos()
+    {
+        // Arrange
+        var enrichmentData = System.Text.Json.JsonSerializer.Serialize(new[]
+        {
+            new { ipAddress = "103.248.45.21", country = "CN", city = "Beijing", asn = "AS4134", isHighRisk = true },
+            new { ipAddress = "185.220.101.32", country = "NL", city = "Amsterdam", asn = "AS13335", isHighRisk = true }
+        });
+
+        // Act
+        var result = InvokeParseEnrichedIPs(_controller, enrichmentData);
+
+        // Assert
+        result.Should().NotBeNull();
+        result.Should().HaveCount(2);
+        result[0].IP.Should().Be("103.248.45.21");
+        result[0].Country.Should().Be("CN");
+        result[1].IP.Should().Be("185.220.101.32");
+        result[1].Country.Should().Be("NL");
+    }
+
+    [Fact]
+    public void ParseEnrichedIPs_WithCaseInsensitiveProperties_ParsesCorrectly()
+    {
+        // Arrange - Test with uppercase property names
+        var enrichmentData = System.Text.Json.JsonSerializer.Serialize(new
+        {
+            IP = "103.248.45.21",
+            Country = "CN",
+            City = "Beijing",
+            ASN = "AS4134",
+            IsHighRisk = true
+        });
+
+        // Act
+        var result = InvokeParseEnrichedIPs(_controller, enrichmentData);
+
+        // Assert
+        result.Should().NotBeNull();
+        result.Should().HaveCount(1);
+        result[0].IP.Should().Be("103.248.45.21");
+        result[0].Country.Should().Be("CN");
+        result[0].City.Should().Be("Beijing");
+        result[0].ASN.Should().Be("AS4134");
+        result[0].IsHighRisk.Should().BeTrue();
+    }
+
+    [Fact]
+    public void ParseEnrichedIPs_WithEmptyString_ReturnsEmptyArray()
+    {
+        // Arrange & Act
+        var result = InvokeParseEnrichedIPs(_controller, "");
+
+        // Assert
+        result.Should().NotBeNull();
+        result.Should().BeEmpty();
+    }
+
+    [Fact]
+    public void ParseEnrichedIPs_WithNull_ReturnsEmptyArray()
+    {
+        // Arrange & Act
+        var result = InvokeParseEnrichedIPs(_controller, null);
+
+        // Assert
+        result.Should().NotBeNull();
+        result.Should().BeEmpty();
+    }
+
+    [Fact]
+    public void ParseEnrichedIPs_WithInvalidJson_ReturnsEmptyArray()
+    {
+        // Arrange & Act
+        var result = InvokeParseEnrichedIPs(_controller, "{ invalid json }");
+
+        // Assert
+        result.Should().NotBeNull();
+        result.Should().BeEmpty();
+    }
+
+    [Fact]
+    public void ParseEnrichedIPs_WithMissingProperties_UsesDefaults()
+    {
+        // Arrange - Enrichment data with only IP address
+        var enrichmentData = System.Text.Json.JsonSerializer.Serialize(new { ipAddress = "103.248.45.21" });
+
+        // Act
+        var result = InvokeParseEnrichedIPs(_controller, enrichmentData);
+
+        // Assert
+        result.Should().NotBeNull();
+        result.Should().HaveCount(1);
+        result[0].IP.Should().Be("103.248.45.21");
+        result[0].Country.Should().Be("Unknown");
+        result[0].City.Should().Be("Unknown");
+        result[0].ASN.Should().Be("Unknown");
+        result[0].IsHighRisk.Should().BeFalse();
+    }
+
+    /// <summary>
+    /// Helper method to invoke private ParseEnrichedIPs method via reflection
+    /// </summary>
+    private IPEnrichmentDto[] InvokeParseEnrichedIPs(SecurityEventsController controller, string? enrichmentData)
+    {
+        var method = typeof(SecurityEventsController).GetMethod(
+            "ParseEnrichedIPs",
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance
+        );
+
+        if (method == null)
+            throw new InvalidOperationException("ParseEnrichedIPs method not found");
+
+        var result = method.Invoke(controller, new object?[] { enrichmentData });
+        return (IPEnrichmentDto[])(result ?? Array.Empty<IPEnrichmentDto>());
+    }
+
     /// <summary>
     /// Helper method to create test security events
     /// </summary>
@@ -121,7 +264,7 @@ public class SecurityEventsControllerTests : IDisposable
     {
         var logEvent = TestDataFactory.CreateSecurityEvent(4625, "test-user");
         var eventType = SecurityEventType.AuthenticationFailure; // Default for test
-        
+
         return SecurityEvent.CreateDeterministic(
             logEvent,
             eventType,
