@@ -1,8 +1,8 @@
 # Castellan API Documentation
 
 **Status**: ✅ **Production Ready**
-**Last Updated**: September 29, 2025
-**API Version**: v1.2 - Phase 4 Week 3 Compliance Performance APIs
+**Last Updated**: October 9, 2025
+**API Version**: v1.3 - Database Connection Pooling & Security Event Rules
 
 ## 🎯 Overview
 
@@ -96,6 +96,75 @@ GET /api/system-status/{componentId}
 ```
 
 ## 🚨 Security Events API
+## 📈 Dashboard Consolidated Data
+
+### Get Consolidated Dashboard Data
+```http
+GET /api/dashboarddata/consolidated?timeRange=24h
+```
+
+**Query Parameters:**
+- `timeRange` — `1h`, `24h`, `7d`, `30d` (default: `24h`)
+
+**Response (schema):**
+```json
+{
+  "securityEvents": {
+    "totalEvents": 693,
+    "riskLevelCounts": {
+      "CRITICAL": 5,
+      "HIGH": 21,
+      "MEDIUM": 48,
+      "LOW": 12
+    },
+    "recentEvents": [ /* last N events (array) */ ],
+    "lastEventTime": "2025-10-09T15:21:48.9342838Z"
+  },
+  "systemStatus": {
+    "totalComponents": 8,
+    "healthyComponents": 8,
+    "components": [ /* component list */ ],
+    "componentStatuses": { /* map */ }
+  },
+  "threatScanner": {
+    "totalScans": 44,
+    "activeScans": 0,
+    "completedScans": 0,
+    "threatsFound": 148150,
+    "lastScanTime": "2025-10-09T12:09:35.2252803Z"
+  },
+  "lastUpdated": "2025-10-09T13:58:50.9723882Z",
+  "timeRange": "24h"
+}
+```
+
+**Frontend mapping (reference):**
+- Open Events — `securityEvents.recentEvents` where `status ∈ {OPEN, INVESTIGATING}`
+- Critical Threats — `securityEvents.riskLevelCounts.CRITICAL`
+- Events/Week — `securityEvents.totalEvents` (until weekly metric is provided)
+- System Status — `OPERATIONAL` if `healthyComponents === totalComponents`, else `DEGRADED`
+- Threat Distribution — from `riskLevelCounts`, shown in order: Critical, High, Medium, Low, Unknown
+
+### Trigger Broadcast (SignalR)
+```http
+POST /api/dashboarddata/broadcast
+Authorization: Bearer {token}
+```
+Sends a consolidated update over SignalR to connected dashboards.
+
+## 📡 Real-time (SignalR)
+
+**Hub:** `/hubs/scan-progress`
+
+**Events (client handlers):**
+- `DashboardUpdate` — sends the consolidated payload above
+- `SecurityEvent` — notifies of a new/updated security event
+- `SystemStatusUpdate` — notifies when component health changes
+
+**WebSocket verification:**
+- `POST /hubs/scan-progress/negotiate` → 200
+- A socket connects to `/hubs/scan-progress` with incoming frames
+
 
 ### List Security Events
 ```http
@@ -169,6 +238,190 @@ Content-Type: application/json
   "status": "investigated"
 }
 ```
+
+## 🛡️ Security Event Rules API
+
+### List Security Event Rules
+```http
+GET /api/security-event-rules?enabled=true&page=1&limit=50&sort=priority&order=desc
+Authorization: Bearer {token}
+```
+
+**Query Parameters:**
+- `enabled` - Filter by enabled status: `true`, `false` (optional)
+- `page` - Page number for pagination (optional)
+- `limit` - Items per page (optional)
+- `sort` - Sort field: `eventid`, `priority`, `risklevel`, `confidence` (optional)
+- `order` - Sort order: `asc`, `desc` (optional)
+
+**Response:**
+```json
+[
+  {
+    "id": 1,
+    "eventId": 4625,
+    "channel": "Security",
+    "eventType": "AuthenticationFailure",
+    "riskLevel": "high",
+    "confidence": 85,
+    "summary": "Multiple failed logon attempts detected",
+    "mitreTechniques": ["T1110.001", "T1078"],
+    "recommendedActions": [
+      "Block source IP address",
+      "Review account security policies",
+      "Investigate source location"
+    ],
+    "isEnabled": true,
+    "priority": 90,
+    "description": "Detects brute force authentication attempts",
+    "tags": ["authentication", "brute-force"],
+    "createdAt": "2025-10-01T10:00:00Z",
+    "updatedAt": "2025-10-08T14:30:00Z",
+    "modifiedBy": "admin"
+  }
+]
+```
+
+**Response Headers:**
+```
+X-Total-Count: 45
+Access-Control-Expose-Headers: X-Total-Count
+```
+
+### Get Security Event Rule by ID
+```http
+GET /api/security-event-rules/{id}
+Authorization: Bearer {token}
+```
+
+**Response:**
+```json
+{
+  "id": 1,
+  "eventId": 4625,
+  "channel": "Security",
+  "eventType": "AuthenticationFailure",
+  "riskLevel": "high",
+  "confidence": 85,
+  "summary": "Multiple failed logon attempts detected",
+  "mitreTechniques": ["T1110.001"],
+  "recommendedActions": ["Block source IP", "Review account security"],
+  "isEnabled": true,
+  "priority": 90,
+  "description": "Detects brute force attempts",
+  "tags": ["authentication"],
+  "createdAt": "2025-10-01T10:00:00Z",
+  "updatedAt": "2025-10-08T14:30:00Z",
+  "modifiedBy": "admin"
+}
+```
+
+### Get Rule by Event ID and Channel
+```http
+GET /api/security-event-rules/event/{eventId}/channel/{channel}
+Authorization: Bearer {token}
+```
+
+**Example:**
+```http
+GET /api/security-event-rules/event/4625/channel/Security
+```
+
+### Create Security Event Rule (Admin Only)
+```http
+POST /api/security-event-rules
+Authorization: Bearer {token}
+Content-Type: application/json
+
+{
+  "eventId": 4688,
+  "channel": "Security",
+  "eventType": "ProcessCreation",
+  "riskLevel": "high",
+  "confidence": 90,
+  "summary": "Suspicious PowerShell execution detected",
+  "mitreTechniques": ["T1059.001"],
+  "recommendedActions": [
+    "Analyze PowerShell command",
+    "Check process parent",
+    "Scan workstation"
+  ],
+  "isEnabled": true,
+  "priority": 85,
+  "description": "Detects suspicious PowerShell command execution",
+  "tags": ["powershell", "execution"]
+}
+```
+
+**Response:**
+```json
+{
+  "id": 12,
+  "eventId": 4688,
+  "channel": "Security",
+  "eventType": "ProcessCreation",
+  "riskLevel": "high",
+  "confidence": 90,
+  "summary": "Suspicious PowerShell execution detected",
+  "mitreTechniques": ["T1059.001"],
+  "recommendedActions": [
+    "Analyze PowerShell command",
+    "Check process parent",
+    "Scan workstation"
+  ],
+  "isEnabled": true,
+  "priority": 85,
+  "description": "Detects suspicious PowerShell command execution",
+  "tags": ["powershell", "execution"],
+  "createdAt": "2025-10-09T14:30:00Z",
+  "updatedAt": "2025-10-09T14:30:00Z",
+  "modifiedBy": "admin"
+}
+```
+
+### Update Security Event Rule (Admin Only)
+```http
+PUT /api/security-event-rules/{id}
+Authorization: Bearer {token}
+Content-Type: application/json
+
+{
+  "confidence": 95,
+  "priority": 100,
+  "isEnabled": false,
+  "description": "Updated description"
+}
+```
+
+### Delete Security Event Rule (Admin Only)
+```http
+DELETE /api/security-event-rules/{id}
+Authorization: Bearer {token}
+```
+
+**Response:** 204 No Content
+
+### Refresh Rules Cache (Admin Only)
+```http
+POST /api/security-event-rules/refresh-cache
+Authorization: Bearer {token}
+```
+
+**Response:**
+```json
+{
+  "message": "Cache refreshed successfully"
+}
+```
+
+**Features:**
+- **Database-Backed Rules** - SQLite storage with EF Core and in-memory caching (15-minute TTL)
+- **Automatic Event Enrichment** - Rules automatically enhance security events with context and risk assessments
+- **Real-time Detection** - Used by SecurityEventDetector for live event analysis
+- **Comprehensive Filtering** - Filter by enabled status, event ID, channel, and more
+- **Role-Based Access** - Read access for all authenticated users, write access for admins only
+- **Pagination Support** - Efficient handling of large rule sets with sorting and pagination
+- **Cache Management** - 15-minute in-memory cache with manual refresh capability
 
 ## 🧠 AI Analysis API
 
@@ -400,6 +653,89 @@ GET /api/performance/system-resources
   "lastUpdated": "2025-09-14T12:30:00Z"
 }
 ```
+
+## 💾 Database Connection Pool API
+
+### Get Database Pool Health
+```http
+GET /api/database-pool/health
+Authorization: Bearer {token}
+```
+
+**Response:**
+```json
+{
+  "healthy": true,
+  "timestamp": "2025-10-09T14:30:00Z",
+  "status": "healthy"
+}
+```
+
+### Get Database Pool Metrics
+```http
+GET /api/database-pool/metrics
+Authorization: Bearer {token}
+```
+
+**Response:**
+```json
+{
+  "data": {
+    "activeConnections": 5,
+    "idleConnections": 15,
+    "totalConnections": 20,
+    "maxPoolSize": 100,
+    "poolUtilizationPercent": 20.0,
+    "healthyConnections": 20,
+    "failedConnections": 0,
+    "averageWaitTimeMs": 2.5,
+    "lastHealthCheck": "2025-10-09T14:30:00Z",
+    "databaseProvider": "SQLite"
+  }
+}
+```
+
+### Get Connection Details
+```http
+GET /api/database-pool/connections
+Authorization: Bearer {token}
+```
+
+**Response:**
+```json
+{
+  "data": {
+    "active": 5,
+    "idle": 15,
+    "total": 20,
+    "maxPoolSize": 100,
+    "utilizationPercent": 20.0,
+    "provider": "SQLite"
+  }
+}
+```
+
+### Force Health Check (Admin Only)
+```http
+POST /api/database-pool/health-check
+Authorization: Bearer {token}
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "healthy": true,
+  "message": "Database connection pool is healthy"
+}
+```
+
+**Features:**
+- **EF Core PooledDbContextFactory** - Production-ready connection pooling with 5-100 configurable connections
+- **SQLite Optimizations** - WAL mode, shared cache, 10MB cache size, 5s busy timeout
+- **Automatic Health Monitoring** - Health checks every 60 seconds with metrics collection
+- **PostgreSQL Ready** - Architecture supports seamless migration without code changes
+- **Performance Metrics** - Tracks active/idle connections, utilization, failure counts, wait times
 
 ## 📊 Analytics API
 
@@ -2287,6 +2623,237 @@ GET /api/dashboarddata/consolidated?timeRange=24h
 - **Caching**: 30-second cache duration for optimal performance
 - **SignalR Integration**: Real-time updates via WebSocket when available
 - **Automatic Fallback**: Works as REST API when SignalR unavailable
+
+### Consolidated Dashboard Data Schema
+
+The consolidated dashboard data follows a hierarchical schema optimized for minimal payload size:
+
+#### Root Object: `ConsolidatedDashboardData`
+```typescript
+{
+  securityEvents: SecurityEventsSummary;
+  systemStatus: SystemStatusSummary;
+  threatScanner: ThreatScannerSummary;
+  lastUpdated: string;         // ISO 8601 timestamp (UTC)
+  timeRange: string;           // "1h" | "24h" | "7d" | "30d"
+}
+```
+
+#### `SecurityEventsSummary`
+```typescript
+{
+  totalEvents: number;         // Total events in time range
+  riskLevelCounts: {
+    critical: number;
+    high: number;
+    medium: number;
+    low: number;
+  };
+  recentEvents: SecurityEventBasic[];  // Latest 10 events
+  lastEventTime: string;       // ISO 8601 timestamp of most recent event
+}
+```
+
+#### `SecurityEventBasic`
+```typescript
+{
+  id: string;                  // Event UUID
+  eventType: string;           // "AuthenticationFailure", "ProcessCreation", etc.
+  timestamp: string;           // ISO 8601 timestamp (UTC)
+  riskLevel: "critical" | "high" | "medium" | "low";
+  source: string;              // Event log source ("Security", "System", etc.)
+  machine: string;             // Source machine hostname
+}
+```
+
+#### `SystemStatusSummary`
+```typescript
+{
+  totalComponents: number;     // Total monitored components
+  healthyComponents: number;   // Count of healthy components
+  components: ComponentHealthBasic[];
+  componentStatuses: {
+    [componentName: string]: "Healthy" | "Degraded" | "Unhealthy";
+  };
+}
+```
+
+#### `ComponentHealthBasic`
+```typescript
+{
+  component: string;           // Component name (e.g., "Qdrant Vector Database")
+  status: "Healthy" | "Degraded" | "Unhealthy";
+  responseTime: number;        // Response time in milliseconds
+  lastCheck: string;           // ISO 8601 timestamp (UTC)
+}
+```
+
+#### `ThreatScannerSummary`
+```typescript
+{
+  totalScans: number;          // All-time scan count
+  activeScans: number;         // Currently running scans
+  completedScans: number;      // Successfully completed scans
+  threatsFound: number;        // Total threats detected across all scans
+  lastScanTime: string;        // ISO 8601 timestamp of most recent scan
+  recentScans: ThreatScanBasic[];  // Latest 5 scans
+}
+```
+
+#### `ThreatScanBasic`
+```typescript
+{
+  id: string;                  // Scan UUID
+  scanType: "FullSystem" | "QuickScan" | "CustomPath";
+  timestamp: string;           // ISO 8601 timestamp (UTC)
+  status: "Running" | "Completed" | "Failed" | "Cancelled";
+  filesScanned: number;
+  threatsFound: number;
+}
+```
+
+### Get Individual Dashboard Components
+
+The consolidated endpoint returns all data at once, but individual components can be fetched separately:
+
+#### Get Security Events Summary Only
+```http
+GET /api/dashboarddata/security-events?timeRange=24h
+Authorization: Bearer {token}
+```
+
+**Response:**
+```json
+{
+  "totalEvents": 1786,
+  "riskLevelCounts": {
+    "critical": 23,
+    "high": 156,
+    "medium": 847,
+    "low": 760
+  },
+  "recentEvents": [
+    {
+      "id": "evt-123",
+      "eventType": "AuthenticationFailure",
+      "timestamp": "2025-10-09T14:30:00Z",
+      "riskLevel": "critical",
+      "source": "Security",
+      "machine": "WORKSTATION-01"
+    }
+  ],
+  "lastEventTime": "2025-10-09T14:30:00Z"
+}
+```
+
+#### Get System Status Summary Only
+```http
+GET /api/dashboarddata/system-status
+Authorization: Bearer {token}
+```
+
+**Response:**
+```json
+{
+  "totalComponents": 8,
+  "healthyComponents": 8,
+  "components": [
+    {
+      "component": "Qdrant Vector Database",
+      "status": "Healthy",
+      "responseTime": 5,
+      "lastCheck": "2025-10-09T14:30:00Z"
+    },
+    {
+      "component": "SecurityEventDetector",
+      "status": "Healthy",
+      "responseTime": 3,
+      "lastCheck": "2025-10-09T14:30:00Z"
+    }
+  ],
+  "componentStatuses": {
+    "Qdrant Vector Database": "Healthy",
+    "SecurityEventDetector": "Healthy",
+    "CorrelationEngine": "Healthy",
+    "YaraScanService": "Healthy"
+  }
+}
+```
+
+#### Get Threat Scanner Summary Only
+```http
+GET /api/dashboarddata/threat-scanner
+Authorization: Bearer {token}
+```
+
+**Response:**
+```json
+{
+  "totalScans": 45,
+  "activeScans": 2,
+  "completedScans": 43,
+  "threatsFound": 12,
+  "lastScanTime": "2025-10-09T14:25:00Z",
+  "recentScans": [
+    {
+      "id": "scan-123",
+      "scanType": "FullSystem",
+      "timestamp": "2025-10-09T14:25:00Z",
+      "status": "Completed",
+      "filesScanned": 15420,
+      "threatsFound": 3
+    },
+    {
+      "id": "scan-124",
+      "scanType": "QuickScan",
+      "timestamp": "2025-10-09T14:20:00Z",
+      "status": "Completed",
+      "filesScanned": 8234,
+      "threatsFound": 1
+    }
+  ]
+}
+```
+
+### Dashboard Cache Management
+
+#### Get Cache Status
+```http
+GET /api/dashboarddata/cache-status
+Authorization: Bearer {token}
+```
+
+**Response:**
+```json
+{
+  "cacheEnabled": true,
+  "cacheDurationSeconds": 30,
+  "lastUpdate": "2025-10-09T14:30:00Z",
+  "message": "Dashboard data cache is active"
+}
+```
+
+#### Refresh Dashboard Data (Force Cache Invalidation)
+```http
+POST /api/dashboarddata/refresh
+Authorization: Bearer {token}
+```
+
+**Response:**
+```json
+{
+  "message": "Dashboard data refresh triggered",
+  "timestamp": "2025-10-09T14:30:00Z"
+}
+```
+
+**Use Cases:**
+- **Manual Refresh**: Force immediate cache invalidation and data update
+- **Post-Configuration**: Refresh after changing system settings
+- **Testing**: Verify real-time data updates
+- **Development**: Clear stale cached data during debugging
+
+**Note**: This endpoint triggers both cache invalidation and immediate SignalR broadcast to all connected clients.
 
 ### Trigger Dashboard Data Broadcast
 ```http
