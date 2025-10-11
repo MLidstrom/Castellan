@@ -140,15 +140,17 @@ public class DashboardDataConsolidationService : IDashboardDataConsolidationServ
             int totalEvents;
             Dictionary<string, int> riskLevelCounts;
 
+            // Total Events should always show all-time count (not filtered by time range)
+            totalEvents = _securityEventStore.GetTotalCount();
+
+            // Risk level counts and recent events respect the time range filter
             if (filters != null && filters.Count > 0)
             {
-                totalEvents = _securityEventStore.GetTotalCount(filters);
                 riskLevelCounts = _securityEventStore.GetRiskLevelCounts(filters);
                 recentEvents = _securityEventStore.GetSecurityEvents(1, 25, filters).ToList();
             }
             else
             {
-                totalEvents = _securityEventStore.GetTotalCount();
                 riskLevelCounts = _securityEventStore.GetRiskLevelCounts();
                 recentEvents = _securityEventStore.GetSecurityEvents(1, 25).ToList();
             }

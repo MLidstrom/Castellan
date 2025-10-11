@@ -107,16 +107,21 @@ export function SecurityEventsPage() {
   const summary = useMemo(() => {
     const consolidated = (consolidatedQuery.data as any) || {};
     const root = consolidated.data && typeof consolidated.data === 'object' ? consolidated.data : consolidated;
-    const se = root.securityEvents || {};
 
-    // Total Events: authoritative from consolidated when present; fallback to list/total
-    const totalFromConsolidated = se.totalEvents;
-    const totalFromList = events?.length || (((eventsQuery.data as any)?.total) ?? 0) || 0;
-    const total = typeof totalFromConsolidated === 'number' ? totalFromConsolidated : totalFromList;
+    // Try both camelCase and PascalCase for API compatibility
+    const se = root.securityEvents || root.SecurityEvents || {};
+
+    // Total Events: prefer direct API total (most accurate), fallback to consolidated, then list length
+    const totalFromConsolidated = se.totalEvents || se.TotalEvents;
+    const totalFromAPI = ((eventsQuery.data as any)?.total) ?? 0;
+    const totalFromList = events?.length || 0;
+
+    // Use direct API total as primary source (most accurate for event counts)
+    const total = totalFromAPI > 0 ? totalFromAPI : (typeof totalFromConsolidated === 'number' ? totalFromConsolidated : totalFromList);
 
     // Critical: authoritative from consolidated riskLevelCounts
-    const riskCounts = se.riskLevelCounts || {};
-    const criticalFromConsolidated = riskCounts.CRITICAL ?? riskCounts.critical;
+    const riskCounts = se.riskLevelCounts || se.RiskLevelCounts || {};
+    const criticalFromConsolidated = riskCounts.CRITICAL ?? riskCounts.critical ?? riskCounts.Critical;
 
     // Compute open and average risk from current page’s events (approximation)
     let open = 0, riskSum = 0;
