@@ -29,16 +29,46 @@ VITE_SIGNALR_HUB=scan-progress
 ## Structure
 ```
 src/
-  components/layout/   # MainLayout (sidebar), shared header
-  pages/               # Dashboard page
-  services/            # api.ts, auth.ts, signalr.ts, constants.ts
-  shared/              # MetricCard, RecentActivity, ThreatDistribution
-  styles/              # globals.css (Tailwind layers)
+  components/
+    layout/              # MainLayout (sidebar navigation)
+    YaraConfigComponent.tsx  # YARA auto-update configuration
+  pages/
+    Dashboard.tsx        # Main dashboard with metrics and activity
+    SecurityEvents.tsx   # Security events list
+    SecurityEventDetail.tsx  # Individual event details
+    Timeline.tsx         # Event timeline visualization
+    MitreAttack.tsx      # MITRE ATT&CK techniques management
+    YaraRules.tsx        # YARA rules management
+    SystemStatus.tsx     # System component health monitoring
+    Configuration.tsx    # Multi-tab configuration interface
+    Login.tsx            # Authentication page
+  services/              # api.ts, auth.ts, signalr.ts, constants.ts
+  shared/                # MetricCard, RecentActivity, ThreatDistribution
+  styles/                # globals.css (Tailwind layers)
 ```
+
+## Pages & Routes
+- `/` - Dashboard (metrics, recent activity, threat distribution)
+- `/security-events` - Security events list with all fields
+- `/security-events/:id` - Event detail page
+- `/timeline` - Event timeline visualization
+- `/mitre-attack` - MITRE ATT&CK techniques (list, search, import, detail)
+- `/yara-rules` - YARA rules (list, enable/disable, import, detail)
+- `/system-status` - Component health monitoring
+- `/configuration` - Settings (Threat Intel, Notifications, IP Enrichment, YARA)
+- `/login` - Authentication
 
 ## API usage
 - GET /api/dashboarddata/consolidated?timeRange=24h — dashboard metrics & threat distribution
 - GET /api/security-events?limit=8&sort=timestamp&order=desc — recent activity
+- GET /api/mitre/techniques — MITRE techniques with pagination
+- GET /api/mitre/statistics — MITRE database statistics
+- GET /api/yara-rules — YARA rules with filters
+- GET /api/yara-rules/statistics — YARA statistics
+- GET /api/system-status — System component health
+- GET /api/settings/threat-intelligence — Threat intel configuration
+- GET /api/notifications/config — Notification settings
+- GET /api/yara-configuration — YARA auto-update configuration
 
 ## Authentication
 - Visit http://localhost:3000/login and sign in (admin / CastellanAdmin2024!)

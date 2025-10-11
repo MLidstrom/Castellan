@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Api } from '../services/api';
 import { useAuth } from '../hooks/useAuth';
+import { useNavigate } from 'react-router-dom';
 
 type Granularity = 'day' | 'hour';
 
@@ -17,6 +18,13 @@ function toLocalLabel(iso: string) {
 
 export function TimelinePage() {
   const { token, loading } = useAuth();
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    if (!loading && !token) {
+      navigate('/login');
+    }
+  }, [token, loading, navigate]);
   const [granularity, setGranularity] = useState<Granularity>('day');
   const [from, setFrom] = useState<Date>(() => {
     const d = new Date(); d.setDate(d.getDate()-7); return d;

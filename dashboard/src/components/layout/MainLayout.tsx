@@ -6,8 +6,8 @@ const navigationItems = [
   { name: 'Dashboard', href: '/', icon: LayoutDashboard, description: 'Mission Control Center' },
   { name: 'Security Events', href: '/security-events', icon: AlertTriangle, description: 'Event Investigation' },
   { name: 'Timeline', href: '/timeline', icon: Clock, description: 'Attack Visualization' },
-  { name: 'MITRE ATT&CK', href: '/mitre-attack', icon: Target, description: 'Threat Intelligence' },
-  { name: 'YARA Rules', href: '/yara-rules', icon: Search, description: 'Malware Detection' },
+  { name: 'Threat Intelligence', href: '/mitre-attack', icon: Target, description: 'MITRE ATT&CK' },
+  { name: 'Malware Detection', href: '/yara-rules', icon: Search, description: 'YARA Rules' },
   { name: 'System Status', href: '/system-status', icon: Activity, description: 'Platform Health' },
   { name: 'Configuration', href: '/configuration', icon: Settings, description: 'Settings & Integrations' },
 ];

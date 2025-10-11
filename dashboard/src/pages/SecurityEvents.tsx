@@ -11,15 +11,25 @@ type Severity = 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW' | 'UNKNOWN';
 
 interface SecurityEvent {
   id: string;
-  title?: string;
   eventType?: string;
-  description?: string;
-  severity?: Severity;
-  status?: string;
   timestamp?: string | Date;
   source?: string;
-  target?: string;
-  riskScore?: number;
+  eventId?: number;
+  level?: string;
+  riskLevel?: string;
+  machine?: string;
+  user?: string;
+  message?: string;
+  mitreAttack?: string[];
+  correlationScore?: number;
+  burstScore?: number;
+  anomalyScore?: number;
+  confidence?: number;
+  status?: string;
+  assignedTo?: string | null;
+  notes?: string | null;
+  ipAddresses?: string[];
+  enrichedIPs?: any[];
 }
 
 function severityBadge(sev: Severity | undefined) {
@@ -160,31 +170,118 @@ export function SecurityEventsPage() {
           )}
 
           {!eventsQuery.isLoading && events?.map((e) => {
-            const sev = (e.severity || 'MEDIUM') as Severity;
-            const status = (e.status || '').toUpperCase();
+            const riskLevel = (e.riskLevel || e.level || 'MEDIUM').toUpperCase() as Severity;
+            const status = (e.status || 'Open').toUpperCase();
+            const hasCorrelation = (e.correlationScore || 0) > 0;
+            
             return (
-              <div key={e.id} className={`rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-5`}> 
+              <div 
+                key={e.id} 
+                onClick={() => navigate(`/security-events/${e.id}`)}
+                className={`rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-5 cursor-pointer hover:shadow-lg hover:border-blue-300 dark:hover:border-blue-600 transition-all duration-200`}
+              > 
                 <div className="flex items-start justify-between">
                   <div className="flex-1">
-                    <div className="flex items-center gap-2 mb-2">
-                      <span className={`text-xs font-semibold px-2 py-1 rounded-full ${severityBadge(sev)}`}>{sev}</span>
+                    {/* Header Row */}
+                    <div className="flex items-center gap-2 mb-2 flex-wrap">
+                      <span className={`text-xs font-semibold px-2 py-1 rounded-full ${severityBadge(riskLevel)}`}>
+                        {riskLevel}
+                      </span>
                       <div className="text-gray-900 dark:text-gray-100 font-semibold">
-                        {e.title || e.eventType || 'Security Event'}
+                        {e.eventType || 'Security Event'}
                       </div>
+                      {e.eventId && (
+                        <span className="text-xs px-2 py-1 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded font-mono">
+                          Event {e.eventId}
+                        </span>
+                      )}
+                      {hasCorrelation && (
+                        <span className="text-xs px-2 py-1 bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200 rounded-full flex items-center gap-1">
+                          🔗 Correlated
+                        </span>
+                      )}
                       {status && (
                         <span className="text-xs font-medium text-blue-600 dark:text-blue-400">{status}</span>
                       )}
+                      <span className="text-xs text-gray-400 dark:text-gray-500 font-mono ml-auto">
+                        {e.id.substring(0, 8)}...
+                      </span>
                     </div>
-                    <p className="text-sm text-gray-700 dark:text-gray-300 mb-3">{e.description || '—'}</p>
-                    <div className="flex flex-wrap items-center gap-6 text-xs text-gray-500 dark:text-gray-400">
+                    
+                    {/* Message */}
+                    <p className="text-sm text-gray-700 dark:text-gray-300 mb-3">{e.message || '—'}</p>
+                    
+                    {/* Details Grid */}
+                    <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-3 text-xs">
+                      <div>
+                        <span className="text-gray-500 dark:text-gray-400">Machine:</span>{' '}
+                        <span className="text-gray-900 dark:text-gray-100 font-medium">{e.machine || '—'}</span>
+                      </div>
+                      <div>
+                        <span className="text-gray-500 dark:text-gray-400">User:</span>{' '}
+                        <span className="text-gray-900 dark:text-gray-100 font-medium">{e.user || '—'}</span>
+                      </div>
+                      <div>
+                        <span className="text-gray-500 dark:text-gray-400">Source:</span>{' '}
+                        <span className="text-gray-900 dark:text-gray-100 font-medium">{e.source || '—'}</span>
+                      </div>
+                    </div>
+                    
+                    {/* MITRE Techniques */}
+                    {e.mitreAttack && e.mitreAttack.length > 0 && (
+                      <div className="mb-3">
+                        <span className="text-xs text-gray-500 dark:text-gray-400 mr-2">MITRE:</span>
+                        <div className="inline-flex flex-wrap gap-1">
+                          {e.mitreAttack.map((technique, idx) => (
+                            <span
+                              key={idx}
+                              className="text-xs px-2 py-1 bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200 rounded"
+                            >
+                              {technique}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                    
+                    {/* Scores Row */}
+                    <div className="flex flex-wrap items-center gap-4 text-xs text-gray-500 dark:text-gray-400">
                       <div className="flex items-center gap-2">
                         <span className="h-1.5 w-1.5 rounded-full bg-gray-400"></span>
                         {new Date(e.timestamp || Date.now()).toLocaleString()}
                       </div>
-                      {e.source && <div>Source: <span className="text-gray-700 dark:text-gray-300 font-medium">{e.source}</span></div>}
-                      {e.target && <div>Target: <span className="text-gray-700 dark:text-gray-300 font-medium">{e.target}</span></div>}
-                      <div>Risk: <span className={`${(e.riskScore || 0) >= 75 ? 'text-red-600' : (e.riskScore || 0) >= 50 ? 'text-yellow-600' : 'text-green-600'} font-semibold`}>{e.riskScore ?? 0}/100</span></div>
+                      <div>
+                        Confidence: <span className="text-gray-900 dark:text-gray-100 font-semibold">{Math.round(e.confidence || 0)}%</span>
+                      </div>
+                      {hasCorrelation && (
+                        <div>
+                          Correlation: <span className="text-blue-600 dark:text-blue-400 font-semibold">{(e.correlationScore || 0).toFixed(2)}</span>
+                        </div>
+                      )}
+                      {(e.burstScore || 0) > 0 && (
+                        <div>
+                          Burst: <span className="text-orange-600 dark:text-orange-400 font-semibold">{(e.burstScore || 0).toFixed(2)}</span>
+                        </div>
+                      )}
+                      {(e.anomalyScore || 0) > 0 && (
+                        <div>
+                          Anomaly: <span className="text-red-600 dark:text-red-400 font-semibold">{(e.anomalyScore || 0).toFixed(2)}</span>
+                        </div>
+                      )}
                     </div>
+                    
+                    {/* IP Addresses */}
+                    {e.ipAddresses && e.ipAddresses.length > 0 && (
+                      <div className="mt-2 text-xs">
+                        <span className="text-gray-500 dark:text-gray-400 mr-2">IPs:</span>
+                        {e.ipAddresses.slice(0, 3).map((ip, idx) => (
+                          <span key={idx} className="text-gray-700 dark:text-gray-300 font-mono mr-2">{ip}</span>
+                        ))}
+                        {e.ipAddresses.length > 3 && (
+                          <span className="text-gray-500">+{e.ipAddresses.length - 3} more</span>
+                        )}
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>

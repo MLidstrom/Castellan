@@ -216,7 +216,7 @@ public class WindowsEventLogWatcherService : BackgroundService
         // This automatically triggers SignalR broadcasting via SignalRSecurityEventStore
         using var scope = _serviceScopeFactory.CreateScope();
         var securityEventStore = scope.ServiceProvider.GetRequiredService<ISecurityEventStore>();
-        securityEventStore.AddSecurityEvent(securityEvent);
+        await securityEventStore.AddSecurityEventAsync(securityEvent, cancellationToken);
 
         // Trigger immediate dashboard broadcast if enabled
         if (_options.ImmediateDashboardBroadcast)

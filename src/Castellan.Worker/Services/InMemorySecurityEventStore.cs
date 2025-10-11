@@ -23,7 +23,7 @@ public class InMemorySecurityEventStore : ISecurityEventStore
             _retentionOptions.GetRetentionPeriod());
     }
 
-    public void AddSecurityEvent(SecurityEvent securityEvent)
+    public Task AddSecurityEventAsync(SecurityEvent securityEvent, CancellationToken cancellationToken = default)
     {
         // Assign a unique ID if not already set
         if (string.IsNullOrEmpty(securityEvent.Id))
@@ -32,12 +32,20 @@ public class InMemorySecurityEventStore : ISecurityEventStore
         }
 
         _events.Enqueue(securityEvent);
-        
+
         // Cleanup old events: enforce both count limit and time-based retention
         CleanupOldEvents();
 
-        _logger.LogDebug("Added security event {Id}: {EventType} ({RiskLevel})", 
+        _logger.LogDebug("Added security event {Id}: {EventType} ({RiskLevel})",
             securityEvent.Id, securityEvent.EventType, securityEvent.RiskLevel);
+
+        return Task.CompletedTask;
+    }
+
+    public void AddSecurityEvent(SecurityEvent securityEvent)
+    {
+        // Delegate to async version for backward compatibility
+        AddSecurityEventAsync(securityEvent).GetAwaiter().GetResult();
     }
 
     public IEnumerable<SecurityEvent> GetSecurityEvents(int page = 1, int pageSize = 10)

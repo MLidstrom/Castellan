@@ -104,27 +104,24 @@ public sealed class Pipeline(
     /// <summary>
     /// Acquire semaphore permission with timeout and metrics tracking
     /// </summary>
-    private Task<bool> TryAcquireSemaphoreAsync(CancellationToken ct)
+    private async Task<bool> TryAcquireSemaphoreAsync(CancellationToken ct)
     {
         // If semaphore is disabled, return true but indicate no acquisition needed
         var semaphore = _processingSemaphore;
         if (semaphore == null)
         {
-            return Task.FromResult(true);
+            return true;
         }
-        
-        // Try to acquire the semaphore (simplified for now - no timeout logic)
+
+        // Use proper async WaitAsync with timeout (Sprint 2 Phase 3 optimization)
+        var timeout = TimeSpan.FromMilliseconds(_pipelineOptions.CurrentValue.SemaphoreTimeoutMs);
         try
         {
-            if (semaphore.Wait(0)) // Non-blocking attempt
-            {
-                return Task.FromResult(true);
-            }
-            return Task.FromResult(false);
+            return await semaphore.WaitAsync(timeout, ct);
         }
-        catch
+        catch (OperationCanceledException)
         {
-            return Task.FromResult(false);
+            return false;
         }
     }
     
@@ -415,35 +412,26 @@ public sealed class Pipeline(
                 eventCount++;
                 queueDepth++; // Simplified queue depth tracking
                 
-                // Try to acquire semaphore permission for throttling
+                // Try to acquire semaphore permission for throttling (Sprint 2 Phase 3 - simplified logic)
                 // Only set semaphoreAcquired if we actually have a semaphore to release later
                 var hasSemaphore = _processingSemaphore != null;
                 if (hasSemaphore)
                 {
                     semaphoreAcquired = await TryAcquireSemaphoreAsync(ct);
-                    
+
                     if (!semaphoreAcquired)
                     {
                         var options = _pipelineOptions.CurrentValue;
                         if (options.SkipOnThrottleTimeout)
                         {
                             log.LogDebug("Skipping event {EventId} due to throttling timeout", e.EventId);
-                            queueDepth--;
-                            continue;
                         }
                         else
                         {
-                            // Wait and retry (with exponential backoff)
-                            await Task.Delay(1000, ct); // Simple delay, could be improved with exponential backoff
-                            semaphoreAcquired = await TryAcquireSemaphoreAsync(ct);
-                            
-                            if (!semaphoreAcquired)
-                            {
-                                log.LogWarning("Dropping event {EventId} due to persistent throttling", e.EventId);
-                                queueDepth--;
-                                continue;
-                            }
+                            log.LogWarning("Dropping event {EventId} due to throttling timeout", e.EventId);
                         }
+                        queueDepth--;
+                        continue;
                     }
                 }
                 else
@@ -774,8 +762,8 @@ public sealed class Pipeline(
             return; // Skip this event entirely
         }
 
-        // Store the security event for API access
-        securityEventStore.AddSecurityEvent(securityEvent);
+        // Store the security event for API access (async for performance)
+        await securityEventStore.AddSecurityEventAsync(securityEvent, ct);
         
         // YARA Integration: Scan files if auto-scanning is enabled
         await PerformYaraScanIfEnabled(securityEvent, ct);

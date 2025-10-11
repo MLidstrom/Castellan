@@ -292,42 +292,67 @@ public class YaraScanService : BackgroundService, IYaraScanService
             
             // Calculate file hash for match record
             var fileHash = CalculateHash(buffer);
-            
-            // Perform real YARA scanning using dnYara
+
+            // Get compiled rules reference (Sprint 3 Phase 4: Minimize lock scope for concurrent scanning)
+            dnYara.CompiledRules? compiledRules;
             lock (_yaraLock)
             {
-                if (_compiledRules != null)
+                compiledRules = _compiledRules;
+            }
+
+            // Perform real YARA scanning OUTSIDE the lock for true concurrency
+            if (compiledRules != null)
+            {
+                try
                 {
+                    // Create scanner and scan the buffer
+                    var scanner = new dnYara.Scanner();
+
+                    // Sprint 3 Phase 4: Use ScanMemory for binary scanning (avoids UTF-8 conversion overhead)
+                    // Try binary scanning first, fall back to string scanning if not available
+                    IEnumerable<object> scanResults;
                     try
                     {
-                        // Create scanner and scan the buffer
-                        var scanner = new dnYara.Scanner();
-                        
-                        // Convert buffer to string for scanning (YARA can handle binary data but we'll convert for text-based rules)
-                        var content = Encoding.UTF8.GetString(buffer);
-                        var scanResults = scanner.ScanString(content, _compiledRules);
-                        
-                        // Process scan results (collect them first, then process outside the lock)
-                        var scanResultsList = new List<(object result, string? fileName, string fileHash, long elapsedMs)>();
-                        foreach (var result in scanResults)
+                        // Attempt to use ScanMemory for binary data (more efficient)
+                        var scanMemoryMethod = scanner.GetType().GetMethod("ScanMemory");
+                        if (scanMemoryMethod != null)
                         {
-                            scanResultsList.Add((result, fileName, fileHash, stopwatch.ElapsedMilliseconds));
+                            scanResults = (IEnumerable<object>)scanMemoryMethod.Invoke(scanner, new object[] { buffer, compiledRules })!;
                         }
-                        
-                        // Store results for processing outside lock
-                        foreach (var (result, fName, fHash, elapsed) in scanResultsList)
+                        else
                         {
-                            var yaraMatch = CreateYaraMatchFromScanResult(result, fName, fHash, elapsed);
-                            if (yaraMatch != null)
-                            {
-                                matches.Add(yaraMatch);
-                            }
+                            // Fallback to string scanning
+                            var content = Encoding.UTF8.GetString(buffer);
+                            scanResults = scanner.ScanString(content, compiledRules);
                         }
                     }
-                    catch (Exception ex)
+                    catch
                     {
-                        _logger.LogError(ex, "Error during YARA scan: {FileName} - {Error}", fileName ?? "stream", ex.Message);
+                        // If reflection fails, use string scanning as fallback
+                        var content = Encoding.UTF8.GetString(buffer);
+                        scanResults = scanner.ScanString(content, compiledRules);
                     }
+
+                    // Process scan results
+                    var scanResultsList = new List<(object result, string? fileName, string fileHash, long elapsedMs)>();
+                    foreach (var result in scanResults)
+                    {
+                        scanResultsList.Add((result, fileName, fileHash, stopwatch.ElapsedMilliseconds));
+                    }
+
+                    // Create match objects from scan results
+                    foreach (var (result, fName, fHash, elapsed) in scanResultsList)
+                    {
+                        var yaraMatch = CreateYaraMatchFromScanResult(result, fName, fHash, elapsed);
+                        if (yaraMatch != null)
+                        {
+                            matches.Add(yaraMatch);
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Error during YARA scan: {FileName} - {Error}", fileName ?? "stream", ex.Message);
                 }
             }
             

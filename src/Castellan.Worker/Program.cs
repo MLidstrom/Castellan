@@ -4,6 +4,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.EntityFrameworkCore;
 using Castellan.Worker; // for Pipeline
 using Castellan.Worker.Abstractions;
 using Castellan.Worker.Configuration;
@@ -162,6 +163,28 @@ using (var scope = app.Services.CreateScope())
         var schemaUpdateService = scope.ServiceProvider.GetRequiredService<DatabaseSchemaUpdateService>();
         await schemaUpdateService.EnsureTablesExistAsync();
         Console.WriteLine("Search tables schema validated");
+
+        // Apply database performance enhancements (v0.7.0)
+        var loggerFactory = scope.ServiceProvider.GetRequiredService<ILoggerFactory>();
+        var perfLogger = loggerFactory.CreateLogger("DatabasePerformance");
+
+        try
+        {
+            await DatabasePerformanceEnhancements.ApplyPerformanceEnhancementsAsync(context, perfLogger);
+
+            // Additional runtime optimizations
+            await context.Database.ExecuteSqlRawAsync("PRAGMA busy_timeout=5000;");
+            await context.Database.ExecuteSqlRawAsync("PRAGMA wal_autocheckpoint=1000;");
+
+            perfLogger.LogInformation("Database performance enhancements applied successfully");
+            Console.WriteLine("Database performance enhancements applied");
+        }
+        catch (Exception perfEx)
+        {
+            perfLogger.LogError(perfEx, "Failed to apply database performance enhancements");
+            Console.WriteLine($"Warning: Could not apply database performance enhancements: {perfEx.Message}");
+            // Don't fail startup, continue with default settings
+        }
     }
     catch (Exception ex)
     {

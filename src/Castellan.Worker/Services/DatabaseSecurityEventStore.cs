@@ -21,7 +21,7 @@ public class DatabaseSecurityEventStore : ISecurityEventStore
         _logger = logger;
     }
 
-    public void AddSecurityEvent(SecurityEvent securityEvent)
+    public async Task AddSecurityEventAsync(SecurityEvent securityEvent, CancellationToken cancellationToken = default)
     {
         try
         {
@@ -29,7 +29,7 @@ public class DatabaseSecurityEventStore : ISecurityEventStore
             var entity = ConvertToEntity(securityEvent);
 
             _context.SecurityEvents.Add(entity);
-            _context.SaveChanges();
+            await _context.SaveChangesAsync(cancellationToken);
 
             _logger.LogDebug("Added security event to database {Id}: {EventType} ({RiskLevel})",
                 securityEvent.Id, securityEvent.EventType, securityEvent.RiskLevel);
@@ -39,6 +39,12 @@ public class DatabaseSecurityEventStore : ISecurityEventStore
             _logger.LogError(ex, "Failed to add security event {Id} to database", securityEvent.Id);
             throw;
         }
+    }
+
+    public void AddSecurityEvent(SecurityEvent securityEvent)
+    {
+        // Delegate to async version for backward compatibility
+        AddSecurityEventAsync(securityEvent).GetAwaiter().GetResult();
     }
 
     public IEnumerable<SecurityEvent> GetSecurityEvents(int page = 1, int pageSize = 10)

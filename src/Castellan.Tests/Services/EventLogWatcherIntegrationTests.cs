@@ -204,10 +204,16 @@ public class MockSecurityEventStore : ISecurityEventStore
     public ConcurrentBag<SecurityEvent> AddedEvents { get; } = new();
     public int AddCallCount { get; private set; }
 
-    public void AddSecurityEvent(SecurityEvent securityEvent)
+    public Task AddSecurityEventAsync(SecurityEvent securityEvent, CancellationToken cancellationToken = default)
     {
         AddCallCount++;
         AddedEvents.Add(securityEvent);
+        return Task.CompletedTask;
+    }
+
+    public void AddSecurityEvent(SecurityEvent securityEvent)
+    {
+        AddSecurityEventAsync(securityEvent).GetAwaiter().GetResult();
     }
 
     public IEnumerable<SecurityEvent> GetSecurityEvents(int page = 1, int pageSize = 10)

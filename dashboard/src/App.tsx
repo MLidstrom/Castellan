@@ -3,7 +3,12 @@ import { MainLayout } from './components/layout/MainLayout';
 import { DashboardPage } from './pages/Dashboard';
 import { LoginPage } from './pages/Login';
 import { SecurityEventsPage } from './pages/SecurityEvents';
+import { SecurityEventDetailPage } from './pages/SecurityEventDetail';
 import { TimelinePage } from './pages/Timeline';
+import { MitreAttackPage } from './pages/MitreAttack';
+import { YaraRulesPage } from './pages/YaraRules';
+import { SystemStatusPage } from './pages/SystemStatus';
+import { ConfigurationPage } from './pages/Configuration';
 
 export default function App() {
   return (
@@ -16,7 +21,12 @@ export default function App() {
             <Routes>
               <Route path="/" element={<DashboardPage />} />
               <Route path="/security-events" element={<SecurityEventsPage />} />
+              <Route path="/security-events/:id" element={<SecurityEventDetailPage />} />
               <Route path="/timeline" element={<TimelinePage />} />
+              <Route path="/mitre-attack" element={<MitreAttackPage />} />
+              <Route path="/yara-rules" element={<YaraRulesPage />} />
+              <Route path="/system-status" element={<SystemStatusPage />} />
+              <Route path="/configuration" element={<ConfigurationPage />} />
             </Routes>
           </MainLayout>
         }

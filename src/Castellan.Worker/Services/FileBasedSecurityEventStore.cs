@@ -45,7 +45,7 @@ public class FileBasedSecurityEventStore : ISecurityEventStore, IDisposable
         _logger.LogInformation("FileBasedSecurityEventStore initialized with data file: {DataFilePath}", _dataFilePath);
     }
 
-    public void AddSecurityEvent(SecurityEvent securityEvent)
+    public Task AddSecurityEventAsync(SecurityEvent securityEvent, CancellationToken cancellationToken = default)
     {
         // Assign a unique ID if not already set
         if (string.IsNullOrEmpty(securityEvent.Id))
@@ -55,12 +55,20 @@ public class FileBasedSecurityEventStore : ISecurityEventStore, IDisposable
 
         _events.Enqueue(securityEvent);
         _isDirty = true;
-        
+
         // Cleanup old events: enforce time-based retention
         CleanupOldEvents();
 
-        _logger.LogDebug("Added security event {Id}: {EventType} ({RiskLevel})", 
+        _logger.LogDebug("Added security event {Id}: {EventType} ({RiskLevel})",
             securityEvent.Id, securityEvent.EventType, securityEvent.RiskLevel);
+
+        return Task.CompletedTask;
+    }
+
+    public void AddSecurityEvent(SecurityEvent securityEvent)
+    {
+        // Delegate to async version for backward compatibility
+        AddSecurityEventAsync(securityEvent).GetAwaiter().GetResult();
     }
 
     public IEnumerable<SecurityEvent> GetSecurityEvents(int page = 1, int pageSize = 10)

@@ -25,13 +25,13 @@ public class SignalRSecurityEventStore : ISecurityEventStore
         _logger = logger;
     }
 
-    public void AddSecurityEvent(SecurityEvent securityEvent)
+    public async Task AddSecurityEventAsync(SecurityEvent securityEvent, CancellationToken cancellationToken = default)
     {
         // Add to the underlying store
-        _innerStore.AddSecurityEvent(securityEvent);
+        await _innerStore.AddSecurityEventAsync(securityEvent, cancellationToken);
 
-        // Broadcast the new event via SignalR
-        Task.Run(async () =>
+        // Broadcast the new event via SignalR (fire-and-forget)
+        _ = Task.Run(async () =>
         {
             try
             {
@@ -80,7 +80,13 @@ public class SignalRSecurityEventStore : ISecurityEventStore
             {
                 _logger.LogError(ex, "Failed to broadcast security event {Id}", securityEvent.Id);
             }
-        });
+        }, cancellationToken);
+    }
+
+    public void AddSecurityEvent(SecurityEvent securityEvent)
+    {
+        // Delegate to async version for backward compatibility
+        AddSecurityEventAsync(securityEvent).GetAwaiter().GetResult();
     }
 
     public IEnumerable<SecurityEvent> GetSecurityEvents(int page = 1, int pageSize = 10)

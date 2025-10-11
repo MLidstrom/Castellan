@@ -19,6 +19,70 @@ export const Api = {
     request(`/timeline?granularity=${encodeURIComponent(granularity)}&from=${encodeURIComponent(fromISO)}&to=${encodeURIComponent(toISO)}`),
   getTimelineStats: (fromISO: string, toISO: string) =>
     request(`/timeline/stats?startTime=${encodeURIComponent(fromISO)}&endTime=${encodeURIComponent(toISO)}`),
+  
+  // MITRE ATT&CK API methods
+  getMitreTechniques: (params: {
+    page?: number;
+    perPage?: number;
+    search?: string;
+    tactic?: string;
+    platform?: string;
+    sort?: string;
+    order?: string;
+  } = {}) => {
+    const queryParams = new URLSearchParams();
+    if (params.page) queryParams.append('page', params.page.toString());
+    if (params.perPage) queryParams.append('perPage', params.perPage.toString());
+    if (params.search) queryParams.append('search', params.search);
+    if (params.tactic) queryParams.append('tactic', params.tactic);
+    if (params.platform) queryParams.append('platform', params.platform);
+    if (params.sort) queryParams.append('sort', params.sort);
+    if (params.order) queryParams.append('order', params.order);
+    
+    return request(`/mitre/techniques?${queryParams.toString()}`);
+  },
+  getMitreStatistics: () => request(`/mitre/statistics`),
+  importMitreTechniques: () => request(`/mitre/import`, { method: 'POST' }),
+  
+  // YARA Rules API methods
+  getYaraRules: (params: {
+    page?: number;
+    perPage?: number;
+    search?: string;
+    category?: string;
+    threatLevel?: string;
+    isValid?: boolean;
+    isEnabled?: boolean;
+  } = {}) => {
+    const queryParams = new URLSearchParams();
+    if (params.page) queryParams.append('page', params.page.toString());
+    if (params.perPage) queryParams.append('perPage', params.perPage.toString());
+    if (params.search) queryParams.append('q', params.search);
+    if (params.category) queryParams.append('category', params.category);
+    if (params.threatLevel) queryParams.append('threatLevel', params.threatLevel);
+    if (params.isValid !== undefined) queryParams.append('isValid', params.isValid.toString());
+    if (params.isEnabled !== undefined) queryParams.append('isEnabled', params.isEnabled.toString());
+    
+    return request(`/yara-rules?${queryParams.toString()}`);
+  },
+  getYaraStatistics: () => request(`/yara-rules/statistics`),
+  getYaraStatus: () => request(`/yara-rules/status`),
+  toggleYaraRule: (id: number, enabled: boolean) => 
+    request(`/yara-rules/${id}/toggle`, { 
+      method: 'POST', 
+      body: JSON.stringify({ isEnabled: enabled }) 
+    }),
+  deleteYaraRule: (id: number) => request(`/yara-rules/${id}`, { method: 'DELETE' }),
+  importYaraRules: (data: {
+    ruleContent: string;
+    category: string;
+    author: string;
+    skipDuplicates: boolean;
+    enableByDefault: boolean;
+  }) => request(`/yara-rules/import`, { 
+    method: 'POST', 
+    body: JSON.stringify(data) 
+  }),
 };
 
 

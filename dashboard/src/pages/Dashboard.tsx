@@ -6,11 +6,19 @@ import { ThreatDistribution } from '../shared/ThreatDistribution';
 import { AlertTriangle, Shield, Activity, Search, TrendingUp, Server, Zap } from 'lucide-react';
 import { Api } from '../services/api';
 import { useAuth } from '../hooks/useAuth';
+import { useNavigate } from 'react-router-dom';
 import { SignalRService } from '../services/signalr';
 
 export function DashboardPage() {
   const { token, loading } = useAuth();
+  const navigate = useNavigate();
   const queryClient = useQueryClient();
+
+  useEffect(() => {
+    if (!loading && !token) {
+      navigate('/login');
+    }
+  }, [token, loading, navigate]);
 
   const dashboardQuery = useQuery({
     queryKey: ['dashboard', 'consolidated', '24h'],
