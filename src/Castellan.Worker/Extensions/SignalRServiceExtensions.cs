@@ -32,6 +32,9 @@ public static class SignalRServiceExtensions
         // Add system metrics background service for SignalR broadcasting
         services.AddHostedService<SystemMetricsBackgroundService>();
 
+        // Add event cleanup service to maintain 24-hour rolling window
+        services.AddHostedService<EventCleanupService>();
+
         return services;
     }
 }

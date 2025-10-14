@@ -6,6 +6,14 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const headers: Record<string, string> = { 'Content-Type': 'application/json', ...(init?.headers as any || {}) };
   if (token) headers.Authorization = `Bearer ${token}`;
   const res = await fetch(`${API_URL}${path}`, { ...init, headers });
+
+  // Handle 401 Unauthorized - clear token and redirect to login
+  if (res.status === 401) {
+    AuthService.logout();
+    window.location.href = '/login';
+    throw new Error('Unauthorized - redirecting to login');
+  }
+
   if (!res.ok) throw new Error(`API ${res.status}: ${await res.text()}`);
   return res.json();
 }
@@ -66,7 +74,6 @@ export const Api = {
     return request(`/yara-rules?${queryParams.toString()}`);
   },
   getYaraStatistics: () => request(`/yara-rules/statistics`),
-  getYaraStatus: () => request(`/yara-rules/status`),
   toggleYaraRule: (id: number, enabled: boolean) => 
     request(`/yara-rules/${id}/toggle`, { 
       method: 'POST', 
@@ -79,10 +86,31 @@ export const Api = {
     author: string;
     skipDuplicates: boolean;
     enableByDefault: boolean;
-  }) => request(`/yara-rules/import`, { 
-    method: 'POST', 
-    body: JSON.stringify(data) 
+  }) => request(`/yara-rules/import`, {
+    method: 'POST',
+    body: JSON.stringify(data)
   }),
+
+  // Threat Scanner API methods
+  getThreatScans: (params: {
+    page?: number;
+    perPage?: number;
+    sort?: string;
+    order?: string;
+  } = {}) => {
+    const queryParams = new URLSearchParams();
+    if (params.page) queryParams.append('page', params.page.toString());
+    if (params.perPage) queryParams.append('perPage', params.perPage.toString());
+    if (params.sort) queryParams.append('sort', params.sort);
+    if (params.order) queryParams.append('order', params.order);
+
+    return request(`/threat-scanner?${queryParams.toString()}`);
+  },
+  getScanProgress: () => request(`/threat-scanner/progress`),
+  startQuickScan: () => request(`/threat-scanner/quick-scan?async=true`, { method: 'POST' }),
+  startFullScan: () => request(`/threat-scanner/full-scan?async=true`, { method: 'POST' }),
+  cancelScan: () => request(`/threat-scanner/cancel`, { method: 'POST' }),
+  getLastScanResult: () => request(`/threat-scanner/last-result`),
 };
 
 

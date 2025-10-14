@@ -24,7 +24,8 @@ public class ThreatScanConfigurationService : IThreatScanConfigurationService
         _jsonOptions = new JsonSerializerOptions
         {
             WriteIndented = true,
-            PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+            PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+            PropertyNameCaseInsensitive = true  // Add case-insensitive deserialization
         };
 
         // Ensure config directory exists
@@ -39,27 +40,40 @@ public class ThreatScanConfigurationService : IThreatScanConfigurationService
     {
         try
         {
+            _logger.LogInformation("[CONFIG] GetConfigurationAsync called, path: {Path}", _configPath);
+
             if (!File.Exists(_configPath))
             {
-                _logger.LogInformation("Threat scan configuration file not found, using defaults");
+                _logger.LogWarning("[CONFIG] File does not exist at {Path}, returning defaults (Enabled=true)", _configPath);
                 return new ThreatScanOptions();
             }
 
             var json = await File.ReadAllTextAsync(_configPath);
-            var config = JsonSerializer.Deserialize<ThreatScanOptions>(json, _jsonOptions);
+            _logger.LogInformation("[CONFIG] Read JSON (length: {Length}): {Json}", json.Length, json);
 
-            if (config == null)
+            try
             {
-                _logger.LogWarning("Failed to deserialize threat scan configuration, using defaults");
+                var config = JsonSerializer.Deserialize<ThreatScanOptions>(json, _jsonOptions);
+
+                if (config == null)
+                {
+                    _logger.LogError("[CONFIG] Deserialization returned null! Returning defaults (Enabled=true)");
+                    return new ThreatScanOptions();
+                }
+
+                _logger.LogInformation("[CONFIG] Successfully deserialized - Enabled={Enabled}, Interval={Interval}",
+                    config.Enabled, config.ScheduledScanInterval);
+                return config;
+            }
+            catch (JsonException jsonEx)
+            {
+                _logger.LogError(jsonEx, "[CONFIG] JSON deserialization failed! Returning defaults (Enabled=true)");
                 return new ThreatScanOptions();
             }
-
-            _logger.LogDebug("Loaded threat scan configuration from {ConfigPath}", _configPath);
-            return config;
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error loading threat scan configuration from {ConfigPath}", _configPath);
+            _logger.LogError(ex, "[CONFIG] Unexpected error loading config from {Path}, returning defaults (Enabled=true)", _configPath);
             return new ThreatScanOptions();
         }
     }

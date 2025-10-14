@@ -46,9 +46,9 @@ public class DashboardDataController : ControllerBase
             stopwatch.Stop();
 
             _logger.LogInformation("Returned consolidated dashboard data via REST API in {ElapsedMs}ms. " +
-                                 "Events: {EventCount}, Components: {ComponentCount}, Scans: {ScanCount}",
+                                 "Events: {EventCount}, Components: {ComponentCount}, Scans: {ScanCount}, YARA: {YaraRules}",
                 stopwatch.ElapsedMilliseconds, data.SecurityEvents.TotalEvents,
-                data.SystemStatus.TotalComponents, data.ThreatScanner.TotalScans);
+                data.SystemStatus.TotalComponents, data.ThreatScanner.TotalScans, data.Yara.EnabledRules);
 
             return Ok(data);
         }

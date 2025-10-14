@@ -25,9 +25,9 @@ export function TimelinePage() {
       navigate('/login');
     }
   }, [token, loading, navigate]);
-  const [granularity, setGranularity] = useState<Granularity>('day');
+  const [granularity, setGranularity] = useState<Granularity>('hour');
   const [from, setFrom] = useState<Date>(() => {
-    const d = new Date(); d.setDate(d.getDate()-7); return d;
+    const d = new Date(); d.setHours(d.getHours()-24); return d;
   });
   const [to, setTo] = useState<Date>(() => new Date());
 
@@ -60,18 +60,25 @@ export function TimelinePage() {
     const s: any = statsQuery.data || {};
     return s.total ?? s.totalEvents ?? buckets.reduce((sum, b) => sum + b.count, 0);
   })();
-  const { high, medium, low } = (() => {
+  const riskLevelStats = (() => {
     const s: any = statsQuery.data || {};
-    const counts: any = (s.riskLevelCounts
-      || (s.securityEvents && s.securityEvents.riskLevelCounts)
-      || s.counts
-      || s.risk
-      || {});
+    const riskLevels: any = s.eventsByRiskLevel || {};
     return {
-      high: s.high ?? s.highRisk ?? counts.HIGH ?? counts.high ?? 0,
-      medium: s.medium ?? s.mediumRisk ?? counts.MEDIUM ?? counts.medium ?? 0,
-      low: s.low ?? s.lowRisk ?? counts.LOW ?? counts.low ?? 0,
+      critical: riskLevels.Critical ?? riskLevels.critical ?? 0,
+      high: riskLevels.High ?? riskLevels.high ?? 0,
+      medium: riskLevels.Medium ?? riskLevels.medium ?? 0,
+      low: riskLevels.Low ?? riskLevels.low ?? 0,
+      info: riskLevels.Info ?? riskLevels.info ?? 0,
     };
+  })();
+
+  const topEventTypes = (() => {
+    const s: any = statsQuery.data || {};
+    const types: any = s.eventsByType || {};
+    return Object.entries(types)
+      .map(([type, count]) => ({ type, count: count as number }))
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 5);
   })();
 
   // Simple inputs; can be replaced with date pickers later
@@ -86,7 +93,7 @@ export function TimelinePage() {
         <div className="px-8 py-6 flex items-center justify-between">
           <div>
             <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Timeline</h1>
-            <p className="text-gray-600 dark:text-gray-400 mt-1">Security events over time</p>
+            <p className="text-gray-600 dark:text-gray-400 mt-1">Security events over time (24-hour rolling window)</p>
           </div>
           <div className="flex items-center gap-2 text-green-600 dark:text-green-400">
             <div className="h-2 w-2 rounded-full bg-green-500 animate-pulse"></div>
@@ -146,12 +153,83 @@ export function TimelinePage() {
           <div>
             <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6">
               <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">Summary</h3>
-              <div className="space-y-2 text-sm">
-                <div className="flex justify-between"><span className="text-gray-600 dark:text-gray-400">Total Events:</span><span className="text-gray-900 dark:text-gray-100 font-medium">{totalEvents}</span></div>
-                <div className="flex justify-between"><span className="text-gray-600 dark:text-gray-400">High Risk:</span><span className="text-gray-900 dark:text-gray-100 font-medium">{high || '—'}</span></div>
-                <div className="flex justify-between"><span className="text-gray-600 dark:text-gray-400">Medium Risk:</span><span className="text-gray-900 dark:text-gray-100 font-medium">{medium || '—'}</span></div>
-                <div className="flex justify-between"><span className="text-gray-600 dark:text-gray-400">Low Risk:</span><span className="text-gray-900 dark:text-gray-100 font-medium">{low || '—'}</span></div>
-              </div>
+              {statsQuery.isLoading ? (
+                <div className="space-y-3">
+                  {[...Array(4)].map((_, i) => (
+                    <div key={i} className="h-5 rounded bg-gray-200 dark:bg-gray-700 animate-pulse" />
+                  ))}
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  <div>
+                    <div className="flex justify-between mb-3">
+                      <span className="text-sm font-semibold text-gray-700 dark:text-gray-300">Total Events</span>
+                      <span className="text-lg font-bold text-gray-900 dark:text-gray-100">{totalEvents.toLocaleString()}</span>
+                    </div>
+                    <div className="space-y-2 text-sm">
+                      {riskLevelStats.critical > 0 && (
+                        <div className="flex justify-between items-center">
+                          <span className="flex items-center gap-2">
+                            <span className="h-2 w-2 rounded-full bg-red-500"></span>
+                            <span className="text-gray-600 dark:text-gray-400">Critical</span>
+                          </span>
+                          <span className="text-gray-900 dark:text-gray-100 font-medium">{riskLevelStats.critical}</span>
+                        </div>
+                      )}
+                      {riskLevelStats.high > 0 && (
+                        <div className="flex justify-between items-center">
+                          <span className="flex items-center gap-2">
+                            <span className="h-2 w-2 rounded-full bg-orange-500"></span>
+                            <span className="text-gray-600 dark:text-gray-400">High</span>
+                          </span>
+                          <span className="text-gray-900 dark:text-gray-100 font-medium">{riskLevelStats.high}</span>
+                        </div>
+                      )}
+                      {riskLevelStats.medium > 0 && (
+                        <div className="flex justify-between items-center">
+                          <span className="flex items-center gap-2">
+                            <span className="h-2 w-2 rounded-full bg-yellow-500"></span>
+                            <span className="text-gray-600 dark:text-gray-400">Medium</span>
+                          </span>
+                          <span className="text-gray-900 dark:text-gray-100 font-medium">{riskLevelStats.medium}</span>
+                        </div>
+                      )}
+                      {riskLevelStats.low > 0 && (
+                        <div className="flex justify-between items-center">
+                          <span className="flex items-center gap-2">
+                            <span className="h-2 w-2 rounded-full bg-green-500"></span>
+                            <span className="text-gray-600 dark:text-gray-400">Low</span>
+                          </span>
+                          <span className="text-gray-900 dark:text-gray-100 font-medium">{riskLevelStats.low}</span>
+                        </div>
+                      )}
+                      {riskLevelStats.info > 0 && (
+                        <div className="flex justify-between items-center">
+                          <span className="flex items-center gap-2">
+                            <span className="h-2 w-2 rounded-full bg-blue-500"></span>
+                            <span className="text-gray-600 dark:text-gray-400">Info</span>
+                          </span>
+                          <span className="text-gray-900 dark:text-gray-100 font-medium">{riskLevelStats.info}</span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {topEventTypes.length > 0 && (
+                    <div className="pt-4 border-t border-gray-200 dark:border-gray-700">
+                      <div className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">Top Event Types</div>
+                      <div className="space-y-2 text-sm">
+                        {topEventTypes.map(({ type, count }) => (
+                          <div key={type} className="flex justify-between items-center">
+                            <span className="text-gray-600 dark:text-gray-400 truncate mr-2">{type}</span>
+                            <span className="text-gray-900 dark:text-gray-100 font-medium whitespace-nowrap">{count}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           </div>
         </div>

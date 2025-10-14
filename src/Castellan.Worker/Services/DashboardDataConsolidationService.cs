@@ -15,6 +15,7 @@ public interface IDashboardDataConsolidationService
     Task<SecurityEventsSummary> GetSecurityEventsSummaryAsync(string timeRange = "24h");
     Task<SystemStatusSummary> GetSystemStatusSummaryAsync();
     Task<ThreatScannerSummary> GetThreatScannerSummaryAsync();
+    Task<YaraSummary> GetYaraSummaryAsync();
     Task InvalidateCache();
 }
 
@@ -29,6 +30,7 @@ public class DashboardDataConsolidationService : IDashboardDataConsolidationServ
     private readonly ILogger<DashboardDataConsolidationService> _logger;
     private readonly IMemoryCache _cache;
     private readonly IThreatScanHistoryRepository _threatScanRepository;
+    private readonly IYaraRuleStore _yaraRuleStore;
 
     private const string CACHE_KEY_PREFIX = "consolidated_dashboard_data";
     private const int CACHE_DURATION_SECONDS = 30; // Same as current dashboard cache
@@ -37,12 +39,14 @@ public class DashboardDataConsolidationService : IDashboardDataConsolidationServ
         ISecurityEventStore securityEventStore,
         SystemHealthService systemHealthService,
         IThreatScanHistoryRepository threatScanRepository,
+        IYaraRuleStore yaraRuleStore,
         IMemoryCache cache,
         ILogger<DashboardDataConsolidationService> logger)
     {
         _securityEventStore = securityEventStore;
         _systemHealthService = systemHealthService;
         _threatScanRepository = threatScanRepository;
+        _yaraRuleStore = yaraRuleStore;
         _cache = cache;
         _logger = logger;
     }
@@ -66,26 +70,45 @@ public class DashboardDataConsolidationService : IDashboardDataConsolidationServ
         try
         {
             // Fetch all dashboard data in parallel for optimal performance
-            // This is the key optimization - single parallel fetch instead of 4+ sequential API calls
+            // This is the key optimization - single parallel fetch instead of 5+ sequential API calls
             var stopwatch = System.Diagnostics.Stopwatch.StartNew();
 
             var securityEventsTask = GetSecurityEventsSummaryAsync(timeRange);
             var systemStatusTask = GetSystemStatusSummaryAsync();
             var threatScannerTask = GetThreatScannerSummaryAsync();
+            var yaraTask = GetYaraSummaryAsync();
 
-            await Task.WhenAll(securityEventsTask, systemStatusTask, threatScannerTask);
+            await Task.WhenAll(securityEventsTask, systemStatusTask, threatScannerTask, yaraTask);
 
             var securityEvents = securityEventsTask.Result;
             var systemStatus = systemStatusTask.Result;
             var threatScanner = threatScannerTask.Result;
+            var yara = yaraTask.Result;
 
             stopwatch.Stop();
+
+            // Get recent activity for the activity feed (top 8 most recent events)
+            var recentActivityEvents = _securityEventStore
+                .GetSecurityEvents(1, 8)
+                .OrderByDescending(e => e.OriginalEvent.Time)
+                .Select(e => new SecurityEventBasic
+                {
+                    Id = e.Id,
+                    EventType = e.EventType.ToString(),
+                    Timestamp = e.OriginalEvent.Time.DateTime,
+                    RiskLevel = e.RiskLevel,
+                    Source = e.OriginalEvent.Channel,
+                    Machine = e.OriginalEvent.Host ?? string.Empty
+                })
+                .ToList();
 
             var consolidatedData = new ConsolidatedDashboardData
             {
                 SecurityEvents = securityEvents,
                 SystemStatus = systemStatus,
                 ThreatScanner = threatScanner,
+                Yara = yara,
+                RecentActivity = recentActivityEvents,
                 TimeRange = timeRange,
                 LastUpdated = DateTime.UtcNow
             };
@@ -98,8 +121,8 @@ public class DashboardDataConsolidationService : IDashboardDataConsolidationServ
             };
             _cache.Set(cacheKey, consolidatedData, cacheOptions);
 
-            _logger.LogInformation("Successfully consolidated dashboard data in {ElapsedMs}ms. Security Events: {EventCount}, Components: {ComponentCount}, Scans: {ScanCount}",
-                stopwatch.ElapsedMilliseconds, securityEvents.TotalEvents, systemStatus.TotalComponents, threatScanner.TotalScans);
+            _logger.LogInformation("Successfully consolidated dashboard data in {ElapsedMs}ms. Security Events: {EventCount}, Components: {ComponentCount}, Scans: {ScanCount}, YARA Rules: {YaraRules}, Recent Activity: {ActivityCount}",
+                stopwatch.ElapsedMilliseconds, securityEvents.TotalEvents, systemStatus.TotalComponents, threatScanner.TotalScans, yara.EnabledRules, recentActivityEvents.Count);
 
             return consolidatedData;
         }
@@ -140,17 +163,17 @@ public class DashboardDataConsolidationService : IDashboardDataConsolidationServ
             int totalEvents;
             Dictionary<string, int> riskLevelCounts;
 
-            // Total Events should always show all-time count (not filtered by time range)
-            totalEvents = _securityEventStore.GetTotalCount();
-
-            // Risk level counts and recent events respect the time range filter
+            // Total Events and Risk Level Counts respect the time range filter (24h scope)
+            // This provides an accurate view of events within the specified time window
             if (filters != null && filters.Count > 0)
             {
+                totalEvents = _securityEventStore.GetTotalCount(filters);
                 riskLevelCounts = _securityEventStore.GetRiskLevelCounts(filters);
                 recentEvents = _securityEventStore.GetSecurityEvents(1, 25, filters).ToList();
             }
             else
             {
+                totalEvents = _securityEventStore.GetTotalCount();
                 riskLevelCounts = _securityEventStore.GetRiskLevelCounts();
                 recentEvents = _securityEventStore.GetSecurityEvents(1, 25).ToList();
             }
@@ -227,6 +250,7 @@ public class DashboardDataConsolidationService : IDashboardDataConsolidationServ
         try
         {
             var recentScans = await _threatScanRepository.GetScanHistoryAsync(1, 50);
+            var lastScan = recentScans.FirstOrDefault();
 
             // Only return essential fields for dashboard
             var basicScans = recentScans.Take(10).Select(s => new ThreatScanBasic
@@ -239,13 +263,47 @@ public class DashboardDataConsolidationService : IDashboardDataConsolidationServ
                 ThreatsFound = s.ThreatsFound
             }).ToList();
 
+            // Determine last scan result and status for dashboard card
+            string lastScanResult = "N/A";
+            string lastScanStatus = "unknown";
+            string scanType = string.Empty;
+
+            if (lastScan != null)
+            {
+                scanType = lastScan.ScanType.ToString();
+
+                // Map status to result text
+                lastScanResult = lastScan.Status switch
+                {
+                    ThreatScanStatus.Completed => "Clean",
+                    ThreatScanStatus.CompletedWithThreats => "Findings Detected",
+                    ThreatScanStatus.Running => "In Progress",
+                    ThreatScanStatus.Failed => "Failed",
+                    ThreatScanStatus.Cancelled => "Cancelled",
+                    _ => "Unknown"
+                };
+
+                // Map to status for color coding
+                lastScanStatus = lastScan.Status switch
+                {
+                    ThreatScanStatus.Completed => "clean",
+                    ThreatScanStatus.CompletedWithThreats => "threat",
+                    ThreatScanStatus.Running => "running",
+                    ThreatScanStatus.Failed => "error",
+                    _ => "unknown"
+                };
+            }
+
             return new ThreatScannerSummary
             {
                 TotalScans = recentScans.Count(),
                 ActiveScans = recentScans.Count(s => s.Status == ThreatScanStatus.Running),
                 CompletedScans = recentScans.Count(s => s.Status == ThreatScanStatus.Completed),
                 ThreatsFound = recentScans.Sum(s => s.ThreatsFound),
-                LastScanTime = recentScans.FirstOrDefault()?.StartTime ?? DateTime.MinValue,
+                LastScanTime = lastScan?.StartTime ?? DateTime.MinValue,
+                LastScanResult = lastScanResult,
+                LastScanStatus = lastScanStatus,
+                ScanType = scanType,
                 RecentScans = basicScans
             };
         }
@@ -253,6 +311,45 @@ public class DashboardDataConsolidationService : IDashboardDataConsolidationServ
         {
             _logger.LogError(ex, "Error getting threat scanner summary");
             return new ThreatScannerSummary();
+        }
+    }
+
+    /// <summary>
+    /// Get YARA rules summary optimized for dashboard display
+    /// </summary>
+    public async Task<YaraSummary> GetYaraSummaryAsync()
+    {
+        try
+        {
+            var allRules = (await _yaraRuleStore.GetAllRulesAsync()).ToList();
+            var recentMatches = (await _yaraRuleStore.GetRecentMatchesAsync(10)).ToList();
+
+            var basicMatches = recentMatches
+                .OrderByDescending(m => m.MatchTime)
+                .Take(10)
+                .Select(m => new YaraMatchBasic
+                {
+                    Id = m.Id,
+                    RuleName = m.RuleName,
+                    MatchTime = m.MatchTime,
+                    SecurityEventId = m.SecurityEventId ?? string.Empty
+                })
+                .ToList();
+
+            return new YaraSummary
+            {
+                TotalRules = allRules.Count,
+                EnabledRules = allRules.Count(r => r.IsEnabled),
+                DisabledRules = allRules.Count(r => !r.IsEnabled),
+                RecentMatches = recentMatches.Count,
+                LastMatchTime = basicMatches.FirstOrDefault()?.MatchTime ?? DateTime.MinValue,
+                RecentMatchList = basicMatches
+            };
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error getting YARA summary");
+            return new YaraSummary();
         }
     }
 
@@ -268,12 +365,9 @@ public class DashboardDataConsolidationService : IDashboardDataConsolidationServ
         {
             "1h" => now.AddHours(-1),
             "24h" => now.AddHours(-24),
-            "7d" => now.AddDays(-7),
-            "30d" => now.AddDays(-30),
-            _ when timeRange.EndsWith("h", StringComparison.OrdinalIgnoreCase) && int.TryParse(timeRange[..^1], out var hours)
+            // Removed: 7d, 30d - Castellan scope limited to 24 hours for AI pattern detection
+            _ when timeRange.EndsWith("h", StringComparison.OrdinalIgnoreCase) && int.TryParse(timeRange[..^1], out var hours) && hours <= 24
                 => now.AddHours(-hours),
-            _ when timeRange.EndsWith("d", StringComparison.OrdinalIgnoreCase) && int.TryParse(timeRange[..^1], out var days)
-                => now.AddDays(-days),
             _ => null
         };
 
@@ -293,8 +387,8 @@ public class DashboardDataConsolidationService : IDashboardDataConsolidationServ
     /// </summary>
     public async Task InvalidateCache()
     {
-        // Remove all cached dashboard data for all time ranges
-        var cacheKeys = new[] { "24h", "7d", "30d", "1h" };
+        // Remove all cached dashboard data for supported time ranges (24h scope only)
+        var cacheKeys = new[] { "1h", "24h" };
         foreach (var timeRange in cacheKeys)
         {
             _cache.Remove($"{CACHE_KEY_PREFIX}_{timeRange}");

@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   Search,
   Filter,
@@ -125,14 +126,13 @@ const importRules = async (data: {
 const ImportDialog: React.FC<{
   isOpen: boolean;
   onClose: () => void;
-  onImport: () => void;
-}> = ({ isOpen, onClose, onImport }) => {
+  importMutation: any;
+}> = ({ isOpen, onClose, importMutation }) => {
   const [ruleContent, setRuleContent] = useState('');
   const [category, setCategory] = useState('Custom');
   const [author, setAuthor] = useState('Imported');
   const [skipDuplicates, setSkipDuplicates] = useState(true);
   const [enableByDefault, setEnableByDefault] = useState(false);
-  const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<any>(null);
 
   const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -152,26 +152,22 @@ const ImportDialog: React.FC<{
       return;
     }
 
-    setLoading(true);
     setResult(null);
     try {
-      const response = await importRules({
+      const response = await importMutation.mutateAsync({
         ruleContent,
         category,
         author,
         skipDuplicates,
         enableByDefault
       });
-      setResult(response.data);
-      onImport();
+      setResult(response.data || response);
     } catch (error: any) {
       setResult({
         success: false,
         message: error.message,
         details: error.toString()
       });
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -187,7 +183,7 @@ const ImportDialog: React.FC<{
         </div>
         
         <div className="p-6 space-y-4">
-          {loading ? (
+          {importMutation.isPending ? (
             <div className="text-center py-8">
               <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4 text-blue-600" />
               <p className="text-gray-600 dark:text-gray-300">Importing YARA rules...</p>
@@ -300,7 +296,7 @@ const ImportDialog: React.FC<{
         <div className="p-6 border-t border-gray-200 dark:border-gray-700 flex justify-end space-x-3">
           <button
             onClick={onClose}
-            disabled={loading}
+            disabled={importMutation.isPending}
             className="px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg disabled:opacity-50"
           >
             {result ? 'Close' : 'Cancel'}
@@ -308,7 +304,7 @@ const ImportDialog: React.FC<{
           {!result && (
             <button
               onClick={handleImport}
-              disabled={loading}
+              disabled={importMutation.isPending}
               className="px-4 py-2 bg-blue-600 text-white hover:bg-blue-700 rounded-lg disabled:opacity-50 flex items-center"
             >
               <Upload className="h-4 w-4 mr-2" />
@@ -573,14 +569,11 @@ const RuleCard: React.FC<{
 export const YaraRulesPage: React.FC = () => {
   const { token, loading: authLoading } = useAuth();
   const navigate = useNavigate();
-  const [rules, setRules] = useState<YaraRule[]>([]);
-  const [statistics, setStatistics] = useState<YaraStatistics | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const queryClient = useQueryClient();
   const [importDialogOpen, setImportDialogOpen] = useState(false);
   const [selectedRule, setSelectedRule] = useState<YaraRule | null>(null);
   const [detailModalOpen, setDetailModalOpen] = useState(false);
-  
+
   // Filters
   const [search, setSearch] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('');
@@ -588,8 +581,7 @@ export const YaraRulesPage: React.FC = () => {
   const [validFilter, setValidFilter] = useState<boolean | undefined>(undefined);
   const [enabledFilter, setEnabledFilter] = useState<boolean | undefined>(undefined);
   const [currentPage, setCurrentPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
-  const [totalCount, setTotalCount] = useState(0);
+  const perPage = 25;
 
   useEffect(() => {
     if (!authLoading && !token) {
@@ -597,43 +589,52 @@ export const YaraRulesPage: React.FC = () => {
     }
   }, [token, authLoading, navigate]);
 
-  const loadRules = async () => {
-    try {
-      setLoading(true);
-      setError(null);
-      
+  // Reset to page 1 when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [search, categoryFilter, threatLevelFilter, validFilter, enabledFilter]);
+
+  // Query for rules with React Query caching
+  const rulesQuery = useQuery({
+    queryKey: ['yara-rules', currentPage, search, categoryFilter, threatLevelFilter, validFilter, enabledFilter],
+    queryFn: async () => {
       const response = await fetchYaraRules({
         page: currentPage,
-        perPage: 25,
+        perPage: perPage,
         search: search || undefined,
         category: categoryFilter || undefined,
         threatLevel: threatLevelFilter || undefined,
         isValid: validFilter,
         isEnabled: enabledFilter
       });
-      
+
       const rulesData = response.data || response.rules || [];
       const total = response.total || response.totalCount || rulesData.length;
-      
-      setRules(rulesData);
-      setTotalCount(total);
-      setTotalPages(Math.ceil(total / 25));
-    } catch (error: any) {
-      console.error('Failed to load rules:', error);
-      setError(error.message || 'Failed to load rules');
-    } finally {
-      setLoading(false);
-    }
-  };
+      // Use the actual page size from the backend, or the number of rules returned
+      const actualPageSize = response.pageSize || response.perPage || rulesData.length || perPage;
 
-  const loadStatistics = async () => {
-    try {
+      return {
+        rules: rulesData,
+        totalCount: total,
+        totalPages: Math.ceil(total / actualPageSize),
+        pageSize: actualPageSize
+      };
+    },
+    enabled: !authLoading && !!token,
+    staleTime: 5 * 60 * 1000, // 5 minutes
+    gcTime: 30 * 60 * 1000, // 30 minutes
+  });
+
+  // Query for statistics with React Query caching
+  const statisticsQuery = useQuery({
+    queryKey: ['yara-statistics'],
+    queryFn: async () => {
       const response = await fetchYaraStatistics();
       console.log('[YaraRules] Statistics response:', response);
-      
+
       // Handle the response format: { data: { TotalRules, EnabledRules, ... } }
       const statsData = response.data || response;
-      
+
       // Map backend property names (PascalCase) to frontend (camelCase)
       const mappedStats = {
         totalRules: statsData.totalRules || statsData.TotalRules || 0,
@@ -646,43 +647,63 @@ export const YaraRulesPage: React.FC = () => {
         topPerformingRules: statsData.topPerformingRules || statsData.TopPerformingRules || [],
         slowestRules: statsData.slowestRules || statsData.SlowestRules || []
       };
-      
+
       console.log('[YaraRules] Mapped statistics:', mappedStats);
-      setStatistics(mappedStats);
-    } catch (error) {
-      console.error('Failed to load statistics:', error);
-    }
-  };
+      return mappedStats;
+    },
+    enabled: !authLoading && !!token,
+    staleTime: 10 * 60 * 1000, // 10 minutes
+    gcTime: 30 * 60 * 1000, // 30 minutes
+  });
 
-  useEffect(() => {
-    loadRules();
-    loadStatistics();
-  }, [currentPage, search, categoryFilter, threatLevelFilter, validFilter, enabledFilter]);
-
-  const handleToggle = async (id: number, enabled: boolean) => {
-    try {
-      await toggleRuleEnabled(id, enabled);
-      await loadRules();
-      await loadStatistics();
-    } catch (error: any) {
+  // Toggle mutation
+  const toggleMutation = useMutation({
+    mutationFn: ({ id, enabled }: { id: number; enabled: boolean }) => toggleRuleEnabled(id, enabled),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['yara-rules'] });
+      queryClient.invalidateQueries({ queryKey: ['yara-statistics'] });
+    },
+    onError: (error: any) => {
       alert(`Failed to toggle rule: ${error.message}`);
-    }
-  };
+    },
+  });
 
-  const handleDelete = async (id: number) => {
-    try {
-      await deleteRule(id);
-      await loadRules();
-      await loadStatistics();
-    } catch (error: any) {
+  // Delete mutation
+  const deleteMutation = useMutation({
+    mutationFn: deleteRule,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['yara-rules'] });
+      queryClient.invalidateQueries({ queryKey: ['yara-statistics'] });
+    },
+    onError: (error: any) => {
       alert(`Failed to delete rule: ${error.message}`);
-    }
+    },
+  });
+
+  // Import mutation
+  const importMutation = useMutation({
+    mutationFn: importRules,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['yara-rules'] });
+      queryClient.invalidateQueries({ queryKey: ['yara-statistics'] });
+    },
+  });
+
+  const handleToggle = (id: number, enabled: boolean) => {
+    toggleMutation.mutate({ id, enabled });
   };
 
-  const handleImport = async () => {
-    await loadRules();
-    await loadStatistics();
+  const handleDelete = (id: number) => {
+    deleteMutation.mutate(id);
   };
+
+  const rules = rulesQuery.data?.rules || [];
+  const totalCount = rulesQuery.data?.totalCount || 0;
+  const totalPages = rulesQuery.data?.totalPages || 1;
+  const actualPageSize = rulesQuery.data?.pageSize || perPage;
+  const statistics = statisticsQuery.data || null;
+  const loading = rulesQuery.isLoading;
+  const error = rulesQuery.error ? (rulesQuery.error as Error).message : null;
 
   const handleRuleClick = (rule: YaraRule) => {
     setSelectedRule(rule);
@@ -857,33 +878,35 @@ export const YaraRulesPage: React.FC = () => {
           </div>
           
           {/* Pagination */}
-          {totalPages > 1 && (
+          {totalCount > 0 && (
             <div className="flex items-center justify-between">
               <div className="text-sm text-gray-600 dark:text-gray-300">
-                Showing {((currentPage - 1) * 25) + 1} to {Math.min(currentPage * 25, totalCount)} of {totalCount} rules
+                Showing {rules.length > 0 ? ((currentPage - 1) * actualPageSize) + 1 : 0} to {Math.min(((currentPage - 1) * actualPageSize) + rules.length, totalCount)} of {totalCount} rules
               </div>
-              
-              <div className="flex space-x-2">
-                <button
-                  onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
-                  disabled={currentPage === 1}
-                  className="px-3 py-1 border border-gray-300 dark:border-gray-600 rounded text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  Previous
-                </button>
-                
-                <span className="px-3 py-1 text-gray-700 dark:text-gray-300">
-                  Page {currentPage} of {totalPages}
-                </span>
-                
-                <button
-                  onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
-                  disabled={currentPage === totalPages}
-                  className="px-3 py-1 border border-gray-300 dark:border-gray-600 rounded text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  Next
-                </button>
-              </div>
+
+              {totalPages > 1 && (
+                <div className="flex space-x-2">
+                  <button
+                    onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                    disabled={currentPage === 1}
+                    className="px-3 py-1 border border-gray-300 dark:border-gray-600 rounded text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    Previous
+                  </button>
+
+                  <span className="px-3 py-1 text-gray-700 dark:text-gray-300">
+                    Page {currentPage} of {totalPages}
+                  </span>
+
+                  <button
+                    onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                    disabled={currentPage === totalPages}
+                    className="px-3 py-1 border border-gray-300 dark:border-gray-600 rounded text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    Next
+                  </button>
+                </div>
+              )}
             </div>
           )}
         </>
@@ -893,7 +916,7 @@ export const YaraRulesPage: React.FC = () => {
       <ImportDialog
         isOpen={importDialogOpen}
         onClose={() => setImportDialogOpen(false)}
-        onImport={handleImport}
+        importMutation={importMutation}
       />
       
       <RuleDetailModal

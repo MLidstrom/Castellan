@@ -3,7 +3,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { MetricCard } from '../shared/MetricCard';
 import { RecentActivity } from '../shared/RecentActivity';
 import { ThreatDistribution } from '../shared/ThreatDistribution';
-import { AlertTriangle, Shield, Activity, Search, TrendingUp, Server, Zap } from 'lucide-react';
+import { AlertTriangle, Shield, Activity, Search, TrendingUp, Server, Zap, Scan } from 'lucide-react';
 import { Api } from '../services/api';
 import { useAuth } from '../hooks/useAuth';
 import { useNavigate } from 'react-router-dom';
@@ -24,13 +24,6 @@ export function DashboardPage() {
     queryKey: ['dashboard', 'consolidated', '24h'],
     queryFn: () => Api.getDashboardConsolidated('24h'),
     refetchInterval: 30000,
-    enabled: !loading && !!token,
-  });
-
-  const activityQuery = useQuery({
-    queryKey: ['security-events', 'recent', 8],
-    queryFn: () => Api.getRecentSecurityEvents(8),
-    refetchInterval: 15000,
     enabled: !loading && !!token,
   });
 
@@ -68,14 +61,6 @@ export function DashboardPage() {
     };
   }, [loading, token, queryClient]);
 
-  // Fallback: fetch system status if consolidated does not include it
-  const systemStatusQuery = useQuery({
-    queryKey: ['system-status'],
-    queryFn: () => Api.getSystemStatus(),
-    enabled: !loading && !!token,
-    staleTime: 30000,
-  });
-
   const normalized = useMemo(() => {
     const raw = dashboardQuery.data || {} as any;
     const root = raw.data && typeof raw.data === 'object' ? raw.data : raw;
@@ -96,35 +81,44 @@ export function DashboardPage() {
     // Last 24h delta is not present; show recentEvents length as approximation
     const last24h = recentEvents.length ?? 0;
 
-    // Events/Week: not provided directly; use totalEvents as a reasonable stand-in
-    const last7d = totalEvents;
+    // Events/24h: Total events in 24-hour window (Castellan scope)
+    const events24h = totalEvents;
 
-    // YARA: not included in consolidated; leave zero – or wire a separate status endpoint later
-    const enabledRules = 0;
-    const totalRules = 0;
-    const recentMatches = 0;
+    // YARA: now included in consolidated data
+    const yara = root.yara || {};
+    const enabledRules = yara.enabledRules ?? 0;
+    const totalRules = yara.totalRules ?? 0;
+    const recentMatches = yara.recentMatches ?? 0;
 
-    // System status: compute from systemStatus summary when present
+    // Threat scans: extract from threatScanner data in consolidated response
+    const ts = root.threatScanner || {};
+    const totalScans = ts.totalScans ?? 0;
+    const lastScanResult = ts.lastScanResult ?? 'N/A';
+    const lastScanStatus = ts.lastScanStatus ?? 'unknown';
+
+    // System status: compute from systemStatus summary
     const ss = root.systemStatus || {};
     let status: string = 'UNKNOWN';
+    const healthyComponents = ss.healthyComponents ?? 0;
+    const totalComponents = ss.totalComponents ?? 0;
     if (typeof ss.totalComponents === 'number' && typeof ss.healthyComponents === 'number') {
       status = ss.totalComponents > 0 && ss.healthyComponents === ss.totalComponents ? 'OPERATIONAL' : 'DEGRADED';
-    } else if (Array.isArray((systemStatusQuery.data as any)?.data)) {
-      const arr = ((systemStatusQuery.data as any).data) as Array<any>;
-      const total = arr.length;
-      const healthy = arr.filter((x) => x.isHealthy || (x.status || '').toLowerCase() === 'healthy').length;
-      status = total > 0 && healthy === total ? 'OPERATIONAL' : total > 0 ? 'DEGRADED' : 'UNKNOWN';
     }
 
     const threatDistribution = Object.keys(riskCounts).map((k) => ({ severity: k, count: riskCounts[k] as number }));
 
+    // Recent activity: now included in consolidated data
+    const recentActivity = Array.isArray(root.recentActivity) ? root.recentActivity : [];
+
     return {
-      events: { open, last24h, critical, last7d },
+      events: { open, last24h, critical, events24h },
       yara: { enabledRules, totalRules, recentMatches },
-      system: { status },
+      threatScans: { totalScans, lastScanResult, lastScanStatus },
+      system: { status, healthyComponents, totalComponents },
       threatDistribution,
+      recentActivity,
     };
-  }, [dashboardQuery.data, systemStatusQuery.data]);
+  }, [dashboardQuery.data]);
 
   // Debug once to inspect shape
   useEffect(() => {
@@ -157,18 +151,18 @@ export function DashboardPage() {
           <MetricCard title="Open Events" value={normalized.events.open} change={{ value: normalized.events.last24h, period: 'last 24h' }} icon={AlertTriangle} color={normalized.events.critical > 0 ? 'red' : 'green'} description="Security events requiring attention" />
           <MetricCard title="Critical Threats" value={normalized.events.critical} icon={Shield} color="red" description="High-priority security incidents" />
           <MetricCard title="YARA Rules" value={`${normalized.yara.enabledRules}/${normalized.yara.totalRules}`} change={{ value: normalized.yara.recentMatches, period: 'matches today' }} icon={Search} color="blue" description="Active malware detection rules" />
-          <MetricCard title="System Status" value={normalized.system.status} icon={Activity} color={normalized.system.status === 'OPERATIONAL' ? 'green' : normalized.system.status === 'DEGRADED' ? 'yellow' : 'gray'} description="Platform health and performance" />
+          <MetricCard title="Threat Scans" value={normalized.threatScans.totalScans} change={{ value: normalized.threatScans.lastScanResult, period: 'last result' }} icon={Scan} color={normalized.threatScans.lastScanStatus === 'clean' ? 'green' : normalized.threatScans.lastScanStatus === 'threat' ? 'red' : 'gray'} description="Threat intelligence scans completed" />
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-          <MetricCard title="Events/Week" value={normalized.events.last7d} icon={TrendingUp} color="blue" description="Security events in the past 7 days" />
-          <MetricCard title="Detection Rate" value="94.2%" icon={Zap} color="green" description="Threat detection accuracy" />
-          <MetricCard title="Response Time" value="2.3min" icon={Server} color="green" description="Average incident response time" />
+          <MetricCard title="Events/24h" value={normalized.events.events24h} icon={TrendingUp} color="blue" description="Total events in 24-hour window" />
+          <MetricCard title="System Status" value={`${normalized.system.healthyComponents}/${normalized.system.totalComponents}`} icon={Server} color={normalized.system.healthyComponents === normalized.system.totalComponents && normalized.system.totalComponents > 0 ? 'green' : 'yellow'} description="Healthy components / Total components" />
+          <MetricCard title="Response Time" value="2.3min" icon={Zap} color="green" description="Average incident response time" />
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           <div className="lg:col-span-2">
-            <RecentActivity events={((activityQuery.data as any)?.data) ?? []} isLoading={activityQuery.isLoading} />
+            <RecentActivity events={normalized.recentActivity ?? []} isLoading={dashboardQuery.isLoading} />
           </div>
           <ThreatDistribution data={normalized.threatDistribution ?? []} isLoading={dashboardQuery.isLoading} />
         </div>

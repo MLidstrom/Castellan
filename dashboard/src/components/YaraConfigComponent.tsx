@@ -349,7 +349,7 @@ export function YaraConfigComponent({
                 ) : (
                   <>
                     <Download className="h-5 w-5" />
-                    Import Now
+                    Import YARA Rules
                   </>
                 )}
               </button>

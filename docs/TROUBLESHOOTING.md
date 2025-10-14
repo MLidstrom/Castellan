@@ -550,13 +550,14 @@ dotnet build
 
 If you're still experiencing issues after trying these solutions:
 
-1. **Check [GitHub Issues](https://github.com/MLidstrom/castellan/issues)** for similar problems
-2. **Create a new issue** with:
+1. **Review the [CHANGELOG.md](../CHANGELOG.md)** for recently fixed issues and known problems
+2. **Check [GitHub Issues](https://github.com/MLidstrom/castellan/issues)** for similar problems
+3. **Create a new issue** with:
    - Detailed description of the problem
    - Steps to reproduce
    - Error messages and logs
    - System information (OS version, .NET version, etc.)
-3. **Join [GitHub Discussions](https://github.com/MLidstrom/castellan/discussions)** for community support
+4. **Join [GitHub Discussions](https://github.com/MLidstrom/castellan/discussions)** for community support
 
 ## Common Error Messages
 

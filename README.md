@@ -26,7 +26,7 @@
 
 🚀 **Enterprise Features**: 12K+ events/sec processing • Vector similarity search • Advanced correlation engine • Real-time Teams/Slack alerts • 800+ MITRE ATT&CK techniques • VirusTotal/MalwareBazaar integration • Complete YARA malware detection with auto-updates • Trend forecasting • Timeline visualization • Export capabilities • Centralized configuration management • Single consolidated database architecture
 
-⚡ **5-Minute Setup**: `.\scripts\start.ps1` → Open `http://localhost:8080` (React Admin) or `http://localhost:3000` (Tailwind Dashboard) → Start monitoring
+⚡ **5-Minute Setup**: `.\scripts\start.ps1` → Open `http://localhost:3000` → Start monitoring
 
 ## 🔥 Key Features
 
@@ -38,9 +38,10 @@
 - **🎯 MITRE Integration** - Auto-updated 800+ ATT&CK techniques with threat mapping
 - **🔍 Threat Intelligence** - VirusTotal, MalwareBazaar, AlienVault OTX with configuration UI
 - **⚡ YARA Malware Detection** - Complete signature-based detection with automatic rule updates and deduplication
+- **🔬 Threat Scanner** - On-demand Quick/Full scans with real-time progress tracking, scheduled scanning, quarantine management, and exclusions
 - **📋 Timeline Visualization** - Interactive security event timeline with granular analysis
 - **📤 Data Export** - CSV, JSON, PDF export with filtering and background processing
-- **📱 Dual Dashboards** - React Admin (port 8080) with enterprise data management + Tailwind Dashboard (port 3000) with modern UI/UX, both with real-time SignalR updates
+- **📱 Dual Dashboards** - Primary Tailwind Dashboard (port 3000) with modern UI/UX + Legacy React Admin (port 8080) with enterprise data management, both with real-time SignalR updates
 - **🔒 Enterprise Security** - BCrypt passwords, JWT tokens, audit trails
 
 ## 🖼️ Screenshots
@@ -88,7 +89,7 @@
    .\scripts\start.ps1
    ```
 
-5. **Access dashboard**: Open `http://localhost:8080`
+5. **Access dashboard**: Open `http://localhost:3000`
 
 > **⚠️ Security Note**: See [Configuration Setup](docs/CONFIGURATION_SETUP.md) for detailed setup instructions.
 

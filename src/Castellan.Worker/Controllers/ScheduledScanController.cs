@@ -62,11 +62,12 @@ public class ScheduledScanController : ControllerBase
     /// Get current scheduled scan configuration
     /// </summary>
     [HttpGet("config")]
-    public ActionResult<ThreatScanConfigDto> GetConfig()
+    public async Task<ActionResult<ThreatScanConfigDto>> GetConfig()
     {
         try
         {
-            var options = _optionsMonitor.CurrentValue;
+            // Read from the same source that SaveConfig writes to (config/threat-scan-config.json)
+            var options = await _configService.GetConfigurationAsync();
 
             var config = new ThreatScanConfigDto
             {
@@ -100,6 +101,8 @@ public class ScheduledScanController : ControllerBase
     {
         try
         {
+            _logger.LogInformation("SaveConfig called with Enabled={Enabled}", configDto.Enabled);
+
             // Convert DTO to options
             var options = new ThreatScanOptions
             {
@@ -116,16 +119,19 @@ public class ScheduledScanController : ControllerBase
                 NotificationThreshold = configDto.NotificationThreshold
             };
 
+            _logger.LogInformation("Validating configuration...");
             // Validate configuration
             if (!await _configService.IsConfigurationValidAsync(options))
             {
+                _logger.LogWarning("Validation failed!");
                 return BadRequest(new { error = "Invalid configuration provided" });
             }
 
+            _logger.LogInformation("Validation passed, saving configuration...");
             // Save configuration
             await _configService.SaveConfigurationAsync(options);
 
-            _logger.LogInformation("Threat scan configuration updated successfully");
+            _logger.LogInformation("Threat scan configuration updated successfully with Enabled={Enabled}", options.Enabled);
 
             return Ok(new { message = "Configuration saved successfully" });
         }

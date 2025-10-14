@@ -7,6 +7,7 @@ import { SecurityEventDetailPage } from './pages/SecurityEventDetail';
 import { TimelinePage } from './pages/Timeline';
 import { MitreAttackPage } from './pages/MitreAttack';
 import { YaraRulesPage } from './pages/YaraRules';
+import { ThreatScannerPage } from './pages/ThreatScanner';
 import { SystemStatusPage } from './pages/SystemStatus';
 import { ConfigurationPage } from './pages/Configuration';
 
@@ -25,6 +26,7 @@ export default function App() {
               <Route path="/timeline" element={<TimelinePage />} />
               <Route path="/mitre-attack" element={<MitreAttackPage />} />
               <Route path="/yara-rules" element={<YaraRulesPage />} />
+              <Route path="/threat-scanner" element={<ThreatScannerPage />} />
               <Route path="/system-status" element={<SystemStatusPage />} />
               <Route path="/configuration" element={<ConfigurationPage />} />
             </Routes>

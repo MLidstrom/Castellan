@@ -56,19 +56,19 @@ export const DateRangePicker: React.FC<DateRangePickerProps> = ({
     onEndDateChange(undefined);
   };
 
-  const setQuickRange = (days: number) => {
+  const setQuickRange = (hours: number) => {
     const end = new Date();
     const start = new Date();
-    start.setDate(end.getDate() - days);
+    start.setHours(end.getHours() - hours);
     onStartDateChange(start);
     onEndDateChange(end);
   };
 
   const quickRangeOptions = [
-    { label: 'Last 24h', days: 1 },
-    { label: 'Last 7d', days: 7 },
-    { label: 'Last 30d', days: 30 },
-    { label: 'Last 90d', days: 90 }
+    { label: 'Last 1h', hours: 1 },
+    { label: 'Last 6h', hours: 6 },
+    { label: 'Last 12h', hours: 12 },
+    { label: 'Last 24h', hours: 24 }
   ];
 
   const formatDisplayDate = (date?: Date): string => {
@@ -130,7 +130,7 @@ export const DateRangePicker: React.FC<DateRangePickerProps> = ({
               key={option.label}
               size="small"
               variant="outlined"
-              onClick={() => setQuickRange(option.days)}
+              onClick={() => setQuickRange(option.hours)}
               disabled={disabled}
               sx={{ fontSize: '0.75rem' }}
             >

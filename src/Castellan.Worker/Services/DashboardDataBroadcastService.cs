@@ -77,16 +77,18 @@ public class DashboardDataBroadcastService : BackgroundService
 
             // Broadcast to all clients subscribed to dashboard updates
             await _hubContext.Clients.Group("DashboardUpdates")
-                .SendAsync("DashboardDataUpdate", dashboardData);
+                .SendAsync("DashboardUpdate", dashboardData);
 
             _logger.LogDebug("Broadcasted consolidated dashboard data in {ElapsedMs}ms at {Timestamp}. " +
-                           "Events: {EventCount}, Components: {ComponentCount}, Scans: {ScanCount}, Threats: {ThreatCount}",
+                           "Events: {EventCount}, Components: {ComponentCount}, Scans: {ScanCount}, Threats: {ThreatCount}, YARA: {YaraRules}, Activity: {ActivityCount}",
                 stopwatch.ElapsedMilliseconds,
                 DateTime.UtcNow,
                 dashboardData.SecurityEvents.TotalEvents,
                 dashboardData.SystemStatus.TotalComponents,
                 dashboardData.ThreatScanner.TotalScans,
-                dashboardData.ThreatScanner.ThreatsFound);
+                dashboardData.ThreatScanner.ThreatsFound,
+                dashboardData.Yara.EnabledRules,
+                dashboardData.RecentActivity.Count);
         }
         catch (Exception ex)
         {

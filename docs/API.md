@@ -1,8 +1,8 @@
 # Castellan API Documentation
 
 **Status**: ✅ **Production Ready**
-**Last Updated**: October 9, 2025
-**API Version**: v1.3 - Database Connection Pooling & Security Event Rules
+**Last Updated**: October 14, 2025
+**API Version**: v1.4 - Threat Scanner Configuration & Dashboard Enhancements
 
 ## 🎯 Overview
 
@@ -1968,6 +1968,133 @@ GET /api/export/download/{exportId}
 ```
 
 Returns the exported file with appropriate Content-Type and Content-Disposition headers.
+
+## 🔬 Threat Scanner Configuration API
+
+### Get Threat Scanner Configuration
+```http
+GET /api/scheduledscan/config
+Authorization: Bearer {token}
+```
+
+**Response:**
+```json
+{
+  "data": {
+    "enabled": true,
+    "scanInterval": "1.00:00:00",
+    "defaultScanType": "Quick",
+    "quarantine": {
+      "enabled": false,
+      "directory": "C:\\Castellan\\Quarantine"
+    },
+    "performance": {
+      "maxConcurrentFiles": 10,
+      "maxFileSizeMB": 100,
+      "notificationThreshold": 10
+    },
+    "exclusions": {
+      "directories": [
+        "C:\\Windows\\System32",
+        "C:\\Program Files"
+      ],
+      "extensions": [
+        ".dll",
+        ".sys",
+        ".exe"
+      ]
+    }
+  }
+}
+```
+
+### Update Threat Scanner Configuration
+```http
+PUT /api/scheduledscan/config
+Authorization: Bearer {token}
+Content-Type: application/json
+
+{
+  "enabled": true,
+  "scanInterval": "2.12:00:00",
+  "defaultScanType": "Full",
+  "quarantine": {
+    "enabled": true,
+    "directory": "D:\\Quarantine"
+  },
+  "performance": {
+    "maxConcurrentFiles": 20,
+    "maxFileSizeMB": 200,
+    "notificationThreshold": 5
+  },
+  "exclusions": {
+    "directories": [
+      "C:\\Windows\\System32",
+      "C:\\Program Files",
+      "C:\\ProgramData"
+    ],
+    "extensions": [
+      ".dll",
+      ".sys"
+    ]
+  }
+}
+```
+
+**Validation Rules:**
+- `scanInterval`: TimeSpan format "d.hh:mm:ss" (e.g., "1.00:00:00" = 1 day, "0.12:00:00" = 12 hours)
+- `defaultScanType`: "Quick" or "Full"
+- `maxConcurrentFiles`: 1-100 files
+- `maxFileSizeMB`: 1-1000 MB
+- `notificationThreshold`: 1-100 threats
+- `directories`: Array of valid Windows paths
+- `extensions`: Array of file extensions (auto-prepends dot if missing)
+
+**Response:**
+```json
+{
+  "data": {
+    "enabled": true,
+    "scanInterval": "2.12:00:00",
+    "defaultScanType": "Full",
+    // ... updated configuration
+  }
+}
+```
+
+### Get Threat Scanner Status
+```http
+GET /api/scheduledscan/status
+Authorization: Bearer {token}
+```
+
+**Response:**
+```json
+{
+  "data": {
+    "enabled": true,
+    "lastScanTime": "2025-10-14T10:30:00Z",
+    "nextScanTime": "2025-10-15T10:30:00Z",
+    "currentStatus": "Idle",
+    "scheduledScanType": "Quick"
+  }
+}
+```
+
+**Status Values:**
+- `Idle` - Scanner ready, no active scan
+- `Scanning` - Scan currently in progress
+- `Paused` - Scanner temporarily paused
+- `Error` - Scanner encountered an error
+
+**Features:**
+- **Scheduled Scanning** - Configurable scan intervals (days/hours) with automatic execution
+- **Scan Type Selection** - Choose between Quick Scan (high-risk locations) and Full Scan (all drives)
+- **Quarantine Management** - Enable/disable quarantine with configurable directory for suspicious files
+- **Performance Tuning** - Control concurrent files, file size limits, and notification thresholds
+- **Scan Exclusions** - Directory and file extension exclusion management for optimization
+- **Real-time Status** - Monitor scheduler status with last/next scan times and current operation
+- **TimeSpan Format** - .NET format "d.hh:mm:ss" for flexible interval configuration
 
 ## 🔍 YARA Scanning API
 

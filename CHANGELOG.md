@@ -7,6 +7,102 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed - Threat Scanner Configuration Persistence (October 14, 2025)
+**Critical Bug Fix**: Resolved configuration not persisting issue in Threat Scanner settings
+
+**Problem**:
+- Users could save Threat Scanner configuration (e.g., disable scheduled scans)
+- Backend returned 200 OK success response
+- Configuration appeared to save successfully
+- On page refresh, settings reverted to defaults (`Enabled = true`)
+- File was being saved correctly with user's choice (`"enabled": false`)
+- But when reading back, configuration always returned default values
+
+**Root Cause**:
+- JSON serialization used `camelCase` naming policy (file: `"enabled": false`)
+- C# class properties use `PascalCase` naming (`Enabled`)
+- `JsonSerializerOptions` was missing `PropertyNameCaseInsensitive = true`
+- Deserialization failed silently and fell back to `new ThreatScanOptions()` with defaults
+
+**Solution**:
+- Added `PropertyNameCaseInsensitive = true` to `JsonSerializerOptions` in `ThreatScanConfigurationService.cs`
+- Added comprehensive debug logging to track configuration lifecycle
+- Enhanced error handling with detailed logging for deserialization failures
+
+**Impact**:
+- Threat Scanner configuration now persists correctly across saves and browser refreshes
+- User settings (Enable/Disable scheduler, scan intervals, exclusions) now properly saved and loaded
+- Configuration file reads correctly despite case differences between JSON and C# properties
+
+**Files Modified**:
+- `src/Castellan.Worker/Services/ThreatScanConfigurationService.cs` - Added case-insensitive deserialization and enhanced logging
+
+**Testing**: Verified complete save/load cycle - checkbox state persists correctly after save and page refresh
+
+### Fixed - Configuration Page UI Polish (October 14, 2025)
+**UI/UX Improvements**: Multiple configuration interface refinements for consistency and usability
+
+**Changes Made**:
+- **Removed Info Boxes**: Removed "About Auto-Updates" from MITRE Techniques tab and "About Threat Scanner" from Threat Scanner tab (documentation will be added separately)
+- **Notifications Configuration Rewrite**: Complete overhaul to match backend API structure
+  - Removed non-existent `notificationTypes` checkboxes
+  - Added proper backend fields: `castellanUrl`, `rateLimitSettings` (throttle minutes for Critical/High/Medium/Low)
+  - Added Slack channel routing: `defaultChannel`, `criticalChannel`, `highChannel`
+  - Proper API integration with POST (create) and PUT (update) endpoints
+  - Backend model: `/api/notifications/config` with proper ID-based CRUD operations
+- **Button Consistency**:
+  - YARA Rules import button text changed from "Import Now" to "Import YARA Rules"
+  - MITRE import button changed from blue to green (`bg-green-600`) to match YARA styling
+- **Pagination Fix**: YARA Rules page pagination now uses actual backend page size instead of hardcoded value
+  - Correctly displays "Showing X to Y of Z rules" based on actual rules returned per page
+  - Fixed totalPages calculation to use backend-reported page size
+  - Reset to page 1 when filters change
+
+**Files Modified**:
+- `dashboard/src/pages/Configuration.tsx` - Notifications config rewrite, info box removals, MITRE button color
+- `dashboard/src/components/YaraConfigComponent.tsx` - Import button text update
+- `dashboard/src/pages/YaraRules.tsx` - Pagination calculations fixed
+
+### Added - Threat Scanner Configuration (October 14, 2025)
+**Complete Threat Scanner Configuration Tab**: Implemented comprehensive threat scanner configuration interface in Tailwind Dashboard
+
+**Configuration Features**:
+- **Scheduled Scans**: Enable/disable scheduler with configurable interval (days/hours) using TimeSpan format
+- **Scan Type Selection**: Choose between Quick Scan (high-risk locations) and Full Scan (all drives) as default
+- **Quarantine Settings**: Enable/disable quarantine functionality with configurable directory path
+- **Performance Tuning**: Max concurrent files (1-100), max file size (1-1000 MB), notification threshold (1-100)
+- **Directory Exclusions**: Add/remove excluded directories with Enter key support and list display
+- **File Extension Exclusions**: Add/remove excluded extensions (auto-prepends dot if missing) with chip display
+- **Real-time Status**: Scanner status updates every 30 seconds showing current operation and schedule
+- **About Section**: Feature information and configuration guidance
+
+**Technical Implementation**:
+- **React Query Integration**: Two queries (config and status) with 30s auto-refresh for status
+- **TimeSpan Parsing**: Bidirectional conversion between .NET format "d.hh:mm:ss" and UI (days/hours inputs)
+- **Type Safety**: Fixed parseScanInterval function to handle undefined values with guard clauses and fallback defaults
+- **Mutation with Cache**: Save configuration with optimistic updates and automatic cache invalidation
+- **API Endpoints**: `/api/scheduledscan/config` (GET/PUT) and `/api/scheduledscan/status` (GET)
+- **Component Structure**: Eight logical sections in clean card-based layout with Tailwind CSS styling
+- **Error Handling**: Comprehensive validation and error states with user-friendly messages
+
+**Files Modified**:
+- `dashboard/src/pages/Configuration.tsx` - Added ThreatScannerConfig component (~520 lines)
+- Fixed runtime TypeError with type guards: `parseScanInterval(interval: string | undefined)`
+
+### Enhanced - Dashboard Cards (October 13, 2025)
+**Dashboard Metric Updates**: Improved dashboard cards for better system visibility
+
+**Card Changes**:
+- **System Status Card**: Replaced "Detection Rate" with "System Status" showing Healthy/Total Components ratio
+- **Status Color Coding**: Green for healthy systems, yellow/red for issues
+- **Threat Scans Card**: New card displaying total scans and last scan result with status-based color coding
+- **Enhanced Metrics**: All cards now show 24-hour scope metrics (Events/24h, Open Events, Critical Threats)
+
+**Technical Changes**:
+- Updated consolidated dashboard API response with threat scanner metadata (lastScanResult, lastScanStatus, scanType)
+- Enhanced SignalR broadcast to include scan progress and status updates
+- Modified dashboard layout to accommodate new metrics
+
 ### Added - Dashboard Frontend with Tailwind CSS (October 10, 2025)
 **Complete React Dashboard**: Implemented full-featured dashboard at `./dashboard` (port 3000) with Tailwind CSS styling
 

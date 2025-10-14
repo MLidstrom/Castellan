@@ -362,14 +362,14 @@ public class TimelineStatsResponse
     public int TotalEvents { get; set; }
     public Dictionary<string, int> EventsByRiskLevel { get; set; } = new();
     public Dictionary<string, int> EventsByType { get; set; } = new();
-    public Dictionary<string, int> EventsByHour { get; set; } = new();
-    public Dictionary<string, int> EventsByDayOfWeek { get; set; } = new();
-    public List<string> TopMitreTechniques { get; set; } = new();
-    public List<string> TopMachines { get; set; } = new();
-    public List<string> TopUsers { get; set; } = new();
-    public double AverageRiskScore { get; set; }
     public int HighRiskEvents { get; set; }
     public int CriticalRiskEvents { get; set; }
+
+    // Removed unused fields for performance (Option B optimization):
+    // - EventsByHour, EventsByDayOfWeek (not displayed anywhere)
+    // - TopMitreTechniques (not displayed on timeline pages)
+    // - TopMachines, TopUsers (not displayed anywhere)
+    // - AverageRiskScore (not displayed anywhere)
 }
 
 public class DetailedTimelineResponse

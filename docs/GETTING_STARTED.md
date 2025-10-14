@@ -39,13 +39,13 @@ $env:AUTHENTICATION__ADMINUSER__PASSWORD = "your-secure-password"
 # This will automatically:
 # - Start Qdrant vector database in Docker
 # - Start the Worker service (main API)
-# - Install and start React Admin interface
+# - Install and start Tailwind Dashboard
 # - Start System Tray application
 ```
 
 ### 3. Access Web Interface
 
-Open your browser to http://localhost:8080 to access the admin interface.
+Open your browser to http://localhost:3000 to access the Tailwind Dashboard.
 
 **Login Credentials:** Use the username and password you configured in step 1.
 
@@ -98,7 +98,7 @@ If services fail to start automatically:
 
 1. **Check Dependencies**: Ensure Docker is running for Qdrant
 2. **Build Requirements**: Make sure all projects are built before starting
-3. **Port Conflicts**: Verify ports 5000, 6333, 8080, and 11434 are available
+3. **Port Conflicts**: Verify ports 3000, 5000, 6333, and 11434 are available
 4. **Configuration**: Check environment variables and appsettings.json
 
 ## Manual Setup (Advanced)
@@ -128,10 +128,10 @@ dotnet build src\Castellan.Worker\Castellan.Worker.csproj -c Release
 cd src\Castellan.Worker
 dotnet run
 
-# Start React Admin (new terminal)
-cd castellan-admin
+# Start Tailwind Dashboard (new terminal)
+cd dashboard
 npm install
-npm start # Runs on http://localhost:8080
+npm run dev # Runs on http://localhost:3000
 ```
 
 </details>

@@ -1,13 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import { 
-  Shield, 
-  Search, 
-  Filter, 
-  Download, 
-  BarChart3, 
-  Target, 
-  CheckCircle, 
-  AlertCircle, 
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import {
+  Shield,
+  Search,
+  Filter,
+  BarChart3,
+  Target,
+  CheckCircle,
+  AlertCircle,
   Info,
   ChevronDown,
   ChevronRight,
@@ -82,149 +82,6 @@ const fetchMitreTechniques = async (params: {
 
 const fetchMitreStatistics = async () => {
   return Api.getMitreStatistics();
-};
-
-const importMitreTechniques = async () => {
-  return Api.importMitreTechniques();
-};
-
-// Import Dialog Component
-const ImportDialog: React.FC<{
-  isOpen: boolean;
-  onClose: () => void;
-  onImport: () => Promise<void>;
-}> = ({ isOpen, onClose, onImport }) => {
-  const [importing, setImporting] = useState(false);
-  const [result, setResult] = useState<any>(null);
-
-  const handleImport = async () => {
-    setImporting(true);
-    setResult(null);
-    try {
-      const response = await importMitreTechniques();
-      setResult(response);
-    } catch (error: any) {
-      setResult({
-        success: false,
-        message: error.message,
-        details: error.toString()
-      });
-    } finally {
-      setImporting(false);
-    }
-  };
-
-  if (!isOpen) return null;
-
-  return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
-        <div className="p-6 border-b border-gray-200 dark:border-gray-700">
-          <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
-            Import MITRE ATT&CK Techniques
-          </h2>
-        </div>
-        
-        <div className="p-6">
-          {importing ? (
-            <div className="text-center py-8">
-              <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4 text-blue-600" />
-              <p className="text-gray-600 dark:text-gray-300">
-                Importing MITRE ATT&CK techniques from official source...
-              </p>
-              <div className="w-full bg-gray-200 rounded-full h-2 mt-4">
-                <div className="bg-blue-600 h-2 rounded-full animate-pulse" style={{ width: '60%' }}></div>
-              </div>
-              <p className="text-sm text-gray-500 mt-2">
-                This may take a few minutes. Please don't close this dialog.
-              </p>
-            </div>
-          ) : result ? (
-            <div className="space-y-4">
-              {result.success !== false ? (
-                <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-                  <div className="flex items-center">
-                    <CheckCircle className="h-5 w-5 text-green-600 mr-2" />
-                    <h3 className="text-lg font-medium text-green-800">Import Successful!</h3>
-                  </div>
-                  <div className="mt-2 text-sm text-green-700">
-                    <p>• {result.result?.techniquesImported || 0} new techniques imported</p>
-                    <p>• {result.result?.techniquesUpdated || 0} existing techniques updated</p>
-                    {result.result?.errors?.length > 0 && (
-                      <p className="text-yellow-700">
-                        • {result.result.errors.length} techniques had errors
-                      </p>
-                    )}
-                  </div>
-                </div>
-              ) : (
-                <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-                  <div className="flex items-center">
-                    <AlertCircle className="h-5 w-5 text-red-600 mr-2" />
-                    <h3 className="text-lg font-medium text-red-800">Import Failed</h3>
-                  </div>
-                  <p className="mt-2 text-sm text-red-700">{result.message}</p>
-                  {result.details && (
-                    <div className="mt-2 p-2 bg-red-100 rounded text-xs font-mono text-red-800">
-                      Details: {result.details}
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
-          ) : (
-            <div className="space-y-4">
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                <div className="flex items-start">
-                  <Info className="h-5 w-5 text-blue-600 mr-2 mt-0.5" />
-                  <p className="text-sm text-blue-800">
-                    This will download and import the latest MITRE ATT&CK techniques from the official MITRE repository.
-                  </p>
-                </div>
-              </div>
-              
-              <div className="border border-gray-200 rounded-lg">
-                <button className="w-full p-4 text-left flex items-center justify-between hover:bg-gray-50 dark:hover:bg-gray-700">
-                  <span className="font-medium text-gray-900 dark:text-white">What will be imported?</span>
-                  <ChevronDown className="h-4 w-4 text-gray-500" />
-                </button>
-                <div className="px-4 pb-4 text-sm text-gray-600 dark:text-gray-300 space-y-1">
-                  <p>• All current MITRE ATT&CK techniques and sub-techniques</p>
-                  <p>• Technique descriptions, tactics, and platforms</p>
-                  <p>• Data sources, mitigations, and examples</p>
-                  <p>• Updates to existing techniques in the database</p>
-                </div>
-              </div>
-              
-              <p className="text-sm text-gray-500">
-                <strong>Note:</strong> This operation may take several minutes to complete and requires an active internet connection.
-              </p>
-            </div>
-          )}
-        </div>
-        
-        <div className="p-6 border-t border-gray-200 dark:border-gray-700 flex justify-end space-x-3">
-          <button
-            onClick={onClose}
-            disabled={importing}
-            className="px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg disabled:opacity-50"
-          >
-            {result ? 'Close' : 'Cancel'}
-          </button>
-          {!result && (
-            <button
-              onClick={handleImport}
-              disabled={importing}
-              className="px-4 py-2 bg-blue-600 text-white hover:bg-blue-700 rounded-lg disabled:opacity-50 flex items-center"
-            >
-              <Download className="h-4 w-4 mr-2" />
-              Start Import
-            </button>
-          )}
-        </div>
-      </div>
-    </div>
-  );
 };
 
 // Technique Card Component
@@ -458,21 +315,15 @@ const TechniqueDetailModal: React.FC<{
 export const MitreAttackPage: React.FC = () => {
   const { token, loading: authLoading } = useAuth();
   const navigate = useNavigate();
-  const [techniques, setTechniques] = useState<MitreTechnique[]>([]);
-  const [statistics, setStatistics] = useState<MitreStatistics | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [importDialogOpen, setImportDialogOpen] = useState(false);
+  const queryClient = useQueryClient();
   const [selectedTechnique, setSelectedTechnique] = useState<MitreTechnique | null>(null);
   const [detailModalOpen, setDetailModalOpen] = useState(false);
-  
+
   // Filters
   const [search, setSearch] = useState('');
   const [tacticFilter, setTacticFilter] = useState('');
   const [platformFilter, setPlatformFilter] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
-  const [totalCount, setTotalCount] = useState(0);
 
   useEffect(() => {
     if (!authLoading && !token) {
@@ -480,11 +331,10 @@ export const MitreAttackPage: React.FC = () => {
     }
   }, [token, authLoading, navigate]);
 
-  const loadTechniques = async () => {
-    try {
-      setLoading(true);
-      setError(null);
-      
+  // Query for techniques with React Query caching
+  const techniquesQuery = useQuery({
+    queryKey: ['mitre-techniques', currentPage, search, tacticFilter, platformFilter],
+    queryFn: async () => {
       console.log('[MitreAttack] Fetching techniques with params:', {
         page: currentPage,
         perPage: 25,
@@ -492,7 +342,7 @@ export const MitreAttackPage: React.FC = () => {
         tactic: tacticFilter || undefined,
         platform: platformFilter || undefined,
       });
-      
+
       const response = await fetchMitreTechniques({
         page: currentPage,
         perPage: 25,
@@ -502,50 +352,47 @@ export const MitreAttackPage: React.FC = () => {
         sort: 'techniqueId',
         order: 'ASC'
       });
-      
+
       console.log('[MitreAttack] Raw API response:', response);
-      
+
       // Handle the response format: { techniques: [...], totalCount: 823 }
       const techniquesData = response.techniques || response.data || [];
       const total = response.totalCount || response.total || techniquesData.length;
-      
+
       console.log('[MitreAttack] Parsed techniques:', techniquesData.length, 'Total:', total);
-      
+
       // Ensure each technique has an id field (use techniqueId as id)
       const techniquesWithId = techniquesData.map((t: any) => ({
         ...t,
         id: t.id || t.techniqueId
       }));
-      
-      setTechniques(techniquesWithId);
-      setTotalCount(total);
-      setTotalPages(Math.ceil(total / 25));
-    } catch (error: any) {
-      console.error('[MitreAttack] Failed to load techniques:', error);
-      setError(error.message || 'Failed to load techniques');
-    } finally {
-      setLoading(false);
-    }
-  };
 
-  const loadStatistics = async () => {
-    try {
-      const stats = await fetchMitreStatistics();
-      setStatistics(stats);
-    } catch (error) {
-      console.error('Failed to load statistics:', error);
-    }
-  };
+      return {
+        techniques: techniquesWithId,
+        totalCount: total,
+        totalPages: Math.ceil(total / 25)
+      };
+    },
+    enabled: !authLoading && !!token,
+    staleTime: 5 * 60 * 1000, // 5 minutes
+    gcTime: 30 * 60 * 1000, // 30 minutes
+  });
 
-  useEffect(() => {
-    loadTechniques();
-    loadStatistics();
-  }, [currentPage, search, tacticFilter, platformFilter]);
+  // Query for statistics with React Query caching
+  const statisticsQuery = useQuery({
+    queryKey: ['mitre-statistics'],
+    queryFn: fetchMitreStatistics,
+    enabled: !authLoading && !!token,
+    staleTime: 10 * 60 * 1000, // 10 minutes
+    gcTime: 30 * 60 * 1000, // 30 minutes
+  });
 
-  const handleImport = async () => {
-    await loadTechniques();
-    await loadStatistics();
-  };
+  const techniques = techniquesQuery.data?.techniques || [];
+  const totalCount = techniquesQuery.data?.totalCount || 0;
+  const totalPages = techniquesQuery.data?.totalPages || 1;
+  const statistics = statisticsQuery.data || null;
+  const loading = techniquesQuery.isLoading;
+  const error = techniquesQuery.error ? (techniquesQuery.error as Error).message : null;
 
   const handleTechniqueClick = (technique: MitreTechnique) => {
     setSelectedTechnique(technique);
@@ -618,7 +465,7 @@ export const MitreAttackPage: React.FC = () => {
               className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             />
           </div>
-          
+
           {/* Filters */}
           <div className="flex gap-2">
             <select
@@ -642,7 +489,7 @@ export const MitreAttackPage: React.FC = () => {
               <option value="exfiltration">Exfiltration</option>
               <option value="impact">Impact</option>
             </select>
-            
+
             <select
               value={platformFilter}
               onChange={(e) => setPlatformFilter(e.target.value)}
@@ -657,25 +504,6 @@ export const MitreAttackPage: React.FC = () => {
               <option value="Mobile">Mobile</option>
             </select>
           </div>
-        </div>
-        
-        {/* Action Buttons */}
-        <div className="flex gap-2">
-          <button
-            onClick={() => setImportDialogOpen(true)}
-            className="px-4 py-2 bg-blue-600 text-white hover:bg-blue-700 rounded-lg flex items-center space-x-2 transition-colors"
-          >
-            <Download className="h-4 w-4" />
-            <span>Import</span>
-          </button>
-          
-          <button
-            onClick={() => window.open('/api/mitre/statistics', '_blank')}
-            className="px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-lg flex items-center space-x-2 transition-colors"
-          >
-            <BarChart3 className="h-4 w-4" />
-            <span>Statistics</span>
-          </button>
         </div>
       </div>
 
@@ -712,13 +540,9 @@ export const MitreAttackPage: React.FC = () => {
             }
           </p>
           {!search && !tacticFilter && !platformFilter && (
-            <button
-              onClick={() => setImportDialogOpen(true)}
-              className="px-4 py-2 bg-blue-600 text-white hover:bg-blue-700 rounded-lg flex items-center space-x-2 mx-auto"
-            >
-              <Download className="h-4 w-4" />
-              <span>Import Techniques</span>
-            </button>
+            <p className="text-sm text-gray-500 dark:text-gray-400">
+              To import techniques, go to <button onClick={() => navigate('/configuration')} className="text-blue-600 hover:underline">Configuration → MITRE Techniques</button>
+            </p>
           )}
         </div>
       ) : (
@@ -766,13 +590,7 @@ export const MitreAttackPage: React.FC = () => {
         </>
       )}
 
-      {/* Modals */}
-      <ImportDialog
-        isOpen={importDialogOpen}
-        onClose={() => setImportDialogOpen(false)}
-        onImport={handleImport}
-      />
-      
+      {/* Modal */}
       <TechniqueDetailModal
         technique={selectedTechnique}
         isOpen={detailModalOpen}

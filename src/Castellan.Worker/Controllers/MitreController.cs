@@ -217,11 +217,13 @@ public class MitreController : ControllerBase
         {
             var tacticCounts = await _mitreService.GetTechniqueCountsByTacticAsync();
             var totalTechniques = await _importService.GetTechniqueCountAsync();
-            
+            var shouldImport = await _importService.ShouldImportTechniquesAsync();
+
             return Ok(new MitreStatisticsResponse
             {
                 TotalTechniques = totalTechniques,
                 TechniquesByTactic = tacticCounts,
+                ShouldImport = shouldImport,
                 LastUpdated = DateTime.UtcNow
             });
         }
@@ -229,6 +231,85 @@ public class MitreController : ControllerBase
         {
             _logger.LogError(ex, "Error retrieving MITRE statistics");
             return StatusCode(500, new { error = "Failed to retrieve statistics" });
+        }
+    }
+
+    /// <summary>
+    /// Gets the MITRE auto-update configuration
+    /// </summary>
+    [HttpGet("config")]
+    public async Task<ActionResult<MitreConfigResponse>> GetConfiguration()
+    {
+        try
+        {
+            var configPath = Path.Combine("data", "mitre-config.json");
+
+            if (System.IO.File.Exists(configPath))
+            {
+                var json = await System.IO.File.ReadAllTextAsync(configPath);
+                var config = System.Text.Json.JsonSerializer.Deserialize<MitreConfigResponse>(json, new System.Text.Json.JsonSerializerOptions
+                {
+                    PropertyNameCaseInsensitive = true
+                });
+
+                if (config != null)
+                {
+                    return Ok(new { data = config });
+                }
+            }
+
+            // Return default config if file doesn't exist
+            var defaultConfig = new MitreConfigResponse
+            {
+                AutoUpdate = new MitreAutoUpdateConfig
+                {
+                    Enabled = false,
+                    UpdateFrequencyDays = 30,
+                    LastUpdate = null,
+                    NextUpdate = null
+                }
+            };
+
+            return Ok(new { data = defaultConfig });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error retrieving MITRE configuration");
+            return StatusCode(500, new { error = "Failed to retrieve configuration" });
+        }
+    }
+
+    /// <summary>
+    /// Updates the MITRE auto-update configuration
+    /// </summary>
+    [HttpPut("config")]
+    public async Task<ActionResult<MitreConfigResponse>> UpdateConfiguration([FromBody] MitreConfigResponse config)
+    {
+        try
+        {
+            var dataDir = "data";
+            if (!Directory.Exists(dataDir))
+            {
+                Directory.CreateDirectory(dataDir);
+            }
+
+            var configPath = Path.Combine(dataDir, "mitre-config.json");
+            var json = System.Text.Json.JsonSerializer.Serialize(config, new System.Text.Json.JsonSerializerOptions
+            {
+                WriteIndented = true,
+                PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase
+            });
+
+            await System.IO.File.WriteAllTextAsync(configPath, json);
+
+            _logger.LogInformation("MITRE configuration updated successfully");
+
+            return Ok(new { data = config });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error updating MITRE configuration");
+            return StatusCode(500, new { error = "Failed to update configuration" });
         }
     }
 
@@ -308,5 +389,19 @@ public class MitreStatisticsResponse
 {
     public int TotalTechniques { get; set; }
     public Dictionary<string, int> TechniquesByTactic { get; set; } = new();
+    public bool ShouldImport { get; set; }
     public DateTime LastUpdated { get; set; }
+}
+
+public class MitreConfigResponse
+{
+    public MitreAutoUpdateConfig AutoUpdate { get; set; } = new();
+}
+
+public class MitreAutoUpdateConfig
+{
+    public bool Enabled { get; set; }
+    public int UpdateFrequencyDays { get; set; }
+    public DateTime? LastUpdate { get; set; }
+    public DateTime? NextUpdate { get; set; }
 }

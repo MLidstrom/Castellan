@@ -123,82 +123,31 @@ public class TimelineService : ITimelineService
             var totalEvents = await query.CountAsync();
             _logger.LogInformation("Total events in range: {TotalEvents}", totalEvents);
 
-            // Database-level GROUP BY RiskLevel
+            // Database-level GROUP BY RiskLevel (used by both dashboards)
             var eventsByRiskLevel = await query
                 .GroupBy(e => e.RiskLevel)
                 .Select(g => new { RiskLevel = g.Key, Count = g.Count() })
                 .ToListAsync();
 
-            // Database-level GROUP BY EventType
+            // Database-level GROUP BY EventType (used by React Admin legacy dashboard)
             var eventsByType = await query
                 .GroupBy(e => e.EventType)
                 .Select(g => new { EventType = g.Key, Count = g.Count() })
                 .ToListAsync();
 
-            // Database-level GROUP BY Hour
-            var eventsByHour = await query
-                .GroupBy(e => e.Timestamp.Hour)
-                .Select(g => new { Hour = g.Key, Count = g.Count() })
-                .ToListAsync();
-
-            // Database-level GROUP BY DayOfWeek
-            var eventsByDayOfWeek = await query
-                .GroupBy(e => e.Timestamp.DayOfWeek)
-                .Select(g => new { DayOfWeek = g.Key, Count = g.Count() })
-                .ToListAsync();
-
-            // Database-level GROUP BY Source (top machines)
-            var topMachines = await query
-                .Where(e => e.Source != null && e.Source != "")
-                .GroupBy(e => e.Source)
-                .Select(g => new { Source = g.Key, Count = g.Count() })
-                .OrderByDescending(g => g.Count)
-                .Take(10)
-                .ToListAsync();
-
-            // MITRE techniques optimization: Drastically reduce sample size for speed
-            // Using only 500 most recent events - provides representative sample while being much faster
-            // Note: This is a statistical sample, not exhaustive - acceptable tradeoff for performance
-            var mitreJsonStrings = await query
-                .Where(e => e.MitreTechniques != null && e.MitreTechniques != "")
-                .OrderByDescending(e => e.Timestamp) // Index-backed ordering
-                .Take(500) // Reduced from 2000 to 500 for 4x speed improvement
-                .Select(e => e.MitreTechniques)
-                .ToListAsync();
-
-            _logger.LogInformation("Retrieved {Count} MITRE technique records from recent events (reduced sample for performance)",
-                mitreJsonStrings.Count);
-
-            var topMitreTechniques = mitreJsonStrings
-                .SelectMany(json => DeserializeStringArray(json))
-                .Where(t => !string.IsNullOrEmpty(t))
-                .GroupBy(t => t)
-                .OrderByDescending(g => g.Count())
-                .Take(10)
-                .Select(g => g.Key)
-                .ToList();
-
-            // Database-level aggregation for risk score calculation
-            var averageRiskScore = eventsByRiskLevel.Any()
-                ? eventsByRiskLevel.Sum(x => GetRiskScore(x.RiskLevel) * x.Count) / totalEvents
-                : 0;
+            _logger.LogInformation("Timeline stats - Total: {Total}, Risk Levels: {RiskCount}, Event Types: {TypeCount}",
+                totalEvents, eventsByRiskLevel.Count, eventsByType.Count);
 
             var stats = new TimelineStatsResponse
             {
                 TotalEvents = totalEvents,
                 EventsByRiskLevel = eventsByRiskLevel.ToDictionary(x => x.RiskLevel, x => x.Count),
                 EventsByType = eventsByType.ToDictionary(x => x.EventType, x => x.Count),
-                EventsByHour = eventsByHour.ToDictionary(x => x.Hour.ToString(), x => x.Count),
-                EventsByDayOfWeek = eventsByDayOfWeek.ToDictionary(x => x.DayOfWeek.ToString(), x => x.Count),
-                TopMitreTechniques = topMitreTechniques,
-                TopMachines = topMachines.Select(x => x.Source!).ToList(),
-                TopUsers = topMachines.Select(x => x.Source!).ToList(), // Using Source as User for now
-                AverageRiskScore = averageRiskScore,
                 HighRiskEvents = eventsByRiskLevel.FirstOrDefault(x => x.RiskLevel.ToLower() == "high")?.Count ?? 0,
                 CriticalRiskEvents = eventsByRiskLevel.FirstOrDefault(x => x.RiskLevel.ToLower() == "critical")?.Count ?? 0
             };
 
-            _logger.LogInformation("Timeline stats computed using database-level aggregation");
+            _logger.LogInformation("Timeline stats computed - removed unused fields (EventsByHour, EventsByDayOfWeek, TopMachines, TopMitreTechniques, AverageRiskScore)");
             return stats;
         }
         catch (Exception ex)

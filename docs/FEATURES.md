@@ -87,7 +87,21 @@
 - **Teams/Slack Integration** - Real-time security alerts in Microsoft Teams and Slack channels
 - **Enhanced Performance Dashboard** - Full-featured performance monitoring with real-time metrics, multi-timeframe analytics (1h-7d), and interactive charts
 - **Threat Intelligence Health Dashboard** - Service status monitoring with API rate limiting, cache efficiency, and automated alerting
-- **React Admin Interface with Instant Page Loading** - Complete management system with all 11 admin pages fully operational and sub-150ms transitions:
+- **Primary Tailwind Dashboard (Port 3000)** - Modern security monitoring interface with instant page loads (v0.7.0)
+  - **Dashboard Overview** - Real-time metrics including Open Events, Critical Threats, YARA Rules, Threat Scans, Events/24h, System Status
+  - **Enhanced Security Events** - Complete event list with machine, user, MITRE, correlation scores, and IP addresses
+  - **Security Event Detail** - Full event information with rich context and related events
+  - **Timeline Visualization** - Interactive security event timeline with 24-hour scope and granular analysis
+  - **MITRE ATT&CK Management** - Browse, search, and import 800+ techniques with detail views
+  - **YARA Rules Management** - Enable/disable rules, import validation, and statistics
+  - **Threat Scanner Interface** - Complete scanning interface with history, progress tracking, and scan controls
+  - **System Status Dashboard** - Component health monitoring with auto-refresh and status indicators
+  - **Configuration Center** - Multi-tab settings for Threat Intel, Notifications, IP Enrichment, YARA, MITRE, Threat Scanner
+  - **React Query Caching** - 30min memory retention, 24h localStorage persistence for <50ms page loads
+  - **SignalR Real-time Updates** - Live data streams for dashboard, events, and scan progress
+  - **Dark Mode Support** - Complete dark theme implementation across all pages
+  - **Responsive Design** - Mobile-friendly layouts with Tailwind CSS
+- **React Admin Interface with Instant Page Loading (Port 8080 - Legacy)** - Complete management system with all 11 admin pages fully operational and sub-150ms transitions:
   - **Smart Preloading** - Navigation pattern prediction with hover-based component loading
   - **Enhanced Data Provider** - Cache-first strategy with 90% faster data fetch times
   - **Predictive Loading** - 80%+ cache hit rate for predicted pages
@@ -104,7 +118,20 @@
   - **YARA Matches Analysis** - Detection history with forensic details and correlation
   - **Timeline Visualization** - Interactive security event timeline with granular time controls
   - **System Status Monitoring** - Component health with real-time indicators
-  - **Threat Scanner** - Manual and automated threat scanning capabilities
+  - **Threat Scanner** - Comprehensive malware scanning interface with real-time monitoring (v0.7.0)
+    - **On-Demand Scanning** - Quick Scan (high-risk locations) and Full Scan (all drives) with async execution
+    - **Real-time Progress Tracking** - Live scan progress with SignalR updates showing files scanned, directories, bytes processed
+    - **Scan History Table** - Complete scan history with filtering by scan type, status, and risk level
+    - **SignalR Connection Status** - Live/Offline indicator with automatic reconnection
+    - **Scan Details Modal** - Comprehensive view of scan results with statistics, findings, and threat summaries
+    - **Scan Management** - Cancel running scans, view progress, and track completion status
+  - **Threat Scanner Configuration** - Complete scheduled scanning and exclusions management (v0.7.0)
+    - **Scheduled Scans** - Configurable scan intervals (days/hours) with TimeSpan format support
+    - **Scan Scheduler Status** - Real-time status showing last scan, next scan, and current operation
+    - **Quarantine Settings** - Enable/disable quarantine with configurable directory for suspicious files
+    - **Performance Settings** - Max concurrent files (1-100), max file size (1-1000 MB), notification threshold
+    - **Scan Exclusions** - Directory and file extension exclusion management with add/remove interface
+    - **Auto-Refresh Status** - Scanner status updates every 30 seconds for current state monitoring
   - **Configuration Management** - Teams/Slack webhook integration and system settings
   - **Enhanced Menu System** - Component preloading with MenuWithPreloading for instant navigation
   - **Permission-Based Access Control** - Role and permission-based menu visibility and page access
@@ -152,6 +179,16 @@
 - **MITRE ATT&CK API** - 800+ technique browsing, import, and security event mapping with configuration tab
 - **Threat Intelligence APIs** - Health monitoring and configuration for multiple providers
 - **IP Enrichment API** - MaxMind database management and geolocation services
+- **Threat Scanner APIs** - Complete scanning interface and configuration (v0.7.0)
+  - `/api/threat-scanner` - Scan history with pagination and filtering
+  - `/api/threat-scanner/progress` - Real-time scan progress tracking
+  - `/api/threat-scanner/quick-scan` - Start Quick Scan (async)
+  - `/api/threat-scanner/full-scan` - Start Full Scan (async)
+  - `/api/threat-scanner/cancel` - Cancel running scan
+  - `/api/scheduledscan/config` - Scheduled scan configuration management
+  - `/api/scheduledscan/status` - Scheduler status with next/last scan times
+- **Consolidated Dashboard API** - Single endpoint for all dashboard data (v0.7.0)
+  - `/api/dashboard/consolidated/{timeRange}` - Comprehensive dashboard data including security events, system status, threat scanner metadata, YARA statistics, and recent activity
 
 ## 🔒 **Enterprise Security**
 - **BCrypt Password Hashing** - Industry-standard password security with configurable work factors

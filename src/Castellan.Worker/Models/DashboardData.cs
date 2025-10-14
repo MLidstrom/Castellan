@@ -8,6 +8,8 @@ public class ConsolidatedDashboardData
     public SecurityEventsSummary SecurityEvents { get; set; } = new();
     public SystemStatusSummary SystemStatus { get; set; } = new();
     public ThreatScannerSummary ThreatScanner { get; set; } = new();
+    public YaraSummary Yara { get; set; } = new();
+    public List<SecurityEventBasic> RecentActivity { get; set; } = new();
     public DateTime LastUpdated { get; set; } = DateTime.UtcNow;
     public string TimeRange { get; set; } = "24h";
 }
@@ -44,6 +46,9 @@ public class ThreatScannerSummary
     public int CompletedScans { get; set; }
     public int ThreatsFound { get; set; }
     public DateTime LastScanTime { get; set; }
+    public string LastScanResult { get; set; } = "N/A";
+    public string LastScanStatus { get; set; } = "unknown";
+    public string ScanType { get; set; } = string.Empty;
     public List<ThreatScanBasic> RecentScans { get; set; } = new();
 }
 
@@ -84,4 +89,28 @@ public class ThreatScanBasic
     public string Status { get; set; } = string.Empty;
     public int FilesScanned { get; set; }
     public int ThreatsFound { get; set; }
+}
+
+/// <summary>
+/// Summary of YARA rules and matches for dashboard display
+/// </summary>
+public class YaraSummary
+{
+    public int TotalRules { get; set; }
+    public int EnabledRules { get; set; }
+    public int DisabledRules { get; set; }
+    public int RecentMatches { get; set; }
+    public DateTime LastMatchTime { get; set; }
+    public List<YaraMatchBasic> RecentMatchList { get; set; } = new();
+}
+
+/// <summary>
+/// Basic YARA match information for dashboard display
+/// </summary>
+public class YaraMatchBasic
+{
+    public string Id { get; set; } = string.Empty;
+    public string RuleName { get; set; } = string.Empty;
+    public DateTime MatchTime { get; set; }
+    public string SecurityEventId { get; set; } = string.Empty;
 }
