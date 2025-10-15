@@ -15,7 +15,7 @@ Castellan processes Windows security events through **enterprise-grade AI/ML ana
 - **Background Service Management**: Reliable PowerShell job-based startup with comprehensive monitoring
 - **🆕 Real-time Monitoring**: SignalR-powered live system health, scan progress, and threat intelligence status
 - **🆕 Dashboard Data Consolidation**: Single SignalR stream replaces 4+ REST API calls with 80%+ performance improvement
-- **🆕 YARA Malware Detection**: Signature-based malware detection with comprehensive rule management and API
+- **🆕 Malware Detection**: Signature-based malware detection with comprehensive rule management and API
 - **🆕 EventLogWatcher**: Real-time Windows Event Log monitoring with sub-second latency and zero event loss
 
 ## System Architecture Diagram
@@ -32,7 +32,7 @@ flowchart LR
     N --> O[VirusTotal API]
     N --> P[MalwareBazaar API]
     N --> Q[AlienVault OTX API]
-    R --> S[YARA Rule Store]
+    R --> S[Malware Detection Rule Store]
     B --> E[Notification Services]
     E --> F[Desktop Notifications]
     E --> G[Web Admin Interface]

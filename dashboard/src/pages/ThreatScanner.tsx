@@ -2,8 +2,9 @@ import { useEffect, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Api } from '../services/api';
 import { useAuth } from '../hooks/useAuth';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { SignalRService } from '../services/signalr';
+import { LoadingSpinner } from '../components/LoadingSpinner';
 import {
   Shield,
   PlayCircle,
@@ -96,10 +97,10 @@ export function ThreatScannerPage() {
 
   // Check if scan is in progress
   useEffect(() => {
-    if (progressQuery.data?.progress) {
-      const status = progressQuery.data.progress.status?.toLowerCase();
+    if ((progressQuery.data as any)?.progress) {
+      const status = (progressQuery.data as any).progress.status?.toLowerCase();
       setScanInProgress(status === 'running' || status === 'initializing');
-      setScanType(progressQuery.data.progress.scanType || 'Scan');
+      setScanType((progressQuery.data as any).progress.scanType || 'Scan');
     } else {
       setScanInProgress(false);
     }
@@ -239,11 +240,7 @@ export function ThreatScannerPage() {
     return `${Math.round(minutes / 60)}h ${Math.round(minutes % 60)}m`;
   };
 
-  const formatBytes = (bytes: number) => {
-    return (bytes / (1024 * 1024 * 1024)).toFixed(2) + ' GB';
-  };
-
-  const scans = scansQuery.data?.data || [];
+  const scans = (scansQuery.data as any)?.data || [];
 
   // Filter scans based on selected filters
   const filteredScans = scans.filter((scan: ThreatScan) => {
@@ -255,6 +252,10 @@ export function ThreatScannerPage() {
 
   // Get selected scan for detail view
   const selectedScan = selectedScanId ? scans.find((s: ThreatScan) => s.id === selectedScanId) : null;
+
+  if (scansQuery.isLoading) {
+    return <LoadingSpinner />;
+  }
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
@@ -308,7 +309,7 @@ export function ThreatScannerPage() {
       </div>
 
       {/* Scan Progress Dialog */}
-      {progressDialogOpen && progressQuery.data?.progress && (
+      {progressDialogOpen && (progressQuery.data as any)?.progress && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
           <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
             <div className="p-6 border-b border-gray-200 dark:border-gray-700">
@@ -324,7 +325,7 @@ export function ThreatScannerPage() {
             </div>
 
             <div className="p-6 space-y-4">
-              <ScanProgressComponent progress={progressQuery.data.progress} onCancel={handleCancelScan} />
+              <ScanProgressComponent progress={(progressQuery.data as any).progress} onCancel={handleCancelScan} />
             </div>
 
             <div className="p-6 border-t border-gray-200 dark:border-gray-700 flex justify-end">

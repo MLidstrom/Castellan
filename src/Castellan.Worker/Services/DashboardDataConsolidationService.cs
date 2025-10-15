@@ -1,4 +1,4 @@
-﻿using System.Linq;
+using System.Linq;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging;
 using Castellan.Worker.Models;
@@ -30,7 +30,7 @@ public class DashboardDataConsolidationService : IDashboardDataConsolidationServ
     private readonly ILogger<DashboardDataConsolidationService> _logger;
     private readonly IMemoryCache _cache;
     private readonly IThreatScanHistoryRepository _threatScanRepository;
-    private readonly IYaraRuleStore _yaraRuleStore;
+    private readonly IMalwareRuleStore _malwareRuleStore;
 
     private const string CACHE_KEY_PREFIX = "consolidated_dashboard_data";
     private const int CACHE_DURATION_SECONDS = 30; // Same as current dashboard cache
@@ -39,14 +39,14 @@ public class DashboardDataConsolidationService : IDashboardDataConsolidationServ
         ISecurityEventStore securityEventStore,
         SystemHealthService systemHealthService,
         IThreatScanHistoryRepository threatScanRepository,
-        IYaraRuleStore yaraRuleStore,
+        IMalwareRuleStore malwareRuleStore,
         IMemoryCache cache,
         ILogger<DashboardDataConsolidationService> logger)
     {
         _securityEventStore = securityEventStore;
         _systemHealthService = systemHealthService;
         _threatScanRepository = threatScanRepository;
-        _yaraRuleStore = yaraRuleStore;
+        _malwareRuleStore = malwareRuleStore;
         _cache = cache;
         _logger = logger;
     }
@@ -121,7 +121,7 @@ public class DashboardDataConsolidationService : IDashboardDataConsolidationServ
             };
             _cache.Set(cacheKey, consolidatedData, cacheOptions);
 
-            _logger.LogInformation("Successfully consolidated dashboard data in {ElapsedMs}ms. Security Events: {EventCount}, Components: {ComponentCount}, Scans: {ScanCount}, YARA Rules: {YaraRules}, Recent Activity: {ActivityCount}",
+            _logger.LogInformation("Successfully consolidated dashboard data in {ElapsedMs}ms. Security Events: {EventCount}, Components: {ComponentCount}, Scans: {ScanCount}, YARA Rules: {MalwareRules}, Recent Activity: {ActivityCount}",
                 stopwatch.ElapsedMilliseconds, securityEvents.TotalEvents, systemStatus.TotalComponents, threatScanner.TotalScans, yara.EnabledRules, recentActivityEvents.Count);
 
             return consolidatedData;
@@ -321,13 +321,13 @@ public class DashboardDataConsolidationService : IDashboardDataConsolidationServ
     {
         try
         {
-            var allRules = (await _yaraRuleStore.GetAllRulesAsync()).ToList();
-            var recentMatches = (await _yaraRuleStore.GetRecentMatchesAsync(10)).ToList();
+            var allRules = (await _malwareRuleStore.GetAllRulesAsync()).ToList();
+            var recentMatches = (await _malwareRuleStore.GetRecentMatchesAsync(10)).ToList();
 
             var basicMatches = recentMatches
                 .OrderByDescending(m => m.MatchTime)
                 .Take(10)
-                .Select(m => new YaraMatchBasic
+                .Select(m => new MalwareMatchBasic
                 {
                     Id = m.Id,
                     RuleName = m.RuleName,

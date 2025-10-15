@@ -22,9 +22,9 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 import { useNavigate } from 'react-router-dom';
-import { YaraConfigComponent } from '../components/YaraConfigComponent';
+import { MalwareConfigComponent } from '../components/MalwareConfigComponent';
 
-type TabType = 'threat-intelligence' | 'notifications' | 'ip-enrichment' | 'yara' | 'mitre' | 'threat-scanner' | 'performance';
+type TabType = 'threat-intelligence' | 'notifications' | 'ip-enrichment' | 'malware' | 'mitre' | 'threat-scanner' | 'performance';
 
 interface ThreatIntelConfig {
   virusTotal: {
@@ -93,36 +93,11 @@ interface IPEnrichmentConfig {
   };
 }
 
-interface YaraConfig {
-  autoUpdate: {
-    enabled: boolean;
-    updateFrequencyDays: number;
-    lastUpdate: string | null;
-    nextUpdate: string | null;
-  };
-  sources: {
-    enabled: boolean;
-    urls: string[];
-    maxRulesPerSource: number;
-  };
-  rules: {
-    enabledByDefault: boolean;
-    autoValidation: boolean;
-    performanceThresholdMs: number;
-  };
-  import: {
-    lastImportDate: string | null;
-    totalRules: number;
-    enabledRules: number;
-    failedRules: number;
-  };
-}
-
 const tabs = [
   { id: 'threat-intelligence' as TabType, label: 'Threat Intelligence', icon: Shield },
   { id: 'notifications' as TabType, label: 'Notifications', icon: Bell },
   { id: 'ip-enrichment' as TabType, label: 'IP Enrichment', icon: Globe },
-  { id: 'yara' as TabType, label: 'YARA Rules', icon: FileText },
+  { id: 'malware' as TabType, label: 'Malware Rules', icon: FileText },
   { id: 'mitre' as TabType, label: 'MITRE Techniques', icon: Target },
   { id: 'threat-scanner' as TabType, label: 'Threat Scanner', icon: Activity },
   { id: 'performance' as TabType, label: 'Performance', icon: Settings, disabled: true },
@@ -153,7 +128,7 @@ export function ConfigurationPage() {
         'threat-intelligence': '/settings/threat-intelligence',
         'notifications': '/notifications/config',
         'ip-enrichment': '/settings/ip-enrichment',
-        'yara': '/yara-configuration',
+        'malware': '/yara-configuration',
         'mitre': '/mitre/config',
         'threat-scanner': '/threat-scanner/config',
         'performance': '/performance/config',
@@ -186,7 +161,7 @@ export function ConfigurationPage() {
         'threat-intelligence': '/settings/threat-intelligence',
         'notifications': '/notifications/config',
         'ip-enrichment': '/settings/ip-enrichment',
-        'yara': '/yara-configuration',
+        'malware': '/yara-configuration',
         'mitre': '/mitre/config',
         'threat-scanner': '/threat-scanner/config',
         'performance': '/performance/config',
@@ -320,8 +295,8 @@ export function ConfigurationPage() {
                 isSaving={saveMutation.isPending}
               />
             )}
-            {activeTab === 'yara' && (
-              <YaraConfigComponent
+            {activeTab === 'malware' && (
+              <MalwareConfigComponent
                 config={configQuery.data}
                 onSave={handleSave}
                 isSaving={saveMutation.isPending}
@@ -1268,8 +1243,8 @@ function ThreatScannerConfig() {
     maxFileSizeMB: 100,
     maxConcurrentFiles: 10,
     notificationThreshold: 2,
-    excludedDirectories: [],
-    excludedExtensions: [],
+    excludedDirectories: [] as string[],
+    excludedExtensions: [] as string[],
     enableRealTimeProtection: false
   };
 
@@ -1379,7 +1354,7 @@ function ThreatScannerConfig() {
       console.log('[ThreatScanner] Save successful, response:', result);
       return result;
     },
-    onSuccess: (data) => {
+    onSuccess: () => {
       console.log('[ThreatScanner] Save mutation onSuccess, invalidating queries...');
       queryClient.invalidateQueries({ queryKey: ['threat-scanner-config'] });
       setSaveSuccess(true);
@@ -1944,7 +1919,7 @@ function MitreConfig({ onSaveSuccess }: { onSaveSuccess?: () => void }) {
       if (!response.ok) throw new Error('Failed to import MITRE techniques');
       return response.json();
     },
-    onSuccess: (data) => {
+    onSuccess: () => {
       // Refresh statistics after successful import
       queryClient.invalidateQueries({ queryKey: ['mitre-statistics'] });
       queryClient.invalidateQueries({ queryKey: ['mitre-config'] });
@@ -2078,7 +2053,7 @@ function MitreConfig({ onSaveSuccess }: { onSaveSuccess?: () => void }) {
             )}
           </button>
 
-          {latestImport && latestImport.status === 'success' && latestImport.data && (
+          {latestImport && latestImport.status === 'success' && latestImport.data ? (
             <div className="bg-green-50 border border-green-200 rounded-lg p-4">
               <div className="flex items-center">
                 <Check className="h-5 w-5 text-green-600 mr-2" />
@@ -2094,7 +2069,7 @@ function MitreConfig({ onSaveSuccess }: { onSaveSuccess?: () => void }) {
                 )}
               </div>
             </div>
-          )}
+          ) : null}
 
           {latestImport && latestImport.status === 'error' && (
             <div className="bg-red-50 border border-red-200 rounded-lg p-4">

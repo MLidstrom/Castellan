@@ -135,7 +135,7 @@ public class NotificationSettingsController : ControllerBase
                     HighRiskEvents = true,
                     MediumRiskEvents = false,
                     CorrelationAlerts = true,
-                    YaraMatches = true
+                    MalwareMatches = true
                 }
             },
             Slack = new SlackConfigDto
@@ -149,7 +149,7 @@ public class NotificationSettingsController : ControllerBase
                     HighRiskEvents = true,
                     MediumRiskEvents = false,
                     CorrelationAlerts = true,
-                    YaraMatches = true
+                    MalwareMatches = true
                 }
             }
         };
@@ -185,5 +185,5 @@ public class NotificationTypesDto
     public bool HighRiskEvents { get; set; }
     public bool MediumRiskEvents { get; set; }
     public bool CorrelationAlerts { get; set; }
-    public bool YaraMatches { get; set; }
+    public bool MalwareMatches { get; set; }
 }

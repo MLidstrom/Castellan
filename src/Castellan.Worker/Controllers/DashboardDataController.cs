@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Authorization;
 using Castellan.Worker.Models;
 using Castellan.Worker.Services;
@@ -46,7 +46,7 @@ public class DashboardDataController : ControllerBase
             stopwatch.Stop();
 
             _logger.LogInformation("Returned consolidated dashboard data via REST API in {ElapsedMs}ms. " +
-                                 "Events: {EventCount}, Components: {ComponentCount}, Scans: {ScanCount}, YARA: {YaraRules}",
+                                 "Events: {EventCount}, Components: {ComponentCount}, Scans: {ScanCount}, YARA: {MalwareRules}",
                 stopwatch.ElapsedMilliseconds, data.SecurityEvents.TotalEvents,
                 data.SystemStatus.TotalComponents, data.ThreatScanner.TotalScans, data.Yara.EnabledRules);
 

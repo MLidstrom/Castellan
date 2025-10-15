@@ -30,7 +30,7 @@ export interface CorrelationAlertUpdate {
   correlationScore: number;
 }
 
-export interface YaraMatchUpdate {
+export interface MalwareMatchUpdate {
   id: string;
   timestamp: string;
   ruleName: string;
@@ -46,7 +46,7 @@ interface UseSecurityEventsSignalROptions {
   enabled?: boolean;
   onSecurityEvent?: (event: SecurityEventUpdate) => void;
   onCorrelationAlert?: (alert: CorrelationAlertUpdate) => void;
-  onYaraMatch?: (match: YaraMatchUpdate) => void;
+  onMalwareMatch?: (match: MalwareMatchUpdate) => void;
   onConnect?: () => void;
   onDisconnect?: () => void;
   onError?: (error: Error) => void;
@@ -57,7 +57,7 @@ export const useSecurityEventsSignalR = (options: UseSecurityEventsSignalROption
     enabled = true,
     onSecurityEvent,
     onCorrelationAlert,
-    onYaraMatch,
+    onMalwareMatch,
     onConnect,
     onDisconnect,
     onError
@@ -71,7 +71,7 @@ export const useSecurityEventsSignalR = (options: UseSecurityEventsSignalROption
   // Store latest security events
   const [latestSecurityEvents, setLatestSecurityEvents] = useState<SecurityEventUpdate[]>([]);
   const [latestCorrelationAlerts, setLatestCorrelationAlerts] = useState<CorrelationAlertUpdate[]>([]);
-  const [latestYaraMatches, setLatestYaraMatches] = useState<YaraMatchUpdate[]>([]);
+  const [latestMalwareMatches, setLatestMalwareMatches] = useState<MalwareMatchUpdate[]>([]);
 
   const connect = useCallback(async () => {
     if (!enabled) {
@@ -138,11 +138,11 @@ export const useSecurityEventsSignalR = (options: UseSecurityEventsSignalROption
         onCorrelationAlert?.(alert);
       });
 
-      connection.on('YaraMatchDetected', (match: YaraMatchUpdate) => {
+      connection.on('MalwareMatchDetected', (match: MalwareMatchUpdate) => {
         console.log('🎯 YARA match detected:', match);
 
         // Update latest matches (keep last 50)
-        setLatestYaraMatches(prev => [match, ...prev.slice(0, 49)]);
+        setLatestMalwareMatches(prev => [match, ...prev.slice(0, 49)]);
 
         // Always notify for YARA matches
         notify(`🎯 YARA Match: ${match.ruleName} in ${match.fileName}`, {
@@ -150,7 +150,7 @@ export const useSecurityEventsSignalR = (options: UseSecurityEventsSignalROption
           autoHideDuration: 15000
         });
 
-        onYaraMatch?.(match);
+        onMalwareMatch?.(match);
       });
 
       connection.on('JoinedSecurityEvents', (response) => {
@@ -203,7 +203,7 @@ export const useSecurityEventsSignalR = (options: UseSecurityEventsSignalROption
       // Retry after 10 seconds
       setTimeout(connect, 10000);
     }
-  }, [enabled, notify, onSecurityEvent, onCorrelationAlert, onYaraMatch, onConnect, onDisconnect, onError]);
+  }, [enabled, notify, onSecurityEvent, onCorrelationAlert, onMalwareMatch, onConnect, onDisconnect, onError]);
 
   const joinGroups = useCallback(async () => {
     if (!connectionRef.current || connectionRef.current.state !== 'Connected') {
@@ -255,7 +255,7 @@ export const useSecurityEventsSignalR = (options: UseSecurityEventsSignalROption
     isConnected,
     latestSecurityEvents,
     latestCorrelationAlerts,
-    latestYaraMatches,
+    latestMalwareMatches,
     connect,
     disconnect
   };

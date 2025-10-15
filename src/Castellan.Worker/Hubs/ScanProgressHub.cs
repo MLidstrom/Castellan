@@ -244,7 +244,7 @@ public interface IScanProgressBroadcaster
     Task BroadcastThreatIntelligenceStatus(object status);
     Task BroadcastSecurityEvent(object securityEvent);
     Task BroadcastCorrelationAlert(object correlationAlert);
-    Task BroadcastYaraMatch(object yaraMatch);
+    Task BroadcastMalwareMatch(object malwareMatch);
 }
 
 /// <summary>
@@ -423,12 +423,12 @@ public class ScanProgressBroadcaster : IScanProgressBroadcaster
     /// <summary>
     /// Broadcast YARA match detection in real-time
     /// </summary>
-    /// <param name="yaraMatch">The YARA match to broadcast</param>
-    public async Task BroadcastYaraMatch(object yaraMatch)
+    /// <param name="malwareMatch">The YARA match to broadcast</param>
+    public async Task BroadcastMalwareMatch(object malwareMatch)
     {
         try
         {
-            await _hubContext.Clients.Group("SecurityEvents").SendAsync("YaraMatchDetected", yaraMatch);
+            await _hubContext.Clients.Group("SecurityEvents").SendAsync("MalwareMatchDetected", malwareMatch);
 
             _logger.LogInformation("Broadcasted YARA match detection");
         }

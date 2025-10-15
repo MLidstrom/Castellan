@@ -6,20 +6,20 @@
 #   .\scripts\start.ps1                       # Start all services (default)
 #   .\scripts\start.ps1 -NoBuild              # Skip build step
 #   .\scripts\start.ps1 -Foreground           # Run Worker in foreground (for debugging)
-#   .\scripts\start.ps1 -NoReactAdmin         # Skip React Admin startup
+#   .\scripts\start.ps1 -NoReactAdmin         # Skip Tailwind Dashboard startup
 #   .\scripts\start.ps1 -ProductionBuild      # Use production build instead of dev server
-#   .\scripts\start.ps1 -Worker               # Start only Worker (no React Admin, no SystemTray)
-#   .\scripts\start.ps1 -ReactAdmin           # Start only React Admin
+#   .\scripts\start.ps1 -Worker               # Start only Worker (no Dashboard, no SystemTray)
+#   .\scripts\start.ps1 -ReactAdmin           # Start only Tailwind Dashboard
 #   .\scripts\start.ps1 -SystemTray           # Start only System Tray
-#   .\scripts\start.ps1 -Worker -ReactAdmin   # Start Worker and React Admin (no SystemTray)
+#   .\scripts\start.ps1 -Worker -ReactAdmin   # Start Worker and Tailwind Dashboard (no SystemTray)
 #
 param(
     [switch]$NoBuild = $false,         # Skip building the project
     [switch]$Foreground = $false,      # Run Worker in foreground instead of background
-    [switch]$NoReactAdmin = $false,    # Skip starting React Admin UI (deprecated, use -Worker instead)
+    [switch]$NoReactAdmin = $false,    # Skip starting Tailwind Dashboard UI (deprecated, use -Worker instead)
     [switch]$ProductionBuild = $false, # Use production build instead of dev server (default: dev)
     [switch]$Worker = $false,          # Start only Worker service
-    [switch]$ReactAdmin = $false,      # Start only React Admin
+    [switch]$ReactAdmin = $false,      # Start only Tailwind Dashboard
     [switch]$SystemTray = $false       # Start only System Tray
 )
 
@@ -39,11 +39,11 @@ Write-Host "============================" -ForegroundColor Cyan
 if ($selectiveMode) {
     $components = @()
     if ($startWorker) { $components += "Worker API" }
-    if ($startReactAdmin) { $components += "React Admin UI" }
+    if ($startReactAdmin) { $components += "Tailwind Dashboard" }
     if ($startSystemTray) { $components += "System Tray" }
     Write-Host "Selected components: $($components -join ', ')" -ForegroundColor Yellow
 } else {
-    Write-Host "Will start: Qdrant, Ollama, Worker API, and React Admin UI" -ForegroundColor Gray
+    Write-Host "Will start: Qdrant, Ollama, Worker API, and Tailwind Dashboard" -ForegroundColor Gray
 }
 Write-Host ""
 
@@ -101,45 +101,45 @@ function Build-Project {
     }
 }
 
-# Function to start React Admin UI
+# Function to start Tailwind Dashboard UI
 function Start-ReactAdmin {
     param([bool]$UseProductionBuild)
 
-    Write-Host "Checking React Admin UI..." -ForegroundColor Yellow
-    
-    # Check if React Admin is already running (dev server or static serve)
+    Write-Host "Checking Tailwind Dashboard..." -ForegroundColor Yellow
+
+    # Check if Tailwind Dashboard is already running (dev server or static serve)
     $nodeProcesses = Get-CimInstance Win32_Process -Filter "Name='node.exe'" -ErrorAction SilentlyContinue | Where-Object {
-        $_.CommandLine -like "*castellan-admin*" -or $_.CommandLine -like "*:8080*"
+        $_.CommandLine -like "*dashboard*" -or $_.CommandLine -like "*:3000*"
     }
-    
+
     if ($nodeProcesses) {
-        Write-Host "OK: React Admin is already running" -ForegroundColor Green
+        Write-Host "OK: Tailwind Dashboard is already running" -ForegroundColor Green
         return $true
     }
-    
-    # Check if castellan-admin directory exists
-    $reactAdminPath = Join-Path $PSScriptRoot "..\castellan-admin"
+
+    # Check if dashboard directory exists
+    $reactAdminPath = Join-Path $PSScriptRoot "..\dashboard"
     if (-not (Test-Path $reactAdminPath)) {
-        Write-Host "WARNING: React Admin directory not found - skipping UI startup" -ForegroundColor Yellow
+        Write-Host "WARNING: Tailwind Dashboard directory not found - skipping UI startup" -ForegroundColor Yellow
         return $false
     }
 
     # Use production build if explicitly requested
     if ($UseProductionBuild) {
-        $buildIndexPath = Join-Path $reactAdminPath "build\index.html"
+        $buildIndexPath = Join-Path $reactAdminPath "dist\index.html"
         if (Test-Path $buildIndexPath) {
             try {
-                Write-Host "Starting React Admin (production build) on http://localhost:8080 ..." -ForegroundColor Yellow
+                Write-Host "Starting Tailwind Dashboard (production build) on http://localhost:3000 ..." -ForegroundColor Yellow
                 $startInfo = New-Object System.Diagnostics.ProcessStartInfo
                 $startInfo.FileName = "cmd.exe"
-                # Use npx to serve the static build (-s) on port 8080; --yes auto-installs 'serve' if needed
-                $startInfo.Arguments = "/c npx --yes serve -s build -l 8080"
+                # Use npx to serve the static build (-s) on port 3000; --yes auto-installs 'serve' if needed
+                $startInfo.Arguments = "/c npx --yes serve -s dist -l 3000"
                 $startInfo.WorkingDirectory = $reactAdminPath
                 $startInfo.UseShellExecute = $false
                 $startInfo.CreateNoWindow = $true
                 $process = [System.Diagnostics.Process]::Start($startInfo)
                 if ($process) {
-                    Write-Host "OK: React Admin (prod) starting in background (PID: $($process.Id))" -ForegroundColor Green
+                    Write-Host "OK: Tailwind Dashboard (prod) starting in background (PID: $($process.Id))" -ForegroundColor Green
                     return $true
                 } else {
                     Write-Host "WARNING: Failed to launch production server; falling back to dev server" -ForegroundColor Yellow
@@ -147,18 +147,18 @@ function Start-ReactAdmin {
             }
             catch {
                 Write-Host "WARNING: Failed to launch production server: $_" -ForegroundColor Yellow
-                Write-Host "Falling back to dev server (npm start)" -ForegroundColor Yellow
+                Write-Host "Falling back to dev server (npm run dev)" -ForegroundColor Yellow
             }
         }
         else {
-            Write-Host "WARNING: Production build not found at build\index.html; falling back to dev server" -ForegroundColor Yellow
+            Write-Host "WARNING: Production build not found at dist\index.html; falling back to dev server" -ForegroundColor Yellow
         }
     }
-    
+
     # Ensure dependencies for dev server
     $nodeModulesPath = Join-Path $reactAdminPath "node_modules"
     if (-not (Test-Path $nodeModulesPath)) {
-        Write-Host "Installing React Admin dependencies..." -ForegroundColor Yellow
+        Write-Host "Installing Tailwind Dashboard dependencies..." -ForegroundColor Yellow
         try {
             Push-Location $reactAdminPath
             & npm install --silent
@@ -175,13 +175,13 @@ function Start-ReactAdmin {
             return $false
         }
     }
-    
-    # Start React Admin dev server in background
+
+    # Start Tailwind Dashboard dev server in background
     try {
-        Write-Host "Starting React Admin (dev server) on http://localhost:8080 ..." -ForegroundColor Yellow
+        Write-Host "Starting Tailwind Dashboard (dev server) on http://localhost:3000 ..." -ForegroundColor Yellow
         $startInfo = New-Object System.Diagnostics.ProcessStartInfo
         $startInfo.FileName = "cmd.exe"
-        $startInfo.Arguments = "/c npm start"
+        $startInfo.Arguments = "/c npm run dev"
         $startInfo.WorkingDirectory = $reactAdminPath
         $startInfo.UseShellExecute = $false
         $startInfo.CreateNoWindow = $true
@@ -189,16 +189,16 @@ function Start-ReactAdmin {
         $startInfo.RedirectStandardError = $false
         $process = [System.Diagnostics.Process]::Start($startInfo)
         if ($process) {
-            Write-Host "OK: React Admin (dev) starting in background (PID: $($process.Id))" -ForegroundColor Green
-            Write-Host "  UI will be available at: http://localhost:8080" -ForegroundColor Gray
+            Write-Host "OK: Tailwind Dashboard (dev) starting in background (PID: $($process.Id))" -ForegroundColor Green
+            Write-Host "  UI will be available at: http://localhost:3000" -ForegroundColor Gray
             return $true
         } else {
-            Write-Host "WARNING: Failed to start React Admin dev server" -ForegroundColor Yellow
+            Write-Host "WARNING: Failed to start Tailwind Dashboard dev server" -ForegroundColor Yellow
             return $false
         }
     }
     catch {
-        Write-Host "WARNING: Failed to start React Admin dev server: $_" -ForegroundColor Yellow
+        Write-Host "WARNING: Failed to start Tailwind Dashboard dev server: $_" -ForegroundColor Yellow
         return $false
     }
 }
@@ -346,9 +346,9 @@ if ($startWorker) {
     $workerStarted = Start-Worker -RunInBackground:$runInBackground
 }
 
-# Start React Admin if requested (only in background mode)
+# Start Tailwind Dashboard if requested (only in background mode)
 if ($startReactAdmin -and ($runInBackground -or -not $startWorker)) {
-    Write-Host "`nStarting React Admin..." -ForegroundColor Cyan
+    Write-Host "`nStarting Tailwind Dashboard..." -ForegroundColor Cyan
     $uiStarted = Start-ReactAdmin -UseProductionBuild:$ProductionBuild
 }
 
@@ -382,7 +382,7 @@ if ($startWorker) {
     if ($workerStarted) { $componentsStarted += "Worker" } else { $componentsFailed += "Worker" }
 }
 if ($startReactAdmin) {
-    if ($uiStarted) { $componentsStarted += "React Admin" } else { $componentsFailed += "React Admin" }
+    if ($uiStarted) { $componentsStarted += "Tailwind Dashboard" } else { $componentsFailed += "Tailwind Dashboard" }
 }
 if ($startSystemTray) {
     if ($trayStarted) { $componentsStarted += "System Tray" } else { $componentsFailed += "System Tray" }
@@ -393,7 +393,7 @@ if ($componentsStarted.Count -gt 0 -and $componentsFailed.Count -eq 0) {
     Write-Host "`n✅ Castellan successfully started!" -ForegroundColor Green
     Write-Host "Started: $($componentsStarted -join ', ')" -ForegroundColor Gray
     if ($uiStarted) {
-        Write-Host "Web UI: http://localhost:8080" -ForegroundColor Gray
+        Write-Host "Web UI: http://localhost:3000" -ForegroundColor Gray
     }
     exit 0
 }

@@ -3,7 +3,8 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { MetricCard } from '../shared/MetricCard';
 import { RecentActivity } from '../shared/RecentActivity';
 import { ThreatDistribution } from '../shared/ThreatDistribution';
-import { AlertTriangle, Shield, Activity, Search, TrendingUp, Server, Zap, Scan } from 'lucide-react';
+import { LoadingSpinner } from '../components/LoadingSpinner';
+import { AlertTriangle, Shield, Search, TrendingUp, Server, Zap, Scan } from 'lucide-react';
 import { Api } from '../services/api';
 import { useAuth } from '../hooks/useAuth';
 import { useNavigate } from 'react-router-dom';
@@ -84,11 +85,11 @@ export function DashboardPage() {
     // Events/24h: Total events in 24-hour window (Castellan scope)
     const events24h = totalEvents;
 
-    // YARA: now included in consolidated data
-    const yara = root.yara || {};
-    const enabledRules = yara.enabledRules ?? 0;
-    const totalRules = yara.totalRules ?? 0;
-    const recentMatches = yara.recentMatches ?? 0;
+    // Malware detection: now included in consolidated data
+    const malware = root.malware || root.yara || {};
+    const enabledRules = malware.enabledRules ?? 0;
+    const totalRules = malware.totalRules ?? 0;
+    const recentMatches = malware.recentMatches ?? 0;
 
     // Threat scans: extract from threatScanner data in consolidated response
     const ts = root.threatScanner || {};
@@ -112,7 +113,7 @@ export function DashboardPage() {
 
     return {
       events: { open, last24h, critical, events24h },
-      yara: { enabledRules, totalRules, recentMatches },
+      malware: { enabledRules, totalRules, recentMatches },
       threatScans: { totalScans, lastScanResult, lastScanStatus },
       system: { status, healthyComponents, totalComponents },
       threatDistribution,
@@ -128,6 +129,10 @@ export function DashboardPage() {
       console.groupEnd();
     }
   }, [dashboardQuery.data]);
+
+  if (dashboardQuery.isLoading) {
+    return <LoadingSpinner />;
+  }
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
@@ -150,7 +155,7 @@ export function DashboardPage() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
           <MetricCard title="Open Events" value={normalized.events.open} change={{ value: normalized.events.last24h, period: 'last 24h' }} icon={AlertTriangle} color={normalized.events.critical > 0 ? 'red' : 'green'} description="Security events requiring attention" />
           <MetricCard title="Critical Threats" value={normalized.events.critical} icon={Shield} color="red" description="High-priority security incidents" />
-          <MetricCard title="YARA Rules" value={`${normalized.yara.enabledRules}/${normalized.yara.totalRules}`} change={{ value: normalized.yara.recentMatches, period: 'matches today' }} icon={Search} color="blue" description="Active malware detection rules" />
+          <MetricCard title="Malware Rules" value={`${normalized.malware.enabledRules}/${normalized.malware.totalRules}`} change={{ value: normalized.malware.recentMatches, period: 'matches today' }} icon={Search} color="blue" description="Active malware detection rules" />
           <MetricCard title="Threat Scans" value={normalized.threatScans.totalScans} change={{ value: normalized.threatScans.lastScanResult, period: 'last result' }} icon={Scan} color={normalized.threatScans.lastScanStatus === 'clean' ? 'green' : normalized.threatScans.lastScanStatus === 'threat' ? 'red' : 'gray'} description="Threat intelligence scans completed" />
         </div>
 

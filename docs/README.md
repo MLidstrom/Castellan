@@ -13,13 +13,13 @@ Welcome to the complete documentation for **Castellan**, the AI-powered Windows 
 
 ## 🛡️ Security Features
 
-|| Component | Document | Description |
-||-----------|----------|-------------|
-|| **YARA Malware Detection** | [YARA_DETECTION.md](YARA_DETECTION.md) | Signature-based malware detection and rule management |
-|| **Timeline Visualization** | [TIMELINE.md](TIMELINE.md) | Interactive security event timeline analysis and trends |
-|| **Threat Intelligence** | [THREAT_INTELLIGENCE.md](THREAT_INTELLIGENCE.md) | VirusTotal, MalwareBazaar, AlienVault OTX integration |
-|| **Authentication** | [AUTHENTICATION_SETUP.md](AUTHENTICATION_SETUP.md) | BCrypt passwords, JWT tokens, and user management |
-|| **Notifications** | [NOTIFICATIONS.md](NOTIFICATIONS.md) | Teams/Slack integration and alert configuration |
+| Component | Document | Description |
+|-----------|----------|-------------|
+| **Malware Detection** | [MALWARE_DETECTION.md](MALWARE_DETECTION.md) | Signature-based malware detection and rule management |
+| **Timeline Visualization** | [TIMELINE.md](TIMELINE.md) | Interactive security event timeline analysis and trends |
+| **Threat Intelligence** | [THREAT_INTELLIGENCE.md](THREAT_INTELLIGENCE.md) | VirusTotal, MalwareBazaar, AlienVault OTX integration |
+| **Authentication** | [AUTHENTICATION_SETUP.md](AUTHENTICATION_SETUP.md) | BCrypt passwords, JWT tokens, and user management |
+| **Notifications** | [NOTIFICATIONS.md](NOTIFICATIONS.md) | Teams/Slack integration and alert configuration |
 
 ## 🔧 Technical Documentation
 
@@ -53,7 +53,7 @@ Welcome to the complete documentation for **Castellan**, the AI-powered Windows 
 ### Complete React Admin Interface
 - **Security Events Management** - Full CRUD with MITRE integration
 - **Timeline Visualization** - Interactive security event timeline analysis with granularity controls
-- **YARA Rules Management** - Complete malware detection rule system
+- **Malware Detection Rules Management** - Complete malware detection rule system
 - **YARA Matches Analysis** - Detection forensics and correlation
 - **MITRE ATT&CK Techniques** - 800+ technique database
 - **System Status Monitoring** - Real-time health indicators
@@ -74,7 +74,7 @@ Welcome to the complete documentation for **Castellan**, the AI-powered Windows 
 - **[Installation Guide](GETTING_STARTED.md)** - Get started in 5 minutes
 - **[Feature Overview](FEATURES.md)** - See what Castellan can do
 - **[Timeline Analysis](TIMELINE.md)** - Interactive security event visualization
-- **[YARA Detection](YARA_DETECTION.md)** - Malware detection capabilities
+- **[YARA Detection](MALWARE_DETECTION.md)** - Malware detection capabilities
 - **[API Documentation](API.md)** - Complete API reference
 - **[Troubleshooting](TROUBLESHOOTING.md)** - Solve common issues
 

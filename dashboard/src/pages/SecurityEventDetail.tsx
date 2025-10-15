@@ -1,8 +1,7 @@
 import { useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { ArrowLeft, AlertTriangle, Shield, Activity, ExternalLink } from 'lucide-react';
-import { Api } from '../services/api';
+import { ArrowLeft, AlertTriangle } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 
 type Severity = 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW' | 'UNKNOWN';

@@ -80,7 +80,7 @@ public class DashboardDataBroadcastService : BackgroundService
                 .SendAsync("DashboardUpdate", dashboardData);
 
             _logger.LogDebug("Broadcasted consolidated dashboard data in {ElapsedMs}ms at {Timestamp}. " +
-                           "Events: {EventCount}, Components: {ComponentCount}, Scans: {ScanCount}, Threats: {ThreatCount}, YARA: {YaraRules}, Activity: {ActivityCount}",
+                           "Events: {EventCount}, Components: {ComponentCount}, Scans: {ScanCount}, Threats: {ThreatCount}, YARA: {MalwareRules}, Activity: {ActivityCount}",
                 stopwatch.ElapsedMilliseconds,
                 DateTime.UtcNow,
                 dashboardData.SecurityEvents.TotalEvents,

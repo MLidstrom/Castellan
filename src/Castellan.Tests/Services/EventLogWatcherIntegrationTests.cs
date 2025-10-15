@@ -1,4 +1,4 @@
-﻿using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -348,9 +348,9 @@ public class MockBroadcaster : IScanProgressBroadcaster
         return Task.CompletedTask;
     }
 
-    public Task BroadcastYaraMatch(object yaraMatch)
+    public Task BroadcastMalwareMatch(object malwareMatch)
     {
-        BroadcastedEvents.Add(yaraMatch);
+        BroadcastedEvents.Add(malwareMatch);
         return Task.CompletedTask;
     }
 }

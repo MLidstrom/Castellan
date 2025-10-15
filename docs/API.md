@@ -1237,11 +1237,11 @@ Content-Type: application/json
 }
 ```
 
-## 🆕 YARA Malware Detection API
+## 🆕 Malware Detection API
 
-### List YARA Rules
+### List Malware Detection Rules
 ```http
-GET /api/yara-rules?page=1&limit=10&category=Malware&enabled=true
+GET /api/malware-rules?page=1&limit=10&category=Malware&enabled=true
 ```
 
 **Query Parameters:**
@@ -1282,9 +1282,9 @@ GET /api/yara-rules?page=1&limit=10&category=Malware&enabled=true
 }
 ```
 
-### Create YARA Rule
+### Create Malware Detection Rule
 ```http
-POST /api/yara-rules
+POST /api/malware-rules
 Content-Type: application/json
 
 {
@@ -1301,14 +1301,14 @@ Content-Type: application/json
 }
 ```
 
-### Get YARA Rule Details
+### Get Malware Detection Rule Details
 ```http
-GET /api/yara-rules/{ruleId}
+GET /api/malware-rules/{ruleId}
 ```
 
-### Update YARA Rule
+### Update Malware Detection Rule
 ```http
-PUT /api/yara-rules/{ruleId}
+PUT /api/malware-rules/{ruleId}
 Content-Type: application/json
 
 {
@@ -1318,14 +1318,14 @@ Content-Type: application/json
 }
 ```
 
-### Delete YARA Rule
+### Delete Malware Detection Rule
 ```http
-DELETE /api/yara-rules/{ruleId}
+DELETE /api/malware-rules/{ruleId}
 ```
 
-### Test YARA Rule
+### Test Malware Detection Rule
 ```http
-POST /api/yara-rules/test
+POST /api/malware-rules/test
 Content-Type: application/json
 
 {
@@ -1353,7 +1353,7 @@ Content-Type: application/json
 
 ### Get Available Categories
 ```http
-GET /api/yara-rules/categories
+GET /api/malware-rules/categories
 ```
 
 **Response:**
@@ -1376,7 +1376,7 @@ GET /api/yara-rules/categories
 
 ### Report False Positive
 ```http
-POST /api/yara-rules/{ruleId}/false-positive
+POST /api/malware-rules/{ruleId}/false-positive
 Content-Type: application/json
 
 {
@@ -1410,7 +1410,7 @@ GET /api/yara-configuration
       "https://raw.githubusercontent.com/Yara-Rules/rules/master/malware/MALW_Zeus.yar",
       "https://raw.githubusercontent.com/Neo23x0/signature-base/master/yara/general_clamav_signature_set.yar",
       "https://raw.githubusercontent.com/Yara-Rules/rules/master/malware/MALW_Ransomware.yar",
-      "https://raw.githubusercontent.com/YARAHQ/yara-rules/main/malware/TrickBot.yar"
+      "https://raw.githubusercontent.com/YARAHQ/malware-rules/main/malware/TrickBot.yar"
     ],
     "maxRulesPerSource": 50
   },
@@ -1460,7 +1460,7 @@ Content-Type: application/json
 - `updateFrequencyDays`: 1-365 days
 - `maxRulesPerSource`: 1-1000 rules
 - `performanceThresholdMs`: 100-10000 milliseconds
-- `urls`: Array of valid HTTP/HTTPS URLs pointing to YARA rule files
+- `urls`: Array of valid HTTP/HTTPS URLs pointing to malware detection rule files
 
 ### Get YARA Import Statistics
 ```http
@@ -1495,7 +1495,7 @@ GET /api/yara-configuration/stats
 }
 ```
 
-### Trigger Manual YARA Rules Import
+### Trigger Manual Malware Detection Rules Import
 ```http
 POST /api/yara-configuration/import
 ```
@@ -1504,7 +1504,7 @@ POST /api/yara-configuration/import
 ```json
 {
   "success": true,
-  "message": "Successfully imported 15 new YARA rules (Total: 85)",
+  "message": "Successfully imported 15 new malware detection rules (Total: 85)",
   "imported": 15,
   "totalRules": 85,
   "enabledRules": 85,
@@ -1515,7 +1515,7 @@ POST /api/yara-configuration/import
 
 **Features:**
 - **Real Import Processing** - Executes actual YARA import tool with configurable rule limits
-- **Source URL Management** - Dynamic configuration of YARA rule source URLs
+- **Source URL Management** - Dynamic configuration of malware detection rule source URLs
 - **Auto-Update Configuration** - Configurable scheduling for automatic rule updates
 - **Import Statistics** - Detailed tracking of rule counts and import success/failure
 - **Performance Monitoring** - Rule execution time thresholds and optimization
@@ -1542,7 +1542,7 @@ GET /api/yara-configuration/check-update
 
 ### Get YARA Matches
 ```http
-GET /api/yara-rules/matches?securityEventId={eventId}&count=100
+GET /api/malware-rules/matches?securityEventId={eventId}&count=100
 ```
 
 **Query Parameters:**
@@ -2096,11 +2096,11 @@ Authorization: Bearer {token}
 - **Real-time Status** - Monitor scheduler status with last/next scan times and current operation
 - **TimeSpan Format** - .NET format "d.hh:mm:ss" for flexible interval configuration
 
-## 🔍 YARA Scanning API
+## 🔍 Malware Scanning API
 
-### Scan Content with YARA Rules
+### Scan Content with Malware Detection Rules
 ```http
-POST /api/yara-rules/scan
+POST /api/malware-rules/scan
 Content-Type: application/json
 
 {
@@ -2145,7 +2145,7 @@ Content-Type: application/json
 
 ### Get YARA Service Status
 ```http
-GET /api/yara-rules/status
+GET /api/malware-rules/status
 ```
 
 **Response:**
@@ -3073,9 +3073,9 @@ X-RateLimit-Reset: 1693958400
 | Search History | 200 |
 | Saved Searches | 200 |
 | AI Analysis | 100 |
-| YARA Rules | 200 |
+| Malware Detection Rules | 200 |
 | YARA Matches | 300 |
-| YARA Scanning | 50 |
+| Malware Scanning | 50 |
 | YARA Testing | 50 |
 | Timeline Data | 500 |
 | Timeline Stats | 200 |

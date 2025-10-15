@@ -171,7 +171,7 @@ Located in dashboard header:
 - ✅ **Dashboard** - Caching system functional, real-time updates working
 - ✅ **Security Events** - API connectivity verified, filtering operational
 - ✅ **MITRE Techniques** - Search functionality confirmed working
-- ✅ **YARA Rules** - Large dataset (1950 entries) loading correctly
+- ✅ **Malware Detection Rules** - Large dataset (1950 entries) loading correctly
 - ✅ **YARA Matches** - Live alerts functionality operational
 - ✅ **Timeline** - Date filters and granularity controls working
 - ✅ **System Status** - Real-time updates via SignalR confirmed
@@ -283,7 +283,7 @@ curl -X POST http://localhost:5000/api/system-metrics/broadcast \
 - [ ] Real-time security event alerts
 - [ ] Live threat map updates
 - [ ] Customizable update frequencies
-- [ ] Real-time YARA rule compilation status
+- [ ] Real-time malware detection rule compilation status
 - [ ] Live log streaming interface
 
 ### Configuration Options (Future)

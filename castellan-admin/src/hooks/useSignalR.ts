@@ -32,7 +32,7 @@ export interface CorrelationAlertUpdate {
   recommendedActions?: string[];
 }
 
-export interface YaraMatchUpdate {
+export interface MalwareMatchUpdate {
   id: string;
   timestamp: string;
   fileName: string;
@@ -251,7 +251,7 @@ interface UseSignalROptions {
   onDashboardData?: (data: ConsolidatedDashboardData) => void;
   onSecurityEvent?: (event: SecurityEventUpdate) => void;
   onCorrelationAlert?: (alert: CorrelationAlertUpdate) => void;
-  onYaraMatch?: (match: YaraMatchUpdate) => void;
+  onMalwareMatch?: (match: MalwareMatchUpdate) => void;
   onConnect?: () => void;
   onDisconnect?: () => void;
   onError?: (error: Error) => void;
@@ -268,7 +268,7 @@ export const useSignalR = (options: UseSignalROptions = {}) => {
     onDashboardData,
     onSecurityEvent,
     onCorrelationAlert,
-    onYaraMatch,
+    onMalwareMatch,
     onConnect,
     onDisconnect,
     onError
@@ -292,7 +292,7 @@ export const useSignalR = (options: UseSignalROptions = {}) => {
     onDashboardData,
     onSecurityEvent,
     onCorrelationAlert,
-    onYaraMatch,
+    onMalwareMatch,
     onConnect,
     onDisconnect,
     onError
@@ -308,7 +308,7 @@ export const useSignalR = (options: UseSignalROptions = {}) => {
     onDashboardData,
     onSecurityEvent,
     onCorrelationAlert,
-    onYaraMatch,
+    onMalwareMatch,
     onConnect,
     onDisconnect,
     onError
@@ -495,9 +495,9 @@ export const useSignalR = (options: UseSignalROptions = {}) => {
         callbacksRef.current.onCorrelationAlert?.(alert);
       });
 
-      connection.on('YaraMatchDetected', (match: YaraMatchUpdate) => {
+      connection.on('MalwareMatchDetected', (match: MalwareMatchUpdate) => {
         console.log('🎯 YARA match received:', match);
-        callbacksRef.current.onYaraMatch?.(match);
+        callbacksRef.current.onMalwareMatch?.(match);
       });
 
       // Handle connection state changes

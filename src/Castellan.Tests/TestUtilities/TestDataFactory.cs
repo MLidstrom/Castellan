@@ -95,9 +95,9 @@ public static class TestDataFactory
         }";
     }
 
-    public static YaraRule CreateTestYaraRule(string name, string description, string category = "Malware")
+    public static MalwareRule CreateTestMalwareRule(string name, string description, string category = "Malware")
     {
-        return new YaraRule
+        return new MalwareRule
         {
             Name = name,
             Description = description,
@@ -114,18 +114,18 @@ public static class TestDataFactory
         };
     }
 
-    public static YaraMatch CreateTestYaraMatch(string ruleId, string ruleName)
+    public static MalwareMatch CreateTestMalwareMatch(string ruleId, string ruleName)
     {
-        return new YaraMatch
+        return new MalwareMatch
         {
             RuleId = ruleId,
             RuleName = ruleName,
             MatchTime = DateTimeOffset.UtcNow.DateTime,
             TargetFile = "C:\\test\\sample.exe",
             TargetHash = "abc123def456",
-            MatchedStrings = new List<YaraMatchString>
+            MatchedStrings = new List<MalwareMatchString>
             {
-                new YaraMatchString
+                new MalwareMatchString
                 {
                     Identifier = "$test_string",
                     Offset = 100,
@@ -143,9 +143,9 @@ public static class TestDataFactory
         };
     }
 
-    public static YaraRuleRequest CreateTestYaraRuleRequest(string name, string description)
+    public static MalwareRuleRequest CreateTestMalwareRuleRequest(string name, string description)
     {
-        return new YaraRuleRequest
+        return new MalwareRuleRequest
         {
             Name = name,
             Description = description,

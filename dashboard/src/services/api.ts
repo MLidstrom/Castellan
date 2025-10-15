@@ -22,7 +22,7 @@ export const Api = {
   getDashboardConsolidated: (timeRange = '24h') => request(`/dashboarddata/consolidated?timeRange=${timeRange}`),
   getRecentSecurityEvents: (limit = 8) => request(`/security-events?limit=${limit}&sort=timestamp&order=desc`),
   getSystemStatus: () => request(`/system-status`),
-  getYaraStatus: () => request(`/yara-rules/status`).catch(() => null as any),
+  getMalwareStatus: () => request(`/malware-rules/status`).catch(() => null as any),
   getTimeline: (granularity: 'day' | 'hour', fromISO: string, toISO: string) =>
     request(`/timeline?granularity=${encodeURIComponent(granularity)}&from=${encodeURIComponent(fromISO)}&to=${encodeURIComponent(toISO)}`),
   getTimelineStats: (fromISO: string, toISO: string) =>
@@ -51,9 +51,9 @@ export const Api = {
   },
   getMitreStatistics: () => request(`/mitre/statistics`),
   importMitreTechniques: () => request(`/mitre/import`, { method: 'POST' }),
-  
-  // YARA Rules API methods
-  getYaraRules: (params: {
+
+  // Malware Rules API methods
+  getMalwareRules: (params: {
     page?: number;
     perPage?: number;
     search?: string;
@@ -70,23 +70,23 @@ export const Api = {
     if (params.threatLevel) queryParams.append('threatLevel', params.threatLevel);
     if (params.isValid !== undefined) queryParams.append('isValid', params.isValid.toString());
     if (params.isEnabled !== undefined) queryParams.append('isEnabled', params.isEnabled.toString());
-    
-    return request(`/yara-rules?${queryParams.toString()}`);
+
+    return request(`/malware-rules?${queryParams.toString()}`);
   },
-  getYaraStatistics: () => request(`/yara-rules/statistics`),
-  toggleYaraRule: (id: number, enabled: boolean) => 
-    request(`/yara-rules/${id}/toggle`, { 
-      method: 'POST', 
-      body: JSON.stringify({ isEnabled: enabled }) 
+  getMalwareStatistics: () => request(`/malware-rules/statistics`),
+  toggleMalwareRule: (id: number, enabled: boolean) =>
+    request(`/malware-rules/${id}/toggle`, {
+      method: 'POST',
+      body: JSON.stringify({ isEnabled: enabled })
     }),
-  deleteYaraRule: (id: number) => request(`/yara-rules/${id}`, { method: 'DELETE' }),
-  importYaraRules: (data: {
+  deleteMalwareRule: (id: number) => request(`/malware-rules/${id}`, { method: 'DELETE' }),
+  importMalwareRules: (data: {
     ruleContent: string;
     category: string;
     author: string;
     skipDuplicates: boolean;
     enableByDefault: boolean;
-  }) => request(`/yara-rules/import`, {
+  }) => request(`/malware-rules/import`, {
     method: 'POST',
     body: JSON.stringify(data)
   }),

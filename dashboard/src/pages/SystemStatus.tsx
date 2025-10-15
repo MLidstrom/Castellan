@@ -1,10 +1,10 @@
 import { useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { 
-  Activity, 
-  CheckCircle, 
-  XCircle, 
-  AlertTriangle, 
+import {
+  Activity,
+  CheckCircle,
+  XCircle,
+  AlertTriangle,
   Info,
   Server,
   Database,
@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 import { useNavigate } from 'react-router-dom';
+import { LoadingSpinner } from '../components/LoadingSpinner';
 
 interface SystemStatus {
   id: string;
@@ -154,10 +155,14 @@ export function SystemStatusPage() {
     healthy: statuses.filter(s => s.isHealthy).length,
     warning: statuses.filter(s => s.status?.toLowerCase() === 'warning' || s.warningCount > 0).length,
     error: statuses.filter(s => !s.isHealthy && s.status?.toLowerCase() === 'error').length,
-    avgResponseTime: statuses.length > 0 
-      ? Math.round(statuses.reduce((sum, s) => sum + s.responseTime, 0) / statuses.length) 
+    avgResponseTime: statuses.length > 0
+      ? Math.round(statuses.reduce((sum, s) => sum + s.responseTime, 0) / statuses.length)
       : 0
   };
+
+  if (statusQuery.isLoading) {
+    return <LoadingSpinner />;
+  }
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">

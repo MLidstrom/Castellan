@@ -694,7 +694,7 @@ $env:SECURITYEVENTRETENTION__ENABLETIEREDSTORAGE = "false"
 $env:SECURITYEVENTRETENTION__ENABLECOMPRESSION = "true"
 ```
 
-## 🛡️ YARA Scanning Configuration
+## 🛡️ Malware Scanning Configuration
 
 ### YARA Detection Settings
 ```json

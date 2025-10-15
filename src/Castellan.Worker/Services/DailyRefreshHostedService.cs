@@ -46,8 +46,8 @@ public class DailyRefreshHostedService : BackgroundService
                 }
 
                 // 2) YARA: check if auto-update is needed, then refresh compiled rules
-                await CheckAndUpdateYaraRulesAsync(scope.ServiceProvider, stoppingToken);
-                var yara = scope.ServiceProvider.GetRequiredService<IYaraScanService>();
+                await CheckAndUpdateMalwareRulesAsync(scope.ServiceProvider, stoppingToken);
+                var yara = scope.ServiceProvider.GetRequiredService<IMalwareScanService>();
                 await yara.RefreshRulesAsync(stoppingToken);
                 _logger.LogInformation("Daily YARA refresh: compiled rules reloaded. Compiled count: {Count}", yara.GetCompiledRuleCount());
             }
@@ -61,7 +61,7 @@ public class DailyRefreshHostedService : BackgroundService
         }
     }
 
-    private async Task CheckAndUpdateYaraRulesAsync(IServiceProvider serviceProvider, CancellationToken stoppingToken)
+    private async Task CheckAndUpdateMalwareRulesAsync(IServiceProvider serviceProvider, CancellationToken stoppingToken)
     {
         try
         {

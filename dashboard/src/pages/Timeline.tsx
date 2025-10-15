@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { Api } from '../services/api';
 import { useAuth } from '../hooks/useAuth';
 import { useNavigate } from 'react-router-dom';
+import { LoadingSpinner } from '../components/LoadingSpinner';
 
 type Granularity = 'day' | 'hour';
 
@@ -85,6 +86,10 @@ export function TimelinePage() {
   const onRefresh = () => { /* react-query refetch auto by key change */ };
 
   useEffect(() => { /* ensure effect to satisfy hooks lint order */ }, []);
+
+  if (timelineQuery.isLoading) {
+    return <LoadingSpinner />;
+  }
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">

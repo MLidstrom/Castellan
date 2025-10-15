@@ -39,7 +39,7 @@ The Phase 3 performance optimization introduces several key improvements:
 The instant page loading system can be configured through environment variables and component settings:
 
 #### Preloading Configuration
-- **Bundle Strategy**: Immediate (Dashboard, Security Events, YARA Rules), Hover (MITRE, System Status), Lazy (Others)
+- **Bundle Strategy**: Immediate (Dashboard, Security Events, Malware Detection Rules), Hover (MITRE, System Status), Lazy (Others)
 - **Cache TTL**: 5s (real-time) to 5m (static content) based on resource type
 - **Network Awareness**: Automatically disables on slow-2g/2g or data saver mode
 - **Memory Threshold**: Stops preloading if heap usage exceeds 80%
@@ -53,7 +53,7 @@ The instant page loading system can be configured through environment variables 
   'dashboard': 30000,             // 30 seconds
   'system-status': 10000,         // 10 seconds
   'threat-scanner': 5000,         // 5 seconds
-  'yara-rules': 60000,            // 1 minute
+  'malware-rules': 60000,            // 1 minute
   'compliance-reports': 60000,    // 1 minute
   'mitre-techniques': 120000,     // 2 minutes
   'configuration': 300000,        // 5 minutes

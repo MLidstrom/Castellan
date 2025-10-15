@@ -37,7 +37,7 @@
 - **🔔 Smart Notifications** - Rich Teams/Slack alerts with adaptive rate limiting
 - **🎯 MITRE Integration** - Auto-updated 800+ ATT&CK techniques with threat mapping
 - **🔍 Threat Intelligence** - VirusTotal, MalwareBazaar, AlienVault OTX with configuration UI
-- **⚡ YARA Malware Detection** - Complete signature-based detection with automatic rule updates and deduplication
+- **⚡ Malware Detection** - Complete signature-based detection with automatic rule updates and deduplication
 - **🔬 Threat Scanner** - On-demand Quick/Full scans with real-time progress tracking, scheduled scanning, quarantine management, and exclusions
 - **📋 Timeline Visualization** - Interactive security event timeline with granular analysis
 - **📤 Data Export** - CSV, JSON, PDF export with filtering and background processing
@@ -120,7 +120,7 @@
 |-------|-------------|
 | **[🚀 Quick Start Guide](docs/GETTING_STARTED.md)** | Complete installation and setup instructions |
 | **[🔥 Features](docs/FEATURES.md)** | Comprehensive feature overview and capabilities |
-| **[🆕 YARA Detection](docs/YARA_DETECTION.md)** | Signature-based malware detection and rule management |
+| **[🆕 YARA Detection](docs/MALWARE_DETECTION.md)** | Signature-based malware detection and rule management |
 | **[🔧 Configuration](docs/CONFIGURATION_SETUP.md)** | Authentication, AI providers, centralized settings management |
 | **[🔔 Notifications](docs/NOTIFICATIONS.md)** | Teams/Slack integration via Configuration tab |
 | **[🏢 Architecture](docs/ARCHITECTURE.md)** | System architecture, security, and observability |

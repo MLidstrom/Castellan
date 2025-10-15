@@ -111,7 +111,7 @@ type NotificationConfigType = {
       highRiskEvents: boolean;
       mediumRiskEvents: boolean;
       correlationAlerts: boolean;
-      yaraMatches: boolean;
+      malwareMatches: boolean;
     };
   };
   slack: {
@@ -123,7 +123,7 @@ type NotificationConfigType = {
       highRiskEvents: boolean;
       mediumRiskEvents: boolean;
       correlationAlerts: boolean;
-      yaraMatches: boolean;
+      malwareMatches: boolean;
     };
   };
 };
@@ -214,7 +214,7 @@ const DEFAULT_NOTIFICATION_CONFIG: NotificationConfigType = {
       highRiskEvents: true,
       mediumRiskEvents: false,
       correlationAlerts: true,
-      yaraMatches: true
+      malwareMatches: true
     }
   },
   slack: {
@@ -226,7 +226,7 @@ const DEFAULT_NOTIFICATION_CONFIG: NotificationConfigType = {
       highRiskEvents: true,
       mediumRiskEvents: false,
       correlationAlerts: true,
-      yaraMatches: true
+      malwareMatches: true
     }
   }
 };
@@ -816,8 +816,8 @@ const NotificationsConfig = ({ record }: { record?: any }) => {
                     control={
                       <Switch
                         size="small"
-                        checked={config.teams.notificationTypes.yaraMatches}
-                        onChange={(e) => handleNotificationTypeChange('teams', 'yaraMatches', e.target.checked)}
+                        checked={config.teams.notificationTypes.malwareMatches}
+                        onChange={(e) => handleNotificationTypeChange('teams', 'malwareMatches', e.target.checked)}
                       />
                     }
                     label="YARA Matches"
@@ -936,8 +936,8 @@ const NotificationsConfig = ({ record }: { record?: any }) => {
                     control={
                       <Switch
                         size="small"
-                        checked={config.slack.notificationTypes.yaraMatches}
-                        onChange={(e) => handleNotificationTypeChange('slack', 'yaraMatches', e.target.checked)}
+                        checked={config.slack.notificationTypes.malwareMatches}
+                        onChange={(e) => handleNotificationTypeChange('slack', 'malwareMatches', e.target.checked)}
                       />
                     }
                     label="YARA Matches"
@@ -2514,7 +2514,7 @@ export const ConfigurationList = () => {
   const config = threatIntelData || DEFAULT_CONFIG;
   const notificationConfig = notificationData || DEFAULT_NOTIFICATION_CONFIG;
   const ipEnrichmentConfig = ipEnrichmentData || DEFAULT_IP_ENRICHMENT_CONFIG;
-  const yaraConfig = yaraData || DEFAULT_YARA_CONFIG;
+  const malwareConfig = yaraData || DEFAULT_YARA_CONFIG;
 
   // Combine loading states
   const loading = threatIntelLoading || notificationLoading || ipEnrichmentLoading || yaraLoading;
@@ -2538,7 +2538,7 @@ export const ConfigurationList = () => {
       case 2:
         return <IPEnrichmentConfig record={{ id: 'ip-enrichment', ...ipEnrichmentConfig }} />;
       case 3:
-        return <YaraConfig record={{ id: 'yara-rules', ...yaraConfig }} />;
+        return <YaraConfig record={{ id: 'yara-rules', ...malwareConfig }} />;
       case 4:
         return <MitreConfig record={{ id: 'mitre-techniques' }} />;
       case 5:

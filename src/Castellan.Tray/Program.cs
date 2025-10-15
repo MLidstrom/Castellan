@@ -321,46 +321,16 @@ public static class Program
     {
         try
         {
-            // Get the project root directory (go up from the tray app directory)
-            var trayAppDir = Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location);
-            var projectRoot = Path.GetFullPath(Path.Combine(trayAppDir!, "..", "..", "..", "..", ".."));
-            
-            // Try multiple possible paths for the Dashboard
-            var possiblePaths = new[]
+            // Open the web-based Tailwind Dashboard at http://localhost:3000
+            Process.Start(new ProcessStartInfo
             {
-                Path.Combine(projectRoot, "src", "Castellan.Dashboard", "bin", "Release", "net8.0-windows", "Castellan.Dashboard.exe"),
-                Path.Combine(projectRoot, "src", "Castellan.Dashboard", "bin", "Release", "net8.0", "Castellan.Dashboard.exe"),
-                Path.Combine(projectRoot, "src", "Castellan.Dashboard", "bin", "Debug", "net8.0-windows", "Castellan.Dashboard.exe"),
-                Path.Combine(projectRoot, "src", "Castellan.Dashboard", "bin", "Debug", "net8.0", "Castellan.Dashboard.exe")
-            };
-
-            string? dashboardPath = null;
-            foreach (var path in possiblePaths)
-            {
-                if (File.Exists(path))
-                {
-                    dashboardPath = path;
-                    break;
-                }
-            }
-
-            if (dashboardPath != null)
-            {
-                Process.Start(new ProcessStartInfo
-                {
-                    FileName = dashboardPath,
-                    UseShellExecute = true
-                });
-            }
-            else
-            {
-                MessageBox.Show("Castellan Dashboard not found. Please ensure Castellan Dashboard is built.", 
-                    "Castellan Tray", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-            }
+                FileName = "http://localhost:3000",
+                UseShellExecute = true
+            });
         }
         catch (Exception ex)
         {
-            MessageBox.Show($"Failed to open dashboard: {ex.Message}", 
+            MessageBox.Show($"Failed to open dashboard: {ex.Message}",
                 "Castellan Tray", MessageBoxButtons.OK, MessageBoxIcon.Error);
         }
     }

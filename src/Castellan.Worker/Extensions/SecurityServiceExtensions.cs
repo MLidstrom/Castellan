@@ -28,8 +28,8 @@ public static class SecurityServiceExtensions
         services.Configure<Castellan.Worker.Configuration.CorrelationOptions>(
             configuration.GetSection("Correlation"));
         services.Configure<ThreatScanOptions>(configuration.GetSection("ThreatScan"));
-        services.Configure<YaraScanningOptions>(
-            configuration.GetSection(YaraScanningOptions.SectionName));
+        services.Configure<MalwareScanningOptions>(
+            configuration.GetSection(MalwareScanningOptions.SectionName));
 
         // Register security event rule store
         services.AddSingleton<ISecurityEventRuleStore, SecurityEventRuleStore>();
@@ -53,12 +53,12 @@ public static class SecurityServiceExtensions
         services.AddSingleton<ICorrelationEngine, CorrelationEngine>();
 
         // Register YARA scanning services
-        services.AddSingleton<DatabaseYaraRuleStore>();
-        services.AddSingleton<IYaraRuleStore>(sp =>
-            sp.GetRequiredService<DatabaseYaraRuleStore>());
-        services.AddSingleton<IYaraScanService, YaraScanService>();
-        services.AddHostedService<YaraScanService>(provider =>
-            (YaraScanService)provider.GetRequiredService<IYaraScanService>());
+        services.AddSingleton<DatabaseMalwareRuleStore>();
+        services.AddSingleton<IMalwareRuleStore>(sp =>
+            sp.GetRequiredService<DatabaseMalwareRuleStore>());
+        services.AddSingleton<IMalwareScanService, MalwareScanService>();
+        services.AddHostedService<MalwareScanService>(provider =>
+            (MalwareScanService)provider.GetRequiredService<IMalwareScanService>());
 
         // Register threat scanning services
         services.AddScoped<IThreatScanner, ThreatScannerService>();

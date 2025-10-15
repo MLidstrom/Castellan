@@ -26,9 +26,9 @@ public sealed class Pipeline(
     IPerformanceMonitor performanceMonitor,
     ISecurityEventStore securityEventStore,
     IAutomatedResponseService automatedResponseService,
-    IYaraScanService yaraScanService,
-    IYaraRuleStore yaraRuleStore,
-    IOptionsMonitor<YaraScanningOptions> yaraScanningOptions,
+    IMalwareScanService malwareScanService,
+    IMalwareRuleStore malwareRuleStore,
+    IOptionsMonitor<MalwareScanningOptions> yaraScanningOptions,
     EventIgnorePatternService ignorePatternService,
     ILogger<Pipeline> log
 ) : BackgroundService
@@ -37,9 +37,9 @@ public sealed class Pipeline(
     private readonly IOptionsMonitor<PipelineOptions> _pipelineOptions = pipelineOptions;
     private readonly IIPEnrichmentService _ipEnrichmentService = ipEnrichmentService;
     private readonly IAutomatedResponseService _automatedResponseService = automatedResponseService;
-    private readonly IYaraScanService _yaraScanService = yaraScanService;
-    private readonly IYaraRuleStore _yaraRuleStore = yaraRuleStore;
-    private readonly IOptionsMonitor<YaraScanningOptions> _yaraScanningOptions = yaraScanningOptions;
+    private readonly IMalwareScanService _malwareScanService = malwareScanService;
+    private readonly IMalwareRuleStore _malwareRuleStore = malwareRuleStore;
+    private readonly IOptionsMonitor<MalwareScanningOptions> _yaraScanningOptions = yaraScanningOptions;
     
     // Semaphore-based throttling for pipeline processing
     private SemaphoreSlim? _processingSemaphore;
@@ -1208,7 +1208,7 @@ public sealed class Pipeline(
                     }
                     
                     log.LogDebug("🔍 YARA scanning file: {FilePath}", filePath);
-                    var matches = await _yaraScanService.ScanFileAsync(filePath, ct);
+                    var matches = await _malwareScanService.ScanFileAsync(filePath, ct);
                     
                     if (matches.Any())
                     {
@@ -1216,7 +1216,7 @@ public sealed class Pipeline(
                             filePath, matches.Count());
                             
                         // Link YARA matches to the security event
-                        await LinkYaraMatchesToSecurityEvent(matches, securityEvent, ct);
+                        await LinkMalwareMatchesToSecurityEvent(matches, securityEvent, ct);
                     }
                     else
                     {
@@ -1436,7 +1436,7 @@ public sealed class Pipeline(
     /// <summary>
     /// Links YARA matches to a security event by setting the SecurityEventId
     /// </summary>
-    private async Task LinkYaraMatchesToSecurityEvent(IEnumerable<YaraMatch> matches, SecurityEvent securityEvent, CancellationToken ct)
+    private async Task LinkMalwareMatchesToSecurityEvent(IEnumerable<MalwareMatch> matches, SecurityEvent securityEvent, CancellationToken ct)
     {
         try
         {
@@ -1446,7 +1446,7 @@ public sealed class Pipeline(
                 match.SecurityEventId = securityEvent.Id;
                 
                 // Save the updated match
-                await _yaraRuleStore.SaveMatchAsync(match);
+                await _malwareRuleStore.SaveMatchAsync(match);
                 
                 log.LogInformation("🔍 YARA match linked to security event: Rule {RuleName} → Event {EventId}", 
                     match.RuleName, securityEvent.OriginalEvent.EventId);

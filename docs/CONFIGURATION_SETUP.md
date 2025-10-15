@@ -97,19 +97,19 @@ Castellan automatically imports MITRE ATT&CK data by default. You can customize 
 - ✅ Requires internet connectivity for import
 - ✅ No additional configuration needed
 
-### 6. Configure YARA Malware Detection (Automatic)
+### 6. Configure Malware Detection (Automatic)
 
 Castellan includes a comprehensive YARA malware detection system that works automatically with minimal configuration:
 
 **Default Setup:**
-- ✅ 70 active YARA rules imported automatically
+- ✅ 70 active malware detection rules imported automatically
 - ✅ Single centralized database at `/data/castellan.db`
 - ✅ Automatic rule updates via web UI configuration
 - ✅ Deduplication prevents duplicate rules
 - ✅ Performance metrics preserved across updates
 
 **Automatic Updates Configuration:**
-Access the Configuration page in the web UI (`http://localhost:8080/#/configuration`) and navigate to the "YARA Rules" tab to:
+Access the Configuration page in the web UI (`http://localhost:8080/#/configuration`) and navigate to the "Malware Detection Rules" tab to:
 - Enable/disable automatic rule updates
 - Set update frequency (1-365 days)
 - Configure rule source URLs

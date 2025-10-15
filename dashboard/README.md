@@ -38,7 +38,7 @@ src/
     SecurityEventDetail.tsx  # Individual event details
     Timeline.tsx         # Event timeline visualization
     MitreAttack.tsx      # MITRE ATT&CK techniques management
-    YaraRules.tsx        # YARA rules management
+    MalwareRules.tsx        # malware detection rules management
     SystemStatus.tsx     # System component health monitoring
     Configuration.tsx    # Multi-tab configuration interface
     Login.tsx            # Authentication page
@@ -53,7 +53,7 @@ src/
 - `/security-events/:id` - Event detail page
 - `/timeline` - Event timeline visualization
 - `/mitre-attack` - MITRE ATT&CK techniques (list, search, import, detail)
-- `/yara-rules` - YARA rules (list, enable/disable, import, detail)
+- `/malware-rules` - malware detection rules (list, enable/disable, import, detail)
 - `/system-status` - Component health monitoring
 - `/configuration` - Settings (Threat Intel, Notifications, IP Enrichment, YARA)
 - `/login` - Authentication
@@ -63,8 +63,8 @@ src/
 - GET /api/security-events?limit=8&sort=timestamp&order=desc — recent activity
 - GET /api/mitre/techniques — MITRE techniques with pagination
 - GET /api/mitre/statistics — MITRE database statistics
-- GET /api/yara-rules — YARA rules with filters
-- GET /api/yara-rules/statistics — YARA statistics
+- GET /api/malware-rules — malware detection rules with filters
+- GET /api/malware-rules/statistics — YARA statistics
 - GET /api/system-status — System component health
 - GET /api/settings/threat-intelligence — Threat intel configuration
 - GET /api/notifications/config — Notification settings

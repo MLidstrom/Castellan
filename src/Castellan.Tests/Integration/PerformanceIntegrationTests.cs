@@ -76,12 +76,12 @@ public class PerformanceIntegrationTests : IDisposable
         services.AddSingleton(Mock.Of<IPerformanceMonitor>());
         services.AddSingleton(Mock.Of<ISecurityEventStore>());
         services.AddSingleton(Mock.Of<IAutomatedResponseService>());
-        services.AddSingleton<IYaraScanService>(new Mock<IYaraScanService>().Object);
-        services.AddSingleton<IYaraRuleStore>(new Mock<IYaraRuleStore>().Object);
+        services.AddSingleton<IMalwareScanService>(new Mock<IMalwareScanService>().Object);
+        services.AddSingleton<IMalwareRuleStore>(new Mock<IMalwareRuleStore>().Object);
         services.AddSingleton(Options.Create(new AlertOptions()));
         services.AddSingleton(Options.Create(new NotificationOptions()));
         services.AddSingleton(Options.Create(new CorrelationOptions()));
-        services.Configure<YaraScanningOptions>(opt => { opt.Enabled = true; opt.ScanTimeoutSeconds = 5; });
+        services.Configure<MalwareScanningOptions>(opt => { opt.Enabled = true; opt.ScanTimeoutSeconds = 5; });
         
         // Register the real services we want to test
         services.AddSingleton<SecurityEventDetector>();
@@ -196,13 +196,13 @@ public class PerformanceIntegrationTests : IDisposable
         services.AddSingleton<IPerformanceMonitor>(new Mock<IPerformanceMonitor>().Object);
         services.AddSingleton<ISecurityEventStore>(new Mock<ISecurityEventStore>().Object);
         services.AddSingleton<IAutomatedResponseService>(new Mock<IAutomatedResponseService>().Object);
-        services.AddSingleton<IYaraScanService>(new Mock<IYaraScanService>().Object);
-        services.AddSingleton<IYaraRuleStore>(new Mock<IYaraRuleStore>().Object);
+        services.AddSingleton<IMalwareScanService>(new Mock<IMalwareScanService>().Object);
+        services.AddSingleton<IMalwareRuleStore>(new Mock<IMalwareRuleStore>().Object);
         services.AddSingleton(Options.Create(new CorrelationOptions
         {
             EnableLowScoreEvents = true
         }));
-        services.Configure<YaraScanningOptions>(opt => { opt.Enabled = true; opt.ScanTimeoutSeconds = 5; });
+        services.Configure<MalwareScanningOptions>(opt => { opt.Enabled = true; opt.ScanTimeoutSeconds = 5; });
 
         var serviceProvider = services.BuildServiceProvider();
         var pipeline = serviceProvider.GetRequiredService<Pipeline>();
@@ -354,10 +354,10 @@ public class PerformanceIntegrationTests : IDisposable
         services.AddSingleton<IPerformanceMonitor>(Mock.Of<IPerformanceMonitor>());
         services.AddSingleton<ISecurityEventStore>(Mock.Of<ISecurityEventStore>());
         services.AddSingleton<IAutomatedResponseService>(Mock.Of<IAutomatedResponseService>());
-        services.AddSingleton<IYaraScanService>(new Mock<IYaraScanService>().Object);
-        services.AddSingleton<IYaraRuleStore>(new Mock<IYaraRuleStore>().Object);
+        services.AddSingleton<IMalwareScanService>(new Mock<IMalwareScanService>().Object);
+        services.AddSingleton<IMalwareRuleStore>(new Mock<IMalwareRuleStore>().Object);
         services.AddSingleton(Options.Create(new CorrelationOptions()));
-        services.Configure<YaraScanningOptions>(opt => { opt.Enabled = true; opt.ScanTimeoutSeconds = 5; });
+        services.Configure<MalwareScanningOptions>(opt => { opt.Enabled = true; opt.ScanTimeoutSeconds = 5; });
 
         using var serviceProvider = services.BuildServiceProvider();
         var pipeline = serviceProvider.GetRequiredService<Pipeline>();

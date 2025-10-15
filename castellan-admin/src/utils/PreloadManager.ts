@@ -41,8 +41,8 @@ class PreloadManager {
   private componentMappings = new Map<string, () => Promise<any>>([
     ['dashboard', () => import('../components/Dashboard').then(m => ({ default: m.Dashboard }))],
     ['security-events', () => import('../resources/SecurityEvents')],
-    ['yara-rules', () => import('../resources/YaraRules')],
-    ['yara-matches', () => import('../resources/YaraMatches')],
+    ['yara-rules', () => import('../resources/MalwareRules')],
+    ['yara-matches', () => import('../resources/MalwareMatches')],
     ['security-event-rules', () => import('../resources/SecurityEventRules')],
     ['mitre-techniques', () => import('../resources/MitreTechniques')],
     ['system-status', () => import('../resources/SystemStatus')],

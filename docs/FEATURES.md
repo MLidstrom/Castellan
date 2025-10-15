@@ -24,14 +24,14 @@
   - **Real-time Integration** - Used by SecurityEventDetector for live event analysis and enrichment
 - **YARA Real-time Malware Detection** - Complete signature-based malware detection system with dnYara 2.1.0 library
 - **YARA Configuration Management** - Advanced rule source management with automatic updates
-  - **Editable Rule Sources** - Dynamic add/remove functionality for YARA rule source URLs
+  - **Editable Rule Sources** - Dynamic add/remove functionality for malware detection rule source URLs
   - **Source URL Management** - Text field interface for configuring malware signature sources
   - **Auto-Update Configuration** - Configurable frequency (1-365 days) with DailyRefreshHostedService
   - **Real Import Processing** - Actual rule import with deduplication via UPSERT logic
   - **Database Consolidation** - Single centralized database at `/data/castellan.db`
   - **Rule Deduplication** - Automatic prevention of duplicate rules using `ON CONFLICT(Name) DO UPDATE`
   - **Performance Preservation** - Hit counts, metrics, and user preferences maintained across updates
-  - **Database-Level Pagination** - 70-80% faster YARA rule loading (1-3s vs 7-10s)
+  - **Database-Level Pagination** - 70-80% faster malware detection rule loading (1-3s vs 7-10s)
 - **React Admin Interface** - Complete web UI for rule management and match analysis
 - **Full CRUD Operations** - REST API and web interface for all rule operations
 - **Performance Metrics** - Thread-safe scanning with execution time tracking
@@ -88,12 +88,12 @@
 - **Enhanced Performance Dashboard** - Full-featured performance monitoring with real-time metrics, multi-timeframe analytics (1h-7d), and interactive charts
 - **Threat Intelligence Health Dashboard** - Service status monitoring with API rate limiting, cache efficiency, and automated alerting
 - **Primary Tailwind Dashboard (Port 3000)** - Modern security monitoring interface with instant page loads (v0.7.0)
-  - **Dashboard Overview** - Real-time metrics including Open Events, Critical Threats, YARA Rules, Threat Scans, Events/24h, System Status
+  - **Dashboard Overview** - Real-time metrics including Open Events, Critical Threats, Malware Detection Rules, Threat Scans, Events/24h, System Status
   - **Enhanced Security Events** - Complete event list with machine, user, MITRE, correlation scores, and IP addresses
   - **Security Event Detail** - Full event information with rich context and related events
   - **Timeline Visualization** - Interactive security event timeline with 24-hour scope and granular analysis
   - **MITRE ATT&CK Management** - Browse, search, and import 800+ techniques with detail views
-  - **YARA Rules Management** - Enable/disable rules, import validation, and statistics
+  - **Malware Detection Rules Management** - Enable/disable rules, import validation, and statistics
   - **Threat Scanner Interface** - Complete scanning interface with history, progress tracking, and scan controls
   - **System Status Dashboard** - Component health monitoring with auto-refresh and status indicators
   - **Configuration Center** - Multi-tab settings for Threat Intel, Notifications, IP Enrichment, YARA, MITRE, Threat Scanner
@@ -108,13 +108,13 @@
   - **Performance Optimization (v0.7.0)** - 81% page load reduction (800ms → 150ms)
   - **Component Memoization (v0.7.0)** - 36 React components optimized with React.memo for 30-50% fewer re-renders
   - **Virtual Scrolling (v0.7.0)** - VirtualDatagrid handles 10,000+ rows with 60fps scrolling and <100ms render
-  - **Professional Card Layouts (v0.7.0)** - Consistent, polished card-based show pages for Security Events, YARA Rules, MITRE Techniques, and Security Event Rules
+  - **Professional Card Layouts (v0.7.0)** - Consistent, polished card-based show pages for Security Events, Malware Detection Rules, MITRE Techniques, and Security Event Rules
   - **Database Connection Pooling (v0.7.0)** - EF Core PooledDbContextFactory with automatic health monitoring for 20-30% latency reduction
   - **Dashboard** - Real-time security monitoring with consolidated SignalR data streaming
   - **Security Events Management** - List, view, edit security events with MITRE integration and real-time updates
   - **Security Event Rules** - Complete rule management interface with CRUD operations (v0.7.0)
   - **MITRE ATT&CK Techniques** - Browse and search 800+ techniques with statistics
-  - **YARA Rules Management** - Full CRUD operations with validation and performance tracking
+  - **Malware Detection Rules Management** - Full CRUD operations with validation and performance tracking
   - **YARA Matches Analysis** - Detection history with forensic details and correlation
   - **Timeline Visualization** - Interactive security event timeline with granular time controls
   - **System Status Monitoring** - Component health with real-time indicators
@@ -138,7 +138,7 @@
 - **Configuration Management** - Centralized configuration system with tabbed interface
   - **Threat Intelligence Tab** - VirusTotal, MalwareBazaar, AlienVault OTX configuration panels
   - **IP Enrichment Tab** - MaxMind GeoLite2 configuration with automated database downloads
-  - **YARA Configuration Tab** - Advanced YARA rule source management with editable URLs and auto-update settings
+  - **YARA Configuration Tab** - Advanced malware detection rule source management with editable URLs and auto-update settings
   - **Notifications Tab** - Teams and Slack webhook configuration with notification type controls
   - **Secure API Key Management** - Password-type fields with show/hide functionality for sensitive credentials
   - **Real-time Validation** - Rate limits (1-1000/min), cache TTL (1-1440min) validation with immediate feedback

@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useCallback, ReactNode } from 'react';
-import { useSignalR, SystemMetricsUpdate, ScanProgressUpdate, ScanCompleteNotification, ScanErrorNotification, ThreatIntelligenceStatusUpdate, SecurityEventUpdate, CorrelationAlertUpdate, YaraMatchUpdate, ConsolidatedDashboardData } from '../hooks/useSignalR';
+import { useSignalR, SystemMetricsUpdate, ScanProgressUpdate, ScanCompleteNotification, ScanErrorNotification, ThreatIntelligenceStatusUpdate, SecurityEventUpdate, CorrelationAlertUpdate, MalwareMatchUpdate, ConsolidatedDashboardData } from '../hooks/useSignalR';
 import { useNotify } from 'react-admin';
 import { useQueryClient } from '@tanstack/react-query';
 
@@ -9,7 +9,7 @@ interface SignalRContextType {
   realtimeMetrics: SystemMetricsUpdate | null;
   latestSecurityEvents: SecurityEventUpdate[];
   latestCorrelationAlerts: CorrelationAlertUpdate[];
-  latestYaraMatches: YaraMatchUpdate[];
+  latestMalwareMatches: MalwareMatchUpdate[];
   consolidatedDashboardData: ConsolidatedDashboardData | null;
   connect: () => void;
   disconnect: () => void;
@@ -33,7 +33,7 @@ export const SignalRProvider: React.FC<SignalRProviderProps> = ({ children }) =>
   const [realtimeMetrics, setRealtimeMetrics] = React.useState<SystemMetricsUpdate | null>(null);
   const [latestSecurityEvents, setLatestSecurityEvents] = React.useState<SecurityEventUpdate[]>([]);
   const [latestCorrelationAlerts, setLatestCorrelationAlerts] = React.useState<CorrelationAlertUpdate[]>([]);
-  const [latestYaraMatches, setLatestYaraMatches] = React.useState<YaraMatchUpdate[]>([]);
+  const [latestMalwareMatches, setLatestMalwareMatches] = React.useState<MalwareMatchUpdate[]>([]);
   const [consolidatedDashboardData, setConsolidatedDashboardData] = React.useState<ConsolidatedDashboardData | null>(null);
 
   const signalROptions = {
@@ -117,7 +117,7 @@ export const SignalRProvider: React.FC<SignalRProviderProps> = ({ children }) =>
         autoHideDuration: 15000
       });
     }, [notify, queryClient]),
-    onYaraMatch: useCallback((match: YaraMatchUpdate) => {
+    onMalwareMatch: useCallback((match: MalwareMatchUpdate) => {
       console.log('🎯 Global SignalR - Received YARA match:', match);
 
       // Invalidate YARA matches cache
@@ -133,7 +133,7 @@ export const SignalRProvider: React.FC<SignalRProviderProps> = ({ children }) =>
       });
 
       // Update local state
-      setLatestYaraMatches(prev => [match, ...prev.slice(0, 49)]);
+      setLatestMalwareMatches(prev => [match, ...prev.slice(0, 49)]);
 
       notify(`🎯 YARA Match: ${match.ruleName} in ${match.fileName}`, {
         type: match.severity === 'critical' || match.severity === 'high' ? 'error' : 'warning',
@@ -208,7 +208,7 @@ export const SignalRProvider: React.FC<SignalRProviderProps> = ({ children }) =>
     realtimeMetrics,
     latestSecurityEvents,
     latestCorrelationAlerts,
-    latestYaraMatches,
+    latestMalwareMatches,
     consolidatedDashboardData,
     connect,
     disconnect,

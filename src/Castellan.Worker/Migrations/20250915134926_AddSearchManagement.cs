@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
@@ -138,7 +138,7 @@ namespace Castellan.Worker.Migrations
                 });
 
             migrationBuilder.CreateTable(
-                name: "YaraMatches",
+                name: "MalwareMatches",
                 columns: table => new
                 {
                     Id = table.Column<string>(type: "TEXT", maxLength: 50, nullable: false),
@@ -154,11 +154,11 @@ namespace Castellan.Worker.Migrations
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK_YaraMatches", x => x.Id);
+                    table.PrimaryKey("PK_MalwareMatches", x => x.Id);
                 });
 
             migrationBuilder.CreateTable(
-                name: "YaraRules",
+                name: "MalwareRules",
                 columns: table => new
                 {
                     Id = table.Column<string>(type: "TEXT", maxLength: 50, nullable: false),
@@ -189,7 +189,7 @@ namespace Castellan.Worker.Migrations
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK_YaraRules", x => x.Id);
+                    table.PrimaryKey("PK_MalwareRules", x => x.Id);
                 });
 
             migrationBuilder.CreateTable(
@@ -279,7 +279,7 @@ namespace Castellan.Worker.Migrations
                 {
                     { 1, "Current database schema version", "DatabaseVersion", new DateTime(2025, 9, 15, 13, 49, 25, 518, DateTimeKind.Utc).AddTicks(9091), "1.0.0" },
                     { 2, "Last date MITRE ATT&CK data was updated", "LastMitreUpdate", new DateTime(2025, 9, 15, 13, 49, 25, 518, DateTimeKind.Utc).AddTicks(9201), "2025-09-15" },
-                    { 3, "Last date YARA rules were fetched and updated", "LastYaraRulesUpdate", new DateTime(2025, 9, 15, 13, 49, 25, 518, DateTimeKind.Utc).AddTicks(9202), "1970-01-01" }
+                    { 3, "Last date YARA rules were fetched and updated", "LastMalwareRulesUpdate", new DateTime(2025, 9, 15, 13, 49, 25, 518, DateTimeKind.Utc).AddTicks(9202), "1970-01-01" }
                 });
 
             migrationBuilder.CreateIndex(
@@ -418,54 +418,54 @@ namespace Castellan.Worker.Migrations
                 unique: true);
 
             migrationBuilder.CreateIndex(
-                name: "IX_YaraMatches_MatchTime",
-                table: "YaraMatches",
+                name: "IX_MalwareMatches_MatchTime",
+                table: "MalwareMatches",
                 column: "MatchTime");
 
             migrationBuilder.CreateIndex(
-                name: "IX_YaraMatches_RuleId",
-                table: "YaraMatches",
+                name: "IX_MalwareMatches_RuleId",
+                table: "MalwareMatches",
                 column: "RuleId");
 
             migrationBuilder.CreateIndex(
-                name: "IX_YaraMatches_RuleTime",
-                table: "YaraMatches",
+                name: "IX_MalwareMatches_RuleTime",
+                table: "MalwareMatches",
                 columns: new[] { "RuleId", "MatchTime" });
 
             migrationBuilder.CreateIndex(
-                name: "IX_YaraMatches_TargetHash",
-                table: "YaraMatches",
+                name: "IX_MalwareMatches_TargetHash",
+                table: "MalwareMatches",
                 column: "TargetHash");
 
             migrationBuilder.CreateIndex(
-                name: "IX_YaraRules_Category",
-                table: "YaraRules",
+                name: "IX_MalwareRules_Category",
+                table: "MalwareRules",
                 column: "Category");
 
             migrationBuilder.CreateIndex(
-                name: "IX_YaraRules_CreatedAt",
-                table: "YaraRules",
+                name: "IX_MalwareRules_CreatedAt",
+                table: "MalwareRules",
                 column: "CreatedAt");
 
             migrationBuilder.CreateIndex(
-                name: "IX_YaraRules_EnabledCategory",
-                table: "YaraRules",
+                name: "IX_MalwareRules_EnabledCategory",
+                table: "MalwareRules",
                 columns: new[] { "IsEnabled", "Category" });
 
             migrationBuilder.CreateIndex(
-                name: "IX_YaraRules_IsEnabled",
-                table: "YaraRules",
+                name: "IX_MalwareRules_IsEnabled",
+                table: "MalwareRules",
                 column: "IsEnabled");
 
             migrationBuilder.CreateIndex(
-                name: "IX_YaraRules_Name",
-                table: "YaraRules",
+                name: "IX_MalwareRules_Name",
+                table: "MalwareRules",
                 column: "Name",
                 unique: true);
 
             migrationBuilder.CreateIndex(
-                name: "IX_YaraRules_UpdatedAt",
-                table: "YaraRules",
+                name: "IX_MalwareRules_UpdatedAt",
+                table: "MalwareRules",
                 column: "UpdatedAt");
         }
 
@@ -491,10 +491,10 @@ namespace Castellan.Worker.Migrations
                 name: "SystemConfiguration");
 
             migrationBuilder.DropTable(
-                name: "YaraMatches");
+                name: "MalwareMatches");
 
             migrationBuilder.DropTable(
-                name: "YaraRules");
+                name: "MalwareRules");
 
             migrationBuilder.DropTable(
                 name: "MitreTechniques");

@@ -9,8 +9,8 @@ import {
   BugReport as ThreatScannerIcon,
   Gavel as MitreIcon,
   Settings as ConfigurationIcon,
-  Shield as YaraRulesIcon,
-  FindInPage as YaraMatchesIcon,
+  Shield as MalwareRulesIcon,
+  FindInPage as MalwareMatchesIcon,
   CalendarMonth as TimelineIcon,
   Rule as RuleIcon,
 } from '@mui/icons-material';
@@ -108,13 +108,13 @@ const ThreatScannerShow = React.lazy(() => import(/* webpackPrefetch: true */ '.
 const MitreTechniquesList = React.lazy(() => import(/* webpackPrefetch: true */ './resources/MitreTechniques').then(module => ({ default: module.MitreTechniquesList })));
 const MitreTechniquesShow = React.lazy(() => import(/* webpackPrefetch: true */ './resources/MitreTechniques').then(module => ({ default: module.MitreTechniquesShow })));
 
-const YaraRulesList = React.lazy(() => import(/* webpackPrefetch: true */ './resources/YaraRules').then(module => ({ default: module.YaraRulesList })));
-const YaraRulesShow = React.lazy(() => import(/* webpackPrefetch: true */ './resources/YaraRules').then(module => ({ default: module.YaraRulesShow })));
-const YaraRulesCreate = React.lazy(() => import(/* webpackPrefetch: true */ './resources/YaraRules').then(module => ({ default: module.YaraRulesCreate })));
-const YaraRulesEdit = React.lazy(() => import(/* webpackPrefetch: true */ './resources/YaraRules').then(module => ({ default: module.YaraRulesEdit })));
+const MalwareRulesList = React.lazy(() => import(/* webpackPrefetch: true */ './resources/MalwareRules').then(module => ({ default: module.MalwareRulesList })));
+const MalwareRulesShow = React.lazy(() => import(/* webpackPrefetch: true */ './resources/MalwareRules').then(module => ({ default: module.MalwareRulesShow })));
+const MalwareRulesCreate = React.lazy(() => import(/* webpackPrefetch: true */ './resources/MalwareRules').then(module => ({ default: module.MalwareRulesCreate })));
+const MalwareRulesEdit = React.lazy(() => import(/* webpackPrefetch: true */ './resources/MalwareRules').then(module => ({ default: module.MalwareRulesEdit })));
 
-const YaraMatchesList = React.lazy(() => import(/* webpackPrefetch: true */ './resources/YaraMatches').then(module => ({ default: module.YaraMatchesList })));
-const YaraMatchesShow = React.lazy(() => import(/* webpackPrefetch: true */ './resources/YaraMatches').then(module => ({ default: module.YaraMatchesShow })));
+const MalwareMatchesList = React.lazy(() => import(/* webpackPrefetch: true */ './resources/MalwareMatches').then(module => ({ default: module.MalwareMatchesList })));
+const MalwareMatchesShow = React.lazy(() => import(/* webpackPrefetch: true */ './resources/MalwareMatches').then(module => ({ default: module.MalwareMatchesShow })));
 
 const SecurityEventRuleList = React.lazy(() => import(/* webpackPrefetch: true */ './resources/SecurityEventRules').then(module => ({ default: module.SecurityEventRuleList })));
 const SecurityEventRuleShow = React.lazy(() => import(/* webpackPrefetch: true */ './resources/SecurityEventRules').then(module => ({ default: module.SecurityEventRuleShow })));
@@ -204,20 +204,20 @@ const App = () => {
             {/* YARA Rules Resource - Available in CastellanProFree */}
             <Resource
               name="yara-rules"
-              list={YaraRulesList}
-              show={YaraRulesShow}
-              create={YaraRulesCreate}
-              edit={YaraRulesEdit}
-              icon={YaraRulesIcon}
+              list={MalwareRulesList}
+              show={MalwareRulesShow}
+              create={MalwareRulesCreate}
+              edit={MalwareRulesEdit}
+              icon={MalwareRulesIcon}
               recordRepresentation={(record) => `${record.name} - ${record.category}`}
             />
     
             {/* YARA Matches Resource - Available in CastellanProFree */}
             <Resource
               name="yara-matches"
-              list={YaraMatchesList}
-              show={YaraMatchesShow}
-              icon={YaraMatchesIcon}
+              list={MalwareMatchesList}
+              show={MalwareMatchesShow}
+              icon={MalwareMatchesIcon}
               recordRepresentation={(record) => `${record.ruleName} - ${record.targetFile}`}
             />
 

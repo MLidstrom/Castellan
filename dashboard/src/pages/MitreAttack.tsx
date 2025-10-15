@@ -1,23 +1,20 @@
 import React, { useState, useEffect } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 import {
   Shield,
   Search,
-  Filter,
-  BarChart3,
   Target,
   CheckCircle,
   AlertCircle,
   Info,
-  ChevronDown,
   ChevronRight,
   Loader2,
-  ExternalLink,
   X
 } from 'lucide-react';
 import { Api } from '../services/api';
 import { useAuth } from '../hooks/useAuth';
 import { useNavigate } from 'react-router-dom';
+import { LoadingSpinner } from '../components/LoadingSpinner';
 
 // Types
 interface MitreTechnique {
@@ -35,13 +32,6 @@ interface MitreTechnique {
     ApplicationName: string;
     Confidence: number;
   }>;
-}
-
-interface MitreStatistics {
-  totalTechniques: number;
-  lastUpdated: string;
-  techniquesByTactic: Record<string, number>;
-  shouldImport: boolean;
 }
 
 // Tactic color mapping
@@ -315,7 +305,6 @@ const TechniqueDetailModal: React.FC<{
 export const MitreAttackPage: React.FC = () => {
   const { token, loading: authLoading } = useAuth();
   const navigate = useNavigate();
-  const queryClient = useQueryClient();
   const [selectedTechnique, setSelectedTechnique] = useState<MitreTechnique | null>(null);
   const [detailModalOpen, setDetailModalOpen] = useState(false);
 
@@ -356,8 +345,8 @@ export const MitreAttackPage: React.FC = () => {
       console.log('[MitreAttack] Raw API response:', response);
 
       // Handle the response format: { techniques: [...], totalCount: 823 }
-      const techniquesData = response.techniques || response.data || [];
-      const total = response.totalCount || response.total || techniquesData.length;
+      const techniquesData = (response as any).techniques || (response as any).data || [];
+      const total = (response as any).totalCount || (response as any).total || techniquesData.length;
 
       console.log('[MitreAttack] Parsed techniques:', techniquesData.length, 'Total:', total);
 
@@ -399,6 +388,10 @@ export const MitreAttackPage: React.FC = () => {
     setDetailModalOpen(true);
   };
 
+  if (loading) {
+    return <LoadingSpinner />;
+  }
+
   return (
     <div className="p-6 space-y-6">
       {/* Header */}
@@ -417,28 +410,28 @@ export const MitreAttackPage: React.FC = () => {
               <span className="text-sm text-gray-500">Cached</span>
             </div>
           </div>
-          
+
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <div>
               <div className="text-3xl font-bold text-blue-600 dark:text-blue-400">
-                {statistics.totalTechniques}
+                {(statistics as any).totalTechniques}
               </div>
               <div className="text-sm text-gray-600 dark:text-gray-300">Total Techniques</div>
             </div>
-            
+
             <div>
               <div className="text-sm text-gray-600 dark:text-gray-300">Last Updated</div>
               <div className="text-sm font-medium text-gray-900 dark:text-white">
-                {statistics.lastUpdated ? new Date(statistics.lastUpdated).toLocaleString() : 'Unknown'}
+                {(statistics as any).lastUpdated ? new Date((statistics as any).lastUpdated).toLocaleString() : 'Unknown'}
               </div>
             </div>
-            
+
             <div>
               <div className="text-sm text-gray-600 dark:text-gray-300">⚡ Instant load from cache</div>
             </div>
           </div>
-          
-          {statistics.shouldImport && (
+
+          {(statistics as any).shouldImport && (
             <div className="mt-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
               <div className="flex items-start">
                 <Info className="h-5 w-5 text-blue-600 mr-2 mt-0.5" />
@@ -548,7 +541,7 @@ export const MitreAttackPage: React.FC = () => {
       ) : (
         <>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {techniques.map((technique) => (
+            {techniques.map((technique: MitreTechnique) => (
               <TechniqueCard
                 key={technique.id}
                 technique={technique}

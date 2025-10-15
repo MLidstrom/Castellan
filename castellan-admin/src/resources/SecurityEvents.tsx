@@ -471,7 +471,7 @@ export const SecurityEventList = () => {
     connectionState,
     latestSecurityEvents,
     latestCorrelationAlerts,
-    latestYaraMatches
+    latestMalwareMatches
   } = useSignalRContext();
 
   // Use the advanced search hook with URL synchronization

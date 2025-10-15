@@ -23,10 +23,10 @@ export const onIdle = (fn: () => void, timeout = 1500) => {
 export const preloadMap: Record<string, () => Promise<any>> = {
   'dashboard': () => import(/* webpackPrefetch: true */ '../components/Dashboard'),
   'security-events': () => import(/* webpackPrefetch: true */ '../resources/SecurityEvents'),
-  'yara-rules': () => import(/* webpackPrefetch: true */ '../resources/YaraRules'),
+  'yara-rules': () => import(/* webpackPrefetch: true */ '../resources/MalwareRules'),
   'mitre/techniques': () => import(/* webpackPrefetch: true */ '../resources/MitreTechniques'),
   'system-status': () => import(/* webpackPrefetch: true */ '../resources/SystemStatus'),
-  'yara-matches': () => import(/* webpackPrefetch: true */ '../resources/YaraMatches'),
+  'yara-matches': () => import(/* webpackPrefetch: true */ '../resources/MalwareMatches'),
   'timelines': () => import(/* webpackPrefetch: true */ '../resources/Timelines'),
   'threat-scanner': () => import(/* webpackPrefetch: true */ '../resources/ThreatScanner'),
   'configuration': () => import(/* webpackPrefetch: true */ '../resources/Configuration'),

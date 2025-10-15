@@ -43,7 +43,7 @@ import { GeographicThreatMap } from './GeographicThreatMap';
 import { PerformanceDashboard } from './PerformanceDashboard';
 import { ThreatIntelligenceHealthDashboard } from './ThreatIntelligenceHealthDashboard';
 import { ApiDiagnostic } from './ApiDiagnostic';
-import { YaraSummaryCard } from './YaraSummaryCard';
+import { MalwareSummaryCard } from './MalwareSummaryCard';
 
 // Import SignalR context for persistent connection
 import { useSignalRContext } from '../contexts/SignalRContext';
@@ -1079,7 +1079,7 @@ export const Dashboard = React.memo(() => {
                 <Skeleton variant="text" width="60%" />
               </Box>
             ) : (
-              <YaraSummaryCard />
+              <MalwareSummaryCard />
             )}
           </CardContent>
         </Card>

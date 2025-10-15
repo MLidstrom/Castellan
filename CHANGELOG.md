@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.7.0] - 2025-10-15
+
+**Status**: ✅ COMPLETE - Performance & Caching Overhaul with Worker Optimization and Threat Scanner System
+
+### Major Features
+- **Worker Performance Optimization**: 5-9x throughput improvement through Sprint 1-3 optimizations
+- **Threat Scanner System**: Complete on-demand scanning with real-time progress tracking
+- **Tailwind Dashboard**: Full dashboard implementation at port 3000 with all pages
+- **Database Connection Pooling**: EF Core PooledDbContextFactory with health monitoring
+- **React Query Caching**: 30min memory retention, 24h localStorage persistence for instant page loads
+
 ### Fixed - Threat Scanner Configuration Persistence (October 14, 2025)
 **Critical Bug Fix**: Resolved configuration not persisting issue in Threat Scanner settings
 
@@ -51,9 +62,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Proper API integration with POST (create) and PUT (update) endpoints
   - Backend model: `/api/notifications/config` with proper ID-based CRUD operations
 - **Button Consistency**:
-  - YARA Rules import button text changed from "Import Now" to "Import YARA Rules"
+  - Malware Detection Rules import button text changed from "Import Now" to "Import Malware Detection Rules"
   - MITRE import button changed from blue to green (`bg-green-600`) to match YARA styling
-- **Pagination Fix**: YARA Rules page pagination now uses actual backend page size instead of hardcoded value
+- **Pagination Fix**: Malware Detection Rules page pagination now uses actual backend page size instead of hardcoded value
   - Correctly displays "Showing X to Y of Z rules" based on actual rules returned per page
   - Fixed totalPages calculation to use backend-reported page size
   - Reset to page 1 when filters change
@@ -61,7 +72,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 **Files Modified**:
 - `dashboard/src/pages/Configuration.tsx` - Notifications config rewrite, info box removals, MITRE button color
 - `dashboard/src/components/YaraConfigComponent.tsx` - Import button text update
-- `dashboard/src/pages/YaraRules.tsx` - Pagination calculations fixed
+- `dashboard/src/pages/MalwareRules.tsx` - Pagination calculations fixed
 
 ### Added - Threat Scanner Configuration (October 14, 2025)
 **Complete Threat Scanner Configuration Tab**: Implemented comprehensive threat scanner configuration interface in Tailwind Dashboard
@@ -108,14 +119,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 **New Pages**:
 - **MITRE ATT&CK** (`/mitre-attack`): Techniques list with search, filters, import dialog, detail modal, statistics
-- **YARA Rules** (`/yara-rules`): Rules management with enable/disable, import, validation status, statistics
+- **Malware Detection Rules** (`/malware-rules`): Rules management with enable/disable, import, validation status, statistics
 - **Security Event Detail** (`/security-events/:id`): Full event details with MITRE techniques, IP enrichment, analysis scores
 - **System Status** (`/system-status`): Component health monitoring with auto-refresh, response times, uptime tracking
 - **Configuration** (`/configuration`): Tabbed settings for Threat Intelligence, Notifications, IP Enrichment, YARA auto-update
 
 **Enhanced Pages**:
 - **Security Events**: Added all API fields (eventId, machine, user, mitreAttack, correlationScore, burstScore, anomalyScore, confidence, ipAddresses)
-- **Menu Navigation**: Swapped text positions - "Threat Intelligence"/"MITRE ATT&CK", "Malware Detection"/"YARA Rules"
+- **Menu Navigation**: Swapped text positions - "Threat Intelligence"/"MITRE ATT&CK", "Malware Detection"/"Malware Detection Rules"
 
 **Features**:
 - Authentication checks on all pages with automatic login redirect
@@ -128,13 +139,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 **API Integration**:
 - Added MITRE API methods: `getMitreTechniques`, `getMitreStatistics`, `importMitreTechniques`
-- Added YARA API methods: `getYaraRules`, `getYaraStatistics`, `toggleYaraRule`, `deleteYaraRule`, `importYaraRules`
+- Added YARA API methods: `getMalwareRules`, `getYaraStatistics`, `toggleYaraRule`, `deleteYaraRule`, `importMalwareRules`
 - Corrected endpoints: `/api/settings/threat-intelligence`, `/api/yara-configuration`
 
 ### Performance - Worker Optimization Sprint 3 Phase 4 (October 10, 2025)
-**YARA Scanning Optimization**: Fixed global lock bottleneck for 4-8x concurrent scanning throughput
+**Malware Scanning Optimization**: Fixed global lock bottleneck for 4-8x concurrent scanning throughput
 
-**Phase 4: YARA Scanning Optimization**
+**Phase 4: Malware Scanning Optimization**
 - Minimized `_yaraLock` scope - lock only held to get `_compiledRules` reference
 - Moved entire scanning operation OUTSIDE the lock (lines 303-336)
 - Enables true concurrent scanning up to `MaxConcurrentScans` limit (8 concurrent scans)
@@ -238,7 +249,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **New SimplifiedDataProvider**: Lightweight data provider with only request deduplication (no caching)
 - **Centralized Configuration**: Created `reactQueryConfig.ts` for consistent cache settings across all resources
   - Security Events: 15s TTL, 30s background polling
-  - YARA Rules: 60s TTL, no polling
+  - Malware Detection Rules: 60s TTL, no polling
   - System Status: 10s TTL, 15s background polling
   - MITRE Techniques: 120s TTL, no polling
 - **Background Polling**: Added `useBackgroundPolling` hook for automatic cache refresh of critical resources
@@ -264,7 +275,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Resources updated:
   - Security Events, YARA Matches, System Status, Threat Scanner: 30min (was 2-5min)
   - Timeline, Dashboard, Security Event Rules: 30min (was 5-10min)
-  - YARA Rules, MITRE Techniques, Configuration: 30min (was 10-30min)
+  - Malware Detection Rules, MITRE Techniques, Configuration: 30min (was 10-30min)
 
 **2. localStorage Persistence (24 Hours)**
 - Added React Query Persist plugin for browser storage
@@ -314,7 +325,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed - Configuration Page Caching (October 5, 2025)
 - **Configuration Not Using React Query**: Converted Configuration page from manual state management to React Query
   - Replaced manual `useEffect` + `dataProvider.getOne()` calls with `useQuery` hooks
-  - Four separate queries for config sections: threat-intelligence, notifications, ip-enrichment, yara-rules
+  - Four separate queries for config sections: threat-intelligence, notifications, ip-enrichment, malware-rules
   - Configuration data now cached for 5 minutes (fresh), 30 minutes (in memory)
   - No background polling (static configuration data)
   - Instant page navigation when cache is fresh
@@ -400,10 +411,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added - Database Consolidation & YARA Improvements (September 29, 2025)
 - **Single Database Architecture**: Consolidated all database operations to use `/data/castellan.db` as the single source of truth
 - **Database Path Fixes**: Updated DatabaseYaraRuleStore, YaraImportTool, YaraConfigurationController, and DailyRefreshHostedService to use centralized database
-- **YARA Rule Deduplication**: Confirmed UPSERT logic prevents duplicate rules using `ON CONFLICT(Name) DO UPDATE`
+- **Malware Detection Rule Deduplication**: Confirmed UPSERT logic prevents duplicate rules using `ON CONFLICT(Name) DO UPDATE`
 - **YARA Auto-Updates**: Verified automatic rule update functionality with configurable frequency (1-365 days)
-- **YARA Rule Management**: 70 active rules with preserved performance metrics and user preferences across updates
-- **Database Performance**: Implemented database-level pagination in YaraRulesController, reducing load times from 7-10s to 1-3s (70-80% improvement)
+- **Malware Detection Rule Management**: 70 active rules with preserved performance metrics and user preferences across updates
+- **Database Performance**: Implemented database-level pagination in MalwareRulesController, reducing load times from 7-10s to 1-3s (70-80% improvement)
 - **Data Migration**: Successfully migrated all existing data from scattered database files to central location
 
 ### Added - Instant Page Loading Optimization (September 29, 2025)
@@ -493,7 +504,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - **Solution**: Updated `authProvider.getPermissions()` to return permissions array directly and enhanced admin user permissions
   - **Enhanced Admin Permissions**: Added `security.read`, `analytics.read`, `system.read`, `compliance.read`, `role:admin` to backend JWT tokens
   - **Files Updated**: `AuthController.cs` (backend permissions), `authProvider.ts` (frontend structure), `MenuWithPreloading.tsx` (permission logic)
-  - **Impact**: All 11 admin interface pages now fully accessible (Dashboard, Security Events, MITRE Techniques, YARA Rules, YARA Matches, Timeline, Trend Analysis, System Status, Threat Scanner, Compliance Reports, Configuration)
+  - **Impact**: All 11 admin interface pages now fully accessible (Dashboard, Security Events, MITRE Techniques, Malware Detection Rules, YARA Matches, Timeline, Trend Analysis, System Status, Threat Scanner, Compliance Reports, Configuration)
   - **Component Preloading**: Enhanced MenuWithPreloading system now successfully preloads all menu components for instant navigation
 
 ### Added
@@ -726,15 +737,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     - Optimistic UI updates with error rollback handling
     - Consistent Material-UI design with existing interface components
 
-- **✅ YARA Malware Detection System**: Complete signature-based malware detection platform
-  - **Rule Management API**: Full REST API for YARA rule CRUD operations
-    - `GET/POST/PUT/DELETE /api/yara-rules` - Complete rule management
+- **✅ Malware Detection System**: Complete signature-based malware detection platform
+  - **Rule Management API**: Full REST API for malware detection rule CRUD operations
+    - `GET/POST/PUT/DELETE /api/malware-rules` - Complete rule management
     - Rule filtering by category, tag, MITRE technique, and enabled status
     - Pagination support for large rule sets with performance optimization
     - Rule testing and validation endpoints with syntax checking
     - Bulk operations for importing/exporting rule collections
   - **Frontend Integration**: Complete React Admin YARA management interface
-    - YaraRules resource with full CRUD capabilities and rule editor
+    - MalwareRules resource with full CRUD capabilities and rule editor
     - YaraMatches resource for viewing detection results and analysis
     - YARA analytics dashboard with rule performance metrics
     - Health monitoring widgets for scanning service status
@@ -754,7 +765,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **✅ Performance Monitoring Enhancement**: Extended system monitoring capabilities
   - Performance alert service with configurable thresholds
-  - Enhanced metrics collection for YARA rule execution
+  - Enhanced metrics collection for malware detection rule execution
   - Additional performance indicators for malware detection workflows
   - Real-time system resource monitoring with health dashboards
 

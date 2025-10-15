@@ -101,13 +101,13 @@ public class YaraSummary
     public int DisabledRules { get; set; }
     public int RecentMatches { get; set; }
     public DateTime LastMatchTime { get; set; }
-    public List<YaraMatchBasic> RecentMatchList { get; set; } = new();
+    public List<MalwareMatchBasic> RecentMatchList { get; set; } = new();
 }
 
 /// <summary>
 /// Basic YARA match information for dashboard display
 /// </summary>
-public class YaraMatchBasic
+public class MalwareMatchBasic
 {
     public string Id { get; set; } = string.Empty;
     public string RuleName { get; set; } = string.Empty;

@@ -2,10 +2,11 @@ import { useEffect, useMemo, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Api } from '../services/api';
 import { MetricCard } from '../shared/MetricCard';
-import { AlertTriangle, Shield, Activity, X, MapPin, Globe, Clock, User, Monitor } from 'lucide-react';
+import { AlertTriangle, Shield, Activity, X, Globe, Clock, User, Monitor } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 import { useNavigate } from 'react-router-dom';
 import { SignalRService } from '../services/signalr';
+import { LoadingSpinner } from '../components/LoadingSpinner';
 
 type Severity = 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW' | 'UNKNOWN';
 
@@ -17,6 +18,8 @@ interface SecurityEvent {
   eventId?: number;
   level?: string;
   riskLevel?: string;
+  severity?: string;
+  riskScore?: number;
   machine?: string;
   user?: string;
   message?: string;
@@ -371,7 +374,7 @@ export function SecurityEventsPage() {
     const riskCounts = se.riskLevelCounts || se.RiskLevelCounts || {};
     const criticalFromConsolidated = riskCounts.CRITICAL ?? riskCounts.critical ?? riskCounts.Critical;
 
-    // Compute open and average risk from current page’s events (approximation)
+    // Compute open and average risk from current page's events (approximation)
     let open = 0, riskSum = 0;
     events?.forEach((e) => {
       const status = (e.status || '').toUpperCase();
@@ -383,6 +386,10 @@ export function SecurityEventsPage() {
 
     return { total, open, critical, avgRisk };
   }, [events, eventsQuery.data, consolidatedQuery.data]);
+
+  if (eventsQuery.isLoading) {
+    return <LoadingSpinner />;
+  }
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
