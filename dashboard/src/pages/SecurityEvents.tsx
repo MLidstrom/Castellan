@@ -2,10 +2,11 @@ import { useEffect, useMemo, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Api } from '../services/api';
 import { MetricCard } from '../shared/MetricCard';
+import { SignalRStatus } from '../components/SignalRStatus';
 import { AlertTriangle, Shield, Activity, X, Globe, Clock, User, Monitor } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 import { useNavigate } from 'react-router-dom';
-import { SignalRService } from '../services/signalr';
+import { useSignalR } from '../contexts/SignalRContext';
 import { LoadingSpinner } from '../components/LoadingSpinner';
 
 type Severity = 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW' | 'UNKNOWN';
@@ -301,6 +302,7 @@ export function SecurityEventsPage() {
   const { token, loading } = useAuth();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const { hub } = useSignalR();
   const [selectedEvent, setSelectedEvent] = useState<SecurityEvent | null>(null);
   const [detailModalOpen, setDetailModalOpen] = useState(false);
 
@@ -329,25 +331,12 @@ export function SecurityEventsPage() {
 
   // Live updates via SignalR (invalidate security-events on new event)
   useEffect(() => {
-    if (loading || !token) return;
-    const hub = new SignalRService();
-    let mounted = true;
-    (async () => {
-      try {
-        await hub.start();
-        if (!mounted) return;
-        hub.on('SecurityEvent', () => {
-          queryClient.invalidateQueries({ queryKey: ['security-events'] });
-        });
-      } catch (e) {
-        console.warn('[SignalR] connection failed (security-events)', e);
-      }
-    })();
-    return () => {
-      mounted = false;
-      hub.stop().catch(() => undefined);
-    };
-  }, [loading, token, queryClient]);
+    if (!hub) return;
+
+    hub.on('SecurityEvent', () => {
+      queryClient.invalidateQueries({ queryKey: ['security-events'] });
+    });
+  }, [hub, queryClient]);
 
   const events: SecurityEvent[] = useMemo(() => {
     const raw = (eventsQuery.data as any) || {};
@@ -401,10 +390,7 @@ export function SecurityEventsPage() {
             <p className="text-gray-600 dark:text-gray-400 mt-1">Real-time threat detection and incident response</p>
           </div>
           <div className="flex items-center gap-3">
-            <div className="flex items-center gap-2 text-green-600 dark:text-green-400">
-              <div className="h-2 w-2 rounded-full bg-green-500 animate-pulse"></div>
-              <span className="text-sm font-medium">Live Monitoring</span>
-            </div>
+            <SignalRStatus />
             <button className="px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700">Filters</button>
           </div>
         </div>

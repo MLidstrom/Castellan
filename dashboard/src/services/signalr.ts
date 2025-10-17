@@ -48,6 +48,10 @@ export class SignalRService {
   onClose(cb: () => void) {
     this.connection?.onclose(() => cb());
   }
+
+  getConnectionState(): string {
+    return this.connection?.state || 'Disconnected';
+  }
 }
 
 

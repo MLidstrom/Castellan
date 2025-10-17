@@ -66,6 +66,7 @@ builder.Services.AddSingleton<IValidateOptions<PipelineOptions>, PipelineOptions
 builder.Services.AddHttpClient(); // Required by multiple features
 builder.Services.AddCastellanDatabase(builder.Configuration, builder.Environment);
 builder.Services.AddCastellanAuthentication(builder.Configuration);
+builder.Services.AddCastellanOpenTelemetry(builder.Configuration); // Phase 2 Week 4: Distributed tracing
 builder.Services.AddCastellanAI(builder.Configuration);
 builder.Services.AddCastellanSecurity(builder.Configuration);
 builder.Services.AddCastellanThreatIntelligence(builder.Configuration);
@@ -73,9 +74,15 @@ builder.Services.AddCastellanNotifications(builder.Configuration);
 builder.Services.AddCastellanMonitoring(builder.Configuration);
 builder.Services.AddCastellanPipeline(builder.Configuration);
 builder.Services.AddCastellanSignalR();
+builder.Services.AddCastellanChat(builder.Configuration); // Phase 3 Week 8: Conversational AI
 
-// Add Web API services
-builder.Services.AddControllers();
+// Add Web API services with JSON configuration
+builder.Services.AddControllers()
+    .AddJsonOptions(options =>
+    {
+        options.JsonSerializerOptions.PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase;
+        options.JsonSerializerOptions.Converters.Add(new System.Text.Json.Serialization.JsonStringEnumConverter(System.Text.Json.JsonNamingPolicy.CamelCase));
+    });
 
 // Add CORS for frontend and SignalR
 builder.Services.AddCors(options =>

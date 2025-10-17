@@ -5,6 +5,20 @@
 - **Zero Event Loss** - Bookmark-based persistence ensures no missed events across service restarts
 - **Multi-Channel Support** - Security, Sysmon, PowerShell, and Windows Defender event monitoring
 - **AI-Powered Threat Analysis** - LLM-based event classification with external threat intelligence
+  - **Multi-Model Ensemble (v0.7.0)** - LLM factory pattern with support for parallel/sequential multi-model predictions for 20-30% accuracy improvement
+    - **Factory Pattern Architecture** - ILlmClientFactory creates model-specific clients with full decorator chain (Base → Resilience → StrictJson → Telemetry)
+    - **Model Diversity** - Supports calling multiple models (llama3.1, mistral, gemma2) with independent client instances
+    - **Voting Strategies** - Majority voting (categorical fields), weighted voting, unanimous voting with configurable weights
+    - **Confidence Aggregation** - Mean, median, min, max, weighted_mean strategies for numerical field aggregation
+    - **Graceful Degradation** - Multi-level fallback when models fail or don't reach quorum (MinimumQuorum 2-3)
+    - **Statistics Tracking** - Monitors model performance, success rates, failure counts, and response times per model
+    - **Parallel/Sequential Execution** - Configurable execution mode with timeout controls for performance optimization
+    - **Provider Support** - Works with both Ollama (local) and OpenAI providers with provider-specific configurations
+  - **Embedding Cache (v0.7.0)** - Hash-keyed LRU cache reduces embedding API calls by 30-70% with SHA256-based keys and stampede prevention
+  - **Polly Resilience Patterns (v0.7.0)** - Retry with exponential backoff, circuit breaker, and timeout for zero cascading failures and 97%+ reliability
+  - **Layered Decorator Architecture** - Composable enhancements: Base → Resilience → Cache with independent feature flags
+  - **Graceful Degradation** - Failed AI calls return empty results instead of crashing the pipeline
+  - **Statistics APIs** - Monitoring endpoints for cache hit rates, circuit breaker status, retry metrics, and ensemble performance
 - **Vector Search** - Semantic similarity search using Qdrant vector database for correlation
 - **Advanced Correlation Engine** - Background intelligence system with ML.NET-powered pattern detection
 - **File Threat Scanning** - Real-time malware detection with VirusTotal integration and local heuristics

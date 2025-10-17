@@ -4,16 +4,18 @@ import { MetricCard } from '../shared/MetricCard';
 import { RecentActivity } from '../shared/RecentActivity';
 import { ThreatDistribution } from '../shared/ThreatDistribution';
 import { LoadingSpinner } from '../components/LoadingSpinner';
+import { SignalRStatus } from '../components/SignalRStatus';
 import { AlertTriangle, Shield, Search, TrendingUp, Server, Zap, Scan } from 'lucide-react';
 import { Api } from '../services/api';
 import { useAuth } from '../hooks/useAuth';
 import { useNavigate } from 'react-router-dom';
-import { SignalRService } from '../services/signalr';
+import { useSignalR } from '../contexts/SignalRContext';
 
 export function DashboardPage() {
   const { token, loading } = useAuth();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const { hub } = useSignalR();
 
   useEffect(() => {
     if (!loading && !token) {
@@ -28,39 +30,23 @@ export function DashboardPage() {
     enabled: !loading && !!token,
   });
 
-  // Start SignalR when authenticated and wire live updates
+  // Wire SignalR live updates
   useEffect(() => {
-    if (loading || !token) return;
-    const hub = new SignalRService();
-    let mounted = true;
+    if (!hub) return;
 
-    (async () => {
-      try {
-        await hub.start();
-        if (!mounted) return;
-        // Dashboard consolidated updates push
-        hub.on('DashboardUpdate', (payload: any) => {
-          queryClient.setQueryData(['dashboard', 'consolidated', '24h'], payload);
-        });
-        // Security events may impact recent activity
-        hub.on('SecurityEvent', () => {
-          queryClient.invalidateQueries({ queryKey: ['security-events'] });
-        });
-        // System status live changes
-        hub.on('SystemStatusUpdate', () => {
-          queryClient.invalidateQueries({ queryKey: ['system-status'] });
-        });
-      } catch (e) {
-        // Fallback: ignore connection errors; REST will still update
-        console.warn('[SignalR] connection failed', e);
-      }
-    })();
-
-    return () => {
-      mounted = false;
-      hub.stop().catch(() => undefined);
-    };
-  }, [loading, token, queryClient]);
+    // Dashboard consolidated updates push
+    hub.on('DashboardUpdate', (payload: any) => {
+      queryClient.setQueryData(['dashboard', 'consolidated', '24h'], payload);
+    });
+    // Security events may impact recent activity
+    hub.on('SecurityEvent', () => {
+      queryClient.invalidateQueries({ queryKey: ['security-events'] });
+    });
+    // System status live changes
+    hub.on('SystemStatusUpdate', () => {
+      queryClient.invalidateQueries({ queryKey: ['system-status'] });
+    });
+  }, [hub, queryClient]);
 
   const normalized = useMemo(() => {
     const raw = dashboardQuery.data || {} as any;
@@ -143,10 +129,7 @@ export function DashboardPage() {
               <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Dashboard</h1>
               <p className="text-gray-600 dark:text-gray-400 mt-1">Real-time security platform overview</p>
             </div>
-            <div className="flex items-center space-x-2">
-              <div className="h-2 w-2 rounded-full bg-green-500 animate-pulse"></div>
-              <span className="text-sm font-medium text-green-600 dark:text-green-400">Live Data</span>
-            </div>
+            <SignalRStatus />
           </div>
         </div>
       </div>

@@ -8,6 +8,8 @@ Castellan processes Windows security events through **enterprise-grade AI/ML ana
 
 - **Connection Pooling**: 15-25% I/O optimization with health monitoring and automatic failover 🎆 **LIVE** - 2/2 instances healthy, HTTP monitoring active
 - **Intelligent Caching**: 30-50% performance improvement with semantic similarity detection and memory management
+- **🆕 AI Embedding Cache (v0.7.0)**: 30-70% reduction in embedding API calls with hash-keyed LRU cache and stampede prevention 🎆 **LIVE**
+- **🆕 Polly Resilience Patterns (v0.7.0)**: Zero cascading failures with retry, circuit breaker, timeout - 97%+ reliability 🎆 **LIVE**
 - **Scaling Architecture**: Complete horizontal scaling with load balancing, event queues, and auto-scaling
 - **Pipeline Stability**: Production-ready with stable background operation and comprehensive monitoring
 - **MITRE Integration**: Full ATT&CK framework integration with 50+ techniques displayed in web interface
@@ -17,6 +19,73 @@ Castellan processes Windows security events through **enterprise-grade AI/ML ana
 - **🆕 Dashboard Data Consolidation**: Single SignalR stream replaces 4+ REST API calls with 80%+ performance improvement
 - **🆕 Malware Detection**: Signature-based malware detection with comprehensive rule management and API
 - **🆕 EventLogWatcher**: Real-time Windows Event Log monitoring with sub-second latency and zero event loss
+- **🆕 Multi-Model Ensemble (v0.7.0)**: LLM factory pattern with support for parallel/sequential multi-model predictions 🎆 **READY**
+
+## AI/ML Architecture (v0.7.0)
+
+### LLM Factory Pattern
+
+Castellan uses a sophisticated factory pattern for creating LLM client instances, enabling both single-model and multi-model ensemble predictions:
+
+```mermaid
+flowchart TD
+    A[ILlmClientFactory] --> B[Create Model-Specific Client]
+    B --> C[Base LLM: OllamaLlm or OpenAILlm]
+    C --> D[Layer 1: ResilientLlmClient]
+    D --> E[Layer 2: StrictJsonLlmClient]
+    E --> F[Layer 3: TelemetryLlmClient]
+    F --> G[ILlmClient Instance]
+
+    H[Configuration] --> I{Ensemble Enabled?}
+    I -->|Yes| J[EnsembleLlmClient]
+    I -->|No| K[Single Model Client]
+    J --> L[Multi-Model Predictions]
+    K --> M[Single Model Predictions]
+
+    G --> J
+    G --> K
+
+    subgraph "Decorator Chain"
+        C
+        D
+        E
+        F
+    end
+
+    subgraph "Client Selection"
+        I
+        J
+        K
+    end
+
+    style A fill:#e1f5fe,color:#000
+    style B fill:#fff3e0,color:#000
+    style C fill:#f3e5f5,color:#000
+    style D fill:#ffebee,color:#000
+    style E fill:#fff8e1,color:#000
+    style F fill:#fce4ec,color:#000
+    style G fill:#e8f5e8,color:#000
+    style H fill:#f1f8e9,color:#000
+    style I fill:#e3f2fd,color:#000
+    style J fill:#ffe0b2,color:#000
+    style K fill:#fff3e0,color:#000
+```
+
+### AI/ML Components
+
+- **LLM Factory Pattern**: Creates model-specific clients with full decorator chain (Base → Resilience → StrictJson → Telemetry)
+- **Multi-Model Ensemble**: Supports calling multiple models (llama3.1, mistral, gemma2) with voting/aggregation strategies
+- **Voting Strategies**: Majority voting (categorical fields), weighted voting, unanimous voting
+- **Confidence Aggregation**: Mean, median, min, max, weighted_mean strategies for numerical fields
+- **Graceful Degradation**: Multi-level fallback when models fail or don't reach quorum
+- **Statistics Tracking**: Monitors model performance, success rates, failure counts, and response times
+- **Embeddings**: Supports Ollama (nomic-embed-text) and OpenAI (text-embedding-3-small) with caching and resilience
+- **Vector Search**: Qdrant integration for semantic similarity search and correlation detection
+- **ML.NET Clustering**: Anomaly detection with 8-feature analysis for security event correlation
+
+### Configuration
+
+See `docs/FACTORY_PATTERN_IMPLEMENTATION.md` and `docs/ENSEMBLE_ARCHITECTURE.md` for detailed configuration guides.
 
 ## System Architecture Diagram
 

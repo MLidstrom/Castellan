@@ -1,8 +1,10 @@
 import { useEffect, useMemo, useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Api } from '../services/api';
 import { useAuth } from '../hooks/useAuth';
 import { useNavigate } from 'react-router-dom';
+import { useSignalR } from '../contexts/SignalRContext';
+import { SignalRStatus } from '../components/SignalRStatus';
 import { LoadingSpinner } from '../components/LoadingSpinner';
 
 type Granularity = 'day' | 'hour';
@@ -20,6 +22,8 @@ function toLocalLabel(iso: string) {
 export function TimelinePage() {
   const { token, loading } = useAuth();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
+  const { hub } = useSignalR();
 
   useEffect(() => {
     if (!loading && !token) {
@@ -42,15 +46,23 @@ export function TimelinePage() {
       return Array.isArray(res) ? res : (res.data || []);
     },
     enabled: !loading && !!token,
-    staleTime: 15000,
   });
 
   const statsQuery = useQuery({
     queryKey: ['timeline-stats', fromIso, toIso],
     queryFn: () => Api.getTimelineStats(fromIso, toIso),
     enabled: !loading && !!token,
-    staleTime: 15000,
   });
+
+  // Live updates via SignalR
+  useEffect(() => {
+    if (!hub) return;
+
+    hub.on('SecurityEvent', () => {
+      queryClient.invalidateQueries({ queryKey: ['timeline'] });
+      queryClient.invalidateQueries({ queryKey: ['timeline-stats'] });
+    });
+  }, [hub, queryClient]);
 
   const buckets: Bucket[] = useMemo(() => {
     const items = (timelineQuery.data as Array<TimelineResponseItem>) || [];
@@ -100,10 +112,7 @@ export function TimelinePage() {
             <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Timeline</h1>
             <p className="text-gray-600 dark:text-gray-400 mt-1">Security events over time (24-hour rolling window)</p>
           </div>
-          <div className="flex items-center gap-2 text-green-600 dark:text-green-400">
-            <div className="h-2 w-2 rounded-full bg-green-500 animate-pulse"></div>
-            <span className="text-sm font-medium">Live Monitoring</span>
-          </div>
+          <SignalRStatus />
         </div>
       </div>
 

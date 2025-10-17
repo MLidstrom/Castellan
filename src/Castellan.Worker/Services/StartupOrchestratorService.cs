@@ -389,6 +389,7 @@ public class StartupOrchestratorService : BackgroundService
     {
         foreach (var process in _managedProcesses)
         {
+            var processId = process.Id;
             try
             {
                 if (!process.HasExited)
@@ -400,7 +401,7 @@ public class StartupOrchestratorService : BackgroundService
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, $"Error stopping process {process.Id}");
+                _logger.LogError(ex, $"Error stopping process {processId}");
             }
         }
         _managedProcesses.Clear();

@@ -20,6 +20,16 @@ import {
   Plus,
   Trash2
 } from 'lucide-react';
+
+// Custom Teams Icon Component
+function TeamsIcon({ className = "h-6 w-6" }: { className?: string }) {
+  return <img src="/microsoft-teams-1.svg" alt="Microsoft Teams" className={className} />;
+}
+
+// Custom Slack Icon Component
+function SlackIcon({ className = "h-6 w-6" }: { className?: string }) {
+  return <img src="/slack-new-logo.svg" alt="Slack" className={className} />;
+}
 import { useAuth } from '../hooks/useAuth';
 import { useNavigate } from 'react-router-dom';
 import { MalwareConfigComponent } from '../components/MalwareConfigComponent';
@@ -669,7 +679,10 @@ function NotificationsConfig({
       {/* Teams */}
       <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-6">
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Microsoft Teams</h2>
+          <div className="flex items-center gap-3">
+            <TeamsIcon className="h-6 w-6" />
+            <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Microsoft Teams</h2>
+          </div>
           <label className="flex items-center gap-2">
             <input
               type="checkbox"
@@ -809,7 +822,10 @@ function NotificationsConfig({
       {/* Slack */}
       <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-6">
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Slack</h2>
+          <div className="flex items-center gap-3">
+            <SlackIcon className="h-6 w-6" />
+            <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Slack</h2>
+          </div>
           <label className="flex items-center gap-2">
             <input
               type="checkbox"

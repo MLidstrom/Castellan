@@ -1,17 +1,17 @@
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { Shield, LayoutDashboard, AlertTriangle, Clock, Target, Search, Activity, Settings, ChevronRight, Bell, User, Scan, Sun, Moon, LogOut } from 'lucide-react';
+import { Shield, LayoutDashboard, AlertTriangle, Clock, Target, Search, Activity, Settings, ChevronRight, Bell, User, Scan, Sun, Moon, LogOut, MessageCircle } from 'lucide-react';
 import { ReactNode, useState, useEffect, useRef } from 'react';
 import { AuthService } from '../../services/auth';
 
 const navigationItems = [
   { name: 'Dashboard', href: '/', icon: LayoutDashboard, description: 'Mission Control Center' },
+  { name: 'AI Chat', href: '/chat', icon: MessageCircle, description: 'Ask CastellanAI' },
   { name: 'Security Events', href: '/security-events', icon: AlertTriangle, description: 'Event Investigation' },
   { name: 'Timeline', href: '/timeline', icon: Clock, description: 'Attack Visualization' },
   { name: 'Threat Intelligence', href: '/mitre-attack', icon: Target, description: 'MITRE ATT&CK' },
   { name: 'Malware Detection', href: '/malware-rules', icon: Search, description: 'Rule Management' },
   { name: 'Threat Scanner', href: '/threat-scanner', icon: Scan, description: 'Security Scanning' },
   { name: 'System Status', href: '/system-status', icon: Activity, description: 'Platform Health' },
-  { name: 'Configuration', href: '/configuration', icon: Settings, description: 'Settings & Integrations' },
 ];
 
 export function MainLayout({ children }: { children: ReactNode }) {
@@ -66,7 +66,7 @@ export function MainLayout({ children }: { children: ReactNode }) {
               <Shield className="h-6 w-6 text-white" />
             </div>
             <div>
-              <h1 className="text-xl font-bold text-gray-900 dark:text-white">Castellan</h1>
+              <h1 className="text-xl font-bold text-gray-900 dark:text-white">CastellanAI</h1>
               <p className="text-xs text-gray-500 dark:text-gray-400">Security Platform</p>
             </div>
           </div>
@@ -101,6 +101,15 @@ export function MainLayout({ children }: { children: ReactNode }) {
                       </>
                     )}
                   </button>
+
+                  <Link
+                    to="/configuration"
+                    onClick={() => setIsDropdownOpen(false)}
+                    className="w-full flex items-center space-x-3 px-4 py-2.5 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+                  >
+                    <Settings className="h-4 w-4" />
+                    <span>Configuration</span>
+                  </Link>
 
                   <div className="border-t border-gray-200 dark:border-gray-700 my-1"></div>
 

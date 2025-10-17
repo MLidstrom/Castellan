@@ -19,14 +19,22 @@ IMPORTANT SECURITY CONTEXT:
 - Consider MITRE ATT&CK techniques relevant to Windows security events
 - Assess risk based on event type, timing, user context, and similar historical events
 
-Output strict JSON only:
+CRITICAL: You MUST respond with ONLY valid JSON. No markdown, no code blocks, no explanations.
+
+REQUIRED JSON SCHEMA:
 {{
-  ""risk"": ""low|medium|high|critical"",
-  ""mitre"": [""Txxxx"", ""Txxxx""],
-  ""confidence"": 0-100,
-  ""summary"": ""brief security assessment"",
-  ""recommended_actions"": [""specific action 1"", ""specific action 2""]
+  ""risk"": ""low|medium|high|critical"" (REQUIRED - exactly one of these values),
+  ""mitre"": [""Txxxx"", ""Txxxx""] (array of MITRE ATT&CK technique IDs, empty array if none),
+  ""confidence"": 0-100 (REQUIRED - integer between 0 and 100),
+  ""summary"": ""brief security assessment 10-500 characters"" (REQUIRED),
+  ""recommended_actions"": [""specific action 1"", ""specific action 2""] (array of strings, can be empty)
 }}
+
+VALIDATION RULES:
+- ""risk"" MUST be one of: low, medium, high, critical
+- ""confidence"" MUST be integer 0-100
+- ""summary"" MUST be 10-500 characters
+- Output ONLY the JSON object, nothing else
 
 NEW EVENT:
 {e.Time:o} [{e.Channel}/{e.EventId}] {e.Message}
@@ -34,12 +42,52 @@ NEW EVENT:
 SIMILAR HISTORICAL EVENTS:
 {ctx}
 
-SECURITY ANALYSIS:";
+JSON RESPONSE:";
 
         var payload = new { model = opt.Value.Model, prompt, stream = false };
         using var resp = await http.PostAsJsonAsync($"{opt.Value.Endpoint}/api/generate", payload, ct);
         resp.EnsureSuccessStatusCode();
         
+        try
+        {
+            var json = await resp.Content.ReadFromJsonAsync<JsonElement>(cancellationToken: ct);
+            if (json.TryGetProperty("response", out var responseElement))
+            {
+                return responseElement.GetString() ?? "";
+            }
+            return "";
+        }
+        catch (JsonException)
+        {
+            return "";
+        }
+    }
+
+    public async Task<string> GenerateAsync(string systemPrompt, string userPrompt, CancellationToken ct)
+    {
+        // Ollama doesn't have a separate system/user prompt API, so we combine them
+        var combinedPrompt = $"{systemPrompt}\n\n{userPrompt}";
+
+        // Add options to limit response length and speed up generation
+        var options = new
+        {
+            temperature = 0.7,
+            num_predict = 512,  // Limit to 512 tokens for faster responses
+            top_p = 0.9,
+            top_k = 40
+        };
+
+        var payload = new
+        {
+            model = opt.Value.Model,
+            prompt = combinedPrompt,
+            stream = false,
+            options
+        };
+
+        using var resp = await http.PostAsJsonAsync($"{opt.Value.Endpoint}/api/generate", payload, ct);
+        resp.EnsureSuccessStatusCode();
+
         try
         {
             var json = await resp.Content.ReadFromJsonAsync<JsonElement>(cancellationToken: ct);

@@ -3,7 +3,8 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Api } from '../services/api';
 import { useAuth } from '../hooks/useAuth';
 import { useNavigate } from 'react-router-dom';
-import { SignalRService } from '../services/signalr';
+import { useSignalR } from '../contexts/SignalRContext';
+import { SignalRStatus } from '../components/SignalRStatus';
 import { LoadingSpinner } from '../components/LoadingSpinner';
 import {
   Shield,
@@ -17,8 +18,6 @@ import {
   Activity,
   Loader2,
   Filter,
-  Wifi,
-  WifiOff,
   Eye
 } from 'lucide-react';
 
@@ -62,11 +61,11 @@ export function ThreatScannerPage() {
   const { token, loading } = useAuth();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const { hub } = useSignalR();
   const [progressDialogOpen, setProgressDialogOpen] = useState(false);
   const [scanType, setScanType] = useState('');
   const [scanInProgress, setScanInProgress] = useState(false);
   const [selectedScanId, setSelectedScanId] = useState<string | null>(null);
-  const [signalRConnected, setSignalRConnected] = useState(false);
 
   // Filter states
   const [filterScanType, setFilterScanType] = useState<string>('');
@@ -108,53 +107,19 @@ export function ThreatScannerPage() {
 
   // Setup SignalR connection for real-time updates
   useEffect(() => {
-    if (loading || !token) return;
+    if (!hub) return;
 
-    const hub = new SignalRService();
-    let mounted = true;
+    // Listen for scan progress updates
+    hub.on('ScanProgressUpdate', () => {
+      queryClient.invalidateQueries({ queryKey: ['scan-progress'] });
+    });
 
-    (async () => {
-      try {
-        await hub.start();
-        if (!mounted) return;
-
-        setSignalRConnected(true);
-
-        // Listen for scan progress updates
-        hub.on('ScanProgressUpdate', () => {
-          queryClient.invalidateQueries({ queryKey: ['scan-progress'] });
-        });
-
-        // Listen for scan completion
-        hub.on('ScanCompleted', () => {
-          queryClient.invalidateQueries({ queryKey: ['threat-scans'] });
-          queryClient.invalidateQueries({ queryKey: ['scan-progress'] });
-        });
-
-        // Listen for connection state changes
-        hub.onReconnected(() => {
-          setSignalRConnected(true);
-        });
-
-        hub.onReconnecting(() => {
-          setSignalRConnected(false);
-        });
-
-        hub.onClose(() => {
-          setSignalRConnected(false);
-        });
-      } catch (e) {
-        console.warn('[SignalR] connection failed', e);
-        setSignalRConnected(false);
-      }
-    })();
-
-    return () => {
-      mounted = false;
-      setSignalRConnected(false);
-      hub.stop().catch(() => undefined);
-    };
-  }, [loading, token, queryClient]);
+    // Listen for scan completion
+    hub.on('ScanCompleted', () => {
+      queryClient.invalidateQueries({ queryKey: ['threat-scans'] });
+      queryClient.invalidateQueries({ queryKey: ['scan-progress'] });
+    });
+  }, [hub, queryClient]);
 
   const handleQuickScan = async () => {
     try {
@@ -277,16 +242,7 @@ export function ThreatScannerPage() {
                   <span className="text-sm font-medium">{scanType} in progress...</span>
                 </button>
               )}
-              <div className="flex items-center space-x-2 px-3 py-2 bg-gray-100 dark:bg-gray-700 rounded-lg">
-                {signalRConnected ? (
-                  <Wifi className="h-4 w-4 text-green-600 dark:text-green-400" />
-                ) : (
-                  <WifiOff className="h-4 w-4 text-red-600 dark:text-red-400" />
-                )}
-                <span className={`text-xs font-medium ${signalRConnected ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
-                  {signalRConnected ? 'Live' : 'Offline'}
-                </span>
-              </div>
+              <SignalRStatus />
               <button
                 onClick={handleQuickScan}
                 disabled={scanInProgress}

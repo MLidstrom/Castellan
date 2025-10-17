@@ -1,0 +1,532 @@
+{
+  "version": "1.0",
+  "description": "Golden test dataset for automated LLM evaluation. Contains security events with expected analysis outputs for regression testing.",
+  "created": "2025-10-16",
+  "test_cases": [
+    {
+      "id": "test-001",
+      "name": "Failed Login Attempt - Brute Force",
+      "event": {
+        "event_id": 4625,
+        "channel": "Security",
+        "host": "WORKSTATION-01",
+        "user": "admin",
+        "message": "An account failed to log on. Subject: Security ID: S-1-5-18 Account Name: WORKSTATION-01$ Logon Type: 3 Account For Which Logon Failed: Account Name: admin Failure Information: Failure Reason: Unknown user name or bad password. Status: 0xC000006D Sub Status: 0xC000006A",
+        "timestamp": "2025-10-16T14:30:00Z",
+        "raw_json": "{\"EventID\":4625,\"SubjectUserName\":\"WORKSTATION-01$\",\"TargetUserName\":\"admin\",\"LogonType\":3,\"Status\":\"0xC000006D\"}"
+      },
+      "expected_output": {
+        "event_type": "UnauthorizedAccess",
+        "risk": "high",
+        "confidence": 85,
+        "summary": "Failed login attempt for privileged account 'admin' from network logon (type 3). Indicates potential brute force attack targeting administrative credentials.",
+        "mitre": ["T1110.001", "T1078"],
+        "recommended_actions": [
+          "Monitor for additional failed login attempts from the same source",
+          "Review account lockout policies",
+          "Consider implementing multi-factor authentication for admin accounts",
+          "Investigate source IP address for malicious activity"
+        ]
+      }
+    },
+    {
+      "id": "test-002",
+      "name": "Successful Login After Failed Attempts",
+      "event": {
+        "event_id": 4624,
+        "channel": "Security",
+        "host": "WORKSTATION-01",
+        "user": "admin",
+        "message": "An account was successfully logged on. Subject: Security ID: S-1-5-21-123 Account Name: admin Logon Type: 3 Workstation Name: ATTACKER-PC Source Network Address: 192.168.1.100",
+        "timestamp": "2025-10-16T14:35:00Z",
+        "raw_json": "{\"EventID\":4624,\"TargetUserName\":\"admin\",\"LogonType\":3,\"WorkstationName\":\"ATTACKER-PC\",\"IpAddress\":\"192.168.1.100\"}"
+      },
+      "expected_output": {
+        "event_type": "UnauthorizedAccess",
+        "risk": "critical",
+        "confidence": 95,
+        "summary": "Successful network logon for admin account after multiple failed attempts. Strong indicator of successful brute force attack or credential compromise.",
+        "mitre": ["T1078.002", "T1110"],
+        "recommended_actions": [
+          "Immediately reset admin account password",
+          "Review audit logs for unauthorized actions",
+          "Check for lateral movement from source IP",
+          "Implement account lockout after failed login attempts",
+          "Enable detailed security auditing"
+        ]
+      }
+    },
+    {
+      "id": "test-003",
+      "name": "New User Account Created",
+      "event": {
+        "event_id": 4720,
+        "channel": "Security",
+        "host": "DC-01",
+        "user": "SYSTEM",
+        "message": "A user account was created. Subject: Account Name: Administrator New Account: Account Name: backdoor_user Security ID: S-1-5-21-456",
+        "timestamp": "2025-10-16T02:15:00Z",
+        "raw_json": "{\"EventID\":4720,\"SubjectUserName\":\"Administrator\",\"TargetUserName\":\"backdoor_user\"}"
+      },
+      "expected_output": {
+        "event_type": "SuspiciousActivity",
+        "risk": "high",
+        "confidence": 80,
+        "summary": "New user account 'backdoor_user' created at 2:15 AM by Administrator. Suspicious naming pattern and off-hours timing suggest potential persistence mechanism.",
+        "mitre": ["T1136.001", "T1098"],
+        "recommended_actions": [
+          "Verify account creation was authorized",
+          "Review account permissions and group memberships",
+          "Investigate Administrator account activity",
+          "Consider disabling account pending investigation",
+          "Check for additional suspicious accounts created in same timeframe"
+        ]
+      }
+    },
+    {
+      "id": "test-004",
+      "name": "PowerShell Script Execution - Encoded Command",
+      "event": {
+        "event_id": 4688,
+        "channel": "Security",
+        "host": "WORKSTATION-05",
+        "user": "johndoe",
+        "message": "A new process has been created. Creator Subject: Account Name: johndoe New Process Name: C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe Process Command Line: powershell.exe -enc JABjAGwAaQBlAG4AdAAgAD0AIABOAGUAdwAtAE8AYgBqAGUAYwB0ACAAUwB5AHMAdABlAG0ALgBOAGUAdAAuAFMAbwBjAGsAZQB0AHMA",
+        "timestamp": "2025-10-16T10:45:00Z",
+        "raw_json": "{\"EventID\":4688,\"SubjectUserName\":\"johndoe\",\"NewProcessName\":\"powershell.exe\",\"CommandLine\":\"powershell.exe -enc JABjAGwAaQBlAG4AdAAgAD0AIABOAGUAdwAtAE8AYgBqAGUAYwB0ACAAUwB5AHMAdABlAG0ALgBOAGUAdAAuAFMAbwBjAGsAZQB0AHMA\"}"
+      },
+      "expected_output": {
+        "event_type": "MaliciousActivity",
+        "risk": "critical",
+        "confidence": 90,
+        "summary": "PowerShell executed with base64-encoded command, commonly used to obfuscate malicious payloads. Command appears to establish network connection (System.Net.Sockets).",
+        "mitre": ["T1059.001", "T1027", "T1071.001"],
+        "recommended_actions": [
+          "Decode and analyze full PowerShell command",
+          "Isolate affected workstation immediately",
+          "Review network connections from this host",
+          "Scan for additional malware or persistence mechanisms",
+          "Check for data exfiltration"
+        ]
+      }
+    },
+    {
+      "id": "test-005",
+      "name": "Firewall Rule Modified",
+      "event": {
+        "event_id": 4947,
+        "channel": "Security",
+        "host": "WORKSTATION-03",
+        "user": "normaluser",
+        "message": "A change has been made to Windows Firewall settings. Profile Changed: Domain Rule Name: Allow All Inbound Rule Action: Allow",
+        "timestamp": "2025-10-16T16:20:00Z",
+        "raw_json": "{\"EventID\":4947,\"SubjectUserName\":\"normaluser\",\"RuleName\":\"Allow All Inbound\",\"Action\":\"Allow\"}"
+      },
+      "expected_output": {
+        "event_type": "PolicyViolation",
+        "risk": "high",
+        "confidence": 85,
+        "summary": "User 'normaluser' modified firewall settings to allow all inbound traffic on Domain profile. Significantly weakens security posture and may facilitate remote access.",
+        "mitre": ["T1562.004", "T1021"],
+        "recommended_actions": [
+          "Revert firewall rule changes immediately",
+          "Investigate if user account is compromised",
+          "Review recent network connections to this host",
+          "Implement change control for firewall modifications",
+          "Enable tamper protection for firewall settings"
+        ]
+      }
+    },
+    {
+      "id": "test-006",
+      "name": "Scheduled Task Created - Suspicious",
+      "event": {
+        "event_id": 4698,
+        "channel": "Security",
+        "host": "WORKSTATION-07",
+        "user": "SYSTEM",
+        "message": "A scheduled task was created. Task Name: \\Microsoft\\Windows\\Update\\SystemUpdate Actions: C:\\Users\\Public\\update.exe",
+        "timestamp": "2025-10-16T03:30:00Z",
+        "raw_json": "{\"EventID\":4698,\"SubjectUserName\":\"SYSTEM\",\"TaskName\":\"\\\\Microsoft\\\\Windows\\\\Update\\\\SystemUpdate\",\"TaskContent\":\"C:\\\\Users\\\\Public\\\\update.exe\"}"
+      },
+      "expected_output": {
+        "event_type": "MaliciousActivity",
+        "risk": "critical",
+        "confidence": 92,
+        "summary": "Suspicious scheduled task created at 3:30 AM executing binary from Public folder. Masquerading as Windows Update but running from non-standard location indicates malware persistence.",
+        "mitre": ["T1053.005", "T1036.005", "T1574.001"],
+        "recommended_actions": [
+          "Delete scheduled task immediately",
+          "Quarantine and analyze update.exe file",
+          "Scan system for additional malware",
+          "Check for other persistence mechanisms",
+          "Investigate how malware was delivered"
+        ]
+      }
+    },
+    {
+      "id": "test-007",
+      "name": "Service Installation - Remote Access Tool",
+      "event": {
+        "event_id": 7045,
+        "channel": "System",
+        "host": "SERVER-02",
+        "user": "SYSTEM",
+        "message": "A service was installed in the system. Service Name: TeamViewerService Service File Name: C:\\Program Files (x86)\\TeamViewer\\TeamViewer_Service.exe Service Type: user mode service Service Start Type: auto start Account Name: LocalSystem",
+        "timestamp": "2025-10-16T09:15:00Z",
+        "raw_json": "{\"EventID\":7045,\"ServiceName\":\"TeamViewerService\",\"ImagePath\":\"C:\\\\Program Files (x86)\\\\TeamViewer\\\\TeamViewer_Service.exe\",\"ServiceType\":\"user mode service\",\"StartType\":\"auto start\"}"
+      },
+      "expected_output": {
+        "event_type": "PolicyViolation",
+        "risk": "medium",
+        "confidence": 70,
+        "summary": "TeamViewer remote access service installed on production server. While legitimate tool, unauthorized remote access software violates security policy and creates potential backdoor.",
+        "mitre": ["T1219"],
+        "recommended_actions": [
+          "Verify if TeamViewer installation was authorized",
+          "Review corporate policy on remote access tools",
+          "Uninstall if not approved by IT security",
+          "Monitor for actual TeamViewer connections",
+          "Consider deploying approved remote access solution"
+        ]
+      }
+    },
+    {
+      "id": "test-008",
+      "name": "Registry Key Modified - Run Key Persistence",
+      "event": {
+        "event_id": 4657,
+        "channel": "Security",
+        "host": "WORKSTATION-09",
+        "user": "malware.exe",
+        "message": "A registry value was modified. Object Name: \\REGISTRY\\MACHINE\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run Value Name: WindowsDefender New Value: C:\\ProgramData\\wdefender.exe",
+        "timestamp": "2025-10-16T11:50:00Z",
+        "raw_json": "{\"EventID\":4657,\"SubjectUserName\":\"malware.exe\",\"ObjectName\":\"\\\\REGISTRY\\\\MACHINE\\\\SOFTWARE\\\\Microsoft\\\\Windows\\\\CurrentVersion\\\\Run\",\"ValueName\":\"WindowsDefender\",\"NewValue\":\"C:\\\\ProgramData\\\\wdefender.exe\"}"
+      },
+      "expected_output": {
+        "event_type": "MaliciousActivity",
+        "risk": "critical",
+        "confidence": 95,
+        "summary": "Malicious process modified Run registry key to establish persistence. Executable masquerading as Windows Defender but running from ProgramData folder (typosquatting: wdefender vs defender).",
+        "mitre": ["T1547.001", "T1036.004"],
+        "recommended_actions": [
+          "Remove registry key immediately",
+          "Terminate malware.exe process",
+          "Delete wdefender.exe file after analysis",
+          "Full antivirus scan of affected system",
+          "Review process creation events for infection vector"
+        ]
+      }
+    },
+    {
+      "id": "test-009",
+      "name": "Lateral Movement - Admin Share Access",
+      "event": {
+        "event_id": 5140,
+        "channel": "Security",
+        "host": "FILE-SERVER-01",
+        "user": "compromised_account",
+        "message": "A network share object was accessed. Share Name: \\\\*\\ADMIN$ Account Name: compromised_account Source Address: 192.168.1.55",
+        "timestamp": "2025-10-16T15:10:00Z",
+        "raw_json": "{\"EventID\":5140,\"SubjectUserName\":\"compromised_account\",\"ShareName\":\"\\\\\\\\*\\\\ADMIN$\",\"IpAddress\":\"192.168.1.55\"}"
+      },
+      "expected_output": {
+        "event_type": "UnauthorizedAccess",
+        "risk": "high",
+        "confidence": 88,
+        "summary": "Compromised account accessed administrative share (ADMIN$) from remote workstation. Indicates lateral movement within network and potential ransomware preparation.",
+        "mitre": ["T1021.002", "T1570"],
+        "recommended_actions": [
+          "Disable compromised account immediately",
+          "Block network access from source IP",
+          "Investigate all systems accessed by this account",
+          "Check for file modifications on ADMIN$ share",
+          "Review Active Directory logs for privilege escalation"
+        ]
+      }
+    },
+    {
+      "id": "test-010",
+      "name": "Benign System Update",
+      "event": {
+        "event_id": 4688,
+        "channel": "Security",
+        "host": "WORKSTATION-10",
+        "user": "SYSTEM",
+        "message": "A new process has been created. New Process Name: C:\\Windows\\System32\\wuauclt.exe Process Command Line: wuauclt.exe /UpdateDeploymentProvider UpdateDeploymentProvider.dll /RunHandlerComServer",
+        "timestamp": "2025-10-16T13:00:00Z",
+        "raw_json": "{\"EventID\":4688,\"SubjectUserName\":\"SYSTEM\",\"NewProcessName\":\"C:\\\\Windows\\\\System32\\\\wuauclt.exe\",\"CommandLine\":\"wuauclt.exe /UpdateDeploymentProvider UpdateDeploymentProvider.dll /RunHandlerComServer\"}"
+      },
+      "expected_output": {
+        "event_type": "Normal",
+        "risk": "low",
+        "confidence": 95,
+        "summary": "Windows Update client (wuauclt.exe) executed from legitimate System32 directory by SYSTEM account. Normal system maintenance activity with no security concerns.",
+        "mitre": [],
+        "recommended_actions": []
+      }
+    },
+    {
+      "id": "test-011",
+      "name": "User Logoff - Normal Activity",
+      "event": {
+        "event_id": 4634,
+        "channel": "Security",
+        "host": "WORKSTATION-11",
+        "user": "janedoe",
+        "message": "An account was logged off. Account Name: janedoe Logon Type: 2",
+        "timestamp": "2025-10-16T17:30:00Z",
+        "raw_json": "{\"EventID\":4634,\"TargetUserName\":\"janedoe\",\"LogonType\":2}"
+      },
+      "expected_output": {
+        "event_type": "Normal",
+        "risk": "low",
+        "confidence": 98,
+        "summary": "User 'janedoe' logged off from interactive session (logon type 2) at end of business day. Expected user behavior with no security implications.",
+        "mitre": [],
+        "recommended_actions": []
+      }
+    },
+    {
+      "id": "test-012",
+      "name": "Privilege Escalation - Admin Group Addition",
+      "event": {
+        "event_id": 4728,
+        "channel": "Security",
+        "host": "DC-01",
+        "user": "attacker_account",
+        "message": "A member was added to a security-enabled global group. Group Name: Domain Admins Member Name: attacker_account",
+        "timestamp": "2025-10-16T02:45:00Z",
+        "raw_json": "{\"EventID\":4728,\"SubjectUserName\":\"attacker_account\",\"TargetGroupName\":\"Domain Admins\",\"MemberName\":\"attacker_account\"}"
+      },
+      "expected_output": {
+        "event_type": "PrivilegeEscalation",
+        "risk": "critical",
+        "confidence": 98,
+        "summary": "User 'attacker_account' added themselves to Domain Admins group at 2:45 AM. Unauthorized privilege escalation to highest administrative level in Active Directory.",
+        "mitre": ["T1098", "T1078.002"],
+        "recommended_actions": [
+          "Remove user from Domain Admins group immediately",
+          "Disable attacker_account",
+          "Review all actions performed with elevated privileges",
+          "Audit other privileged group memberships",
+          "Investigate how attacker gained initial access",
+          "Reset krbtgt account password twice"
+        ]
+      }
+    },
+    {
+      "id": "test-013",
+      "name": "DLL Injection - Suspicious Process",
+      "event": {
+        "event_id": 7,
+        "channel": "Microsoft-Windows-Sysmon/Operational",
+        "host": "WORKSTATION-12",
+        "user": "victim_user",
+        "message": "Image loaded: RuleName: - UtcTime: 2025-10-16 12:30:00.000 ProcessGuid: {12345} Image: C:\\Windows\\System32\\svchost.exe ImageLoaded: C:\\Users\\Public\\malicious.dll",
+        "timestamp": "2025-10-16T12:30:00Z",
+        "raw_json": "{\"EventID\":7,\"Image\":\"C:\\\\Windows\\\\System32\\\\svchost.exe\",\"ImageLoaded\":\"C:\\\\Users\\\\Public\\\\malicious.dll\"}"
+      },
+      "expected_output": {
+        "event_type": "MaliciousActivity",
+        "risk": "critical",
+        "confidence": 93,
+        "summary": "Legitimate svchost.exe process loaded DLL from suspicious location (Users\\Public folder). Strong indicator of DLL injection attack or process hollowing technique.",
+        "mitre": ["T1055.001", "T1574.002"],
+        "recommended_actions": [
+          "Terminate svchost.exe process loading malicious DLL",
+          "Quarantine and analyze malicious.dll",
+          "Memory dump of affected svchost.exe for forensics",
+          "Check for additional injected processes",
+          "Scan system for malware loader"
+        ]
+      }
+    },
+    {
+      "id": "test-014",
+      "name": "Data Exfiltration - Large File Transfer",
+      "event": {
+        "event_id": 5156,
+        "channel": "Security",
+        "host": "WORKSTATION-13",
+        "user": "insider_threat",
+        "message": "The Windows Filtering Platform has permitted a connection. Application: C:\\Program Files\\FileZilla\\filezilla.exe Direction: Outbound Source Address: 192.168.1.75 Destination Address: 203.0.113.50 Destination Port: 21",
+        "timestamp": "2025-10-16T20:15:00Z",
+        "raw_json": "{\"EventID\":5156,\"Application\":\"filezilla.exe\",\"SourceAddress\":\"192.168.1.75\",\"DestinationAddress\":\"203.0.113.50\",\"DestinationPort\":21,\"Direction\":\"Outbound\"}"
+      },
+      "expected_output": {
+        "event_type": "DataExfiltration",
+        "risk": "high",
+        "confidence": 82,
+        "summary": "User 'insider_threat' initiated FTP connection to external IP address (203.0.113.50) at 8:15 PM. After-hours file transfer to internet destination suggests potential data exfiltration.",
+        "mitre": ["T1048.002", "T1071.002"],
+        "recommended_actions": [
+          "Block connection to external FTP server",
+          "Review files transferred in FTP session logs",
+          "Investigate user's recent file access patterns",
+          "Check DLP systems for policy violations",
+          "Interview user about business justification"
+        ]
+      }
+    },
+    {
+      "id": "test-015",
+      "name": "Credential Dumping - LSASS Access",
+      "event": {
+        "event_id": 10,
+        "channel": "Microsoft-Windows-Sysmon/Operational",
+        "host": "WORKSTATION-14",
+        "user": "SYSTEM",
+        "message": "Process accessed: RuleName: - UtcTime: 2025-10-16 14:20:00.000 SourceImage: C:\\Temp\\mimikatz.exe TargetImage: C:\\Windows\\System32\\lsass.exe GrantedAccess: 0x1410",
+        "timestamp": "2025-10-16T14:20:00Z",
+        "raw_json": "{\"EventID\":10,\"SourceImage\":\"C:\\\\Temp\\\\mimikatz.exe\",\"TargetImage\":\"C:\\\\Windows\\\\System32\\\\lsass.exe\",\"GrantedAccess\":\"0x1410\"}"
+      },
+      "expected_output": {
+        "event_type": "CredentialAccess",
+        "risk": "critical",
+        "confidence": 99,
+        "summary": "Known credential dumping tool (mimikatz.exe) accessed LSASS process memory. Attacker attempting to extract plaintext credentials, password hashes, and Kerberos tickets from memory.",
+        "mitre": ["T1003.001", "T1558"],
+        "recommended_actions": [
+          "Isolate workstation immediately from network",
+          "Terminate mimikatz.exe process",
+          "Reset passwords for all accounts accessed on this system",
+          "Enable credential guard on all endpoints",
+          "Review security event logs for credential reuse",
+          "Investigate how mimikatz was deployed"
+        ]
+      }
+    },
+    {
+      "id": "test-016",
+      "name": "Ransomware - Mass File Modifications",
+      "event": {
+        "event_id": 4663,
+        "channel": "Security",
+        "host": "FILE-SERVER-02",
+        "user": "infected_workstation$",
+        "message": "An attempt was made to access an object. Object Name: \\\\FILE-SERVER-02\\SharedDocs\\document.txt.encrypted Accesses: WriteData Audit Success",
+        "timestamp": "2025-10-16T04:30:00Z",
+        "raw_json": "{\"EventID\":4663,\"SubjectUserName\":\"infected_workstation$\",\"ObjectName\":\"document.txt.encrypted\",\"AccessMask\":\"WriteData\"}"
+      },
+      "expected_output": {
+        "event_type": "MaliciousActivity",
+        "risk": "critical",
+        "confidence": 97,
+        "summary": "File modified with .encrypted extension at 4:30 AM. Mass file modifications with encryption extensions indicates active ransomware infection in progress.",
+        "mitre": ["T1486", "T1490"],
+        "recommended_actions": [
+          "Immediately disconnect infected_workstation from network",
+          "Activate incident response team for ransomware scenario",
+          "Do not pay ransom - contact law enforcement",
+          "Restore files from clean backup if available",
+          "Identify ransomware variant for decryption tools",
+          "Review backup integrity before restoration"
+        ]
+      }
+    },
+    {
+      "id": "test-017",
+      "name": "Password Spray Attack",
+      "event": {
+        "event_id": 4625,
+        "channel": "Security",
+        "host": "DC-01",
+        "user": "multiple",
+        "message": "An account failed to log on. Multiple different user accounts with same password pattern. Source: 192.168.1.200",
+        "timestamp": "2025-10-16T08:45:00Z",
+        "raw_json": "{\"EventID\":4625,\"TargetUserName\":\"multiple\",\"FailureReason\":\"Bad password\",\"IpAddress\":\"192.168.1.200\"}"
+      },
+      "expected_output": {
+        "event_type": "UnauthorizedAccess",
+        "risk": "high",
+        "confidence": 90,
+        "summary": "Multiple failed login attempts across different user accounts from same source IP (192.168.1.200). Pattern indicates password spray attack attempting to avoid account lockout while testing common passwords.",
+        "mitre": ["T1110.003"],
+        "recommended_actions": [
+          "Block source IP 192.168.1.200 at firewall",
+          "Enable smart lockout for domain accounts",
+          "Force password reset for any weak passwords identified",
+          "Implement conditional access policies",
+          "Review account lockout thresholds",
+          "Alert users about ongoing password attack"
+        ]
+      }
+    },
+    {
+      "id": "test-018",
+      "name": "Benign Printer Installation",
+      "event": {
+        "event_id": 4656,
+        "channel": "Security",
+        "host": "WORKSTATION-15",
+        "user": "print_user",
+        "message": "A handle to an object was requested. Object Name: \\Registry\\Machine\\System\\CurrentControlSet\\Control\\Print\\Printers\\HP LaserJet Pro",
+        "timestamp": "2025-10-16T10:00:00Z",
+        "raw_json": "{\"EventID\":4656,\"SubjectUserName\":\"print_user\",\"ObjectName\":\"\\\\Registry\\\\Machine\\\\System\\\\CurrentControlSet\\\\Control\\\\Print\\\\Printers\\\\HP LaserJet Pro\"}"
+      },
+      "expected_output": {
+        "event_type": "Normal",
+        "risk": "low",
+        "confidence": 92,
+        "summary": "User 'print_user' accessed printer registry key for HP LaserJet Pro during business hours. Legitimate printer installation or configuration activity.",
+        "mitre": [],
+        "recommended_actions": []
+      }
+    },
+    {
+      "id": "test-019",
+      "name": "Kerberoasting Attack",
+      "event": {
+        "event_id": 4769,
+        "channel": "Security",
+        "host": "DC-01",
+        "user": "compromised_account",
+        "message": "A Kerberos service ticket was requested. Service Name: MSSQLSvc/sql-server.domain.local Ticket Encryption Type: 0x17 (RC4-HMAC)",
+        "timestamp": "2025-10-16T11:30:00Z",
+        "raw_json": "{\"EventID\":4769,\"ServiceName\":\"MSSQLSvc/sql-server.domain.local\",\"TicketEncryptionType\":\"0x17\",\"IpAddress\":\"192.168.1.88\"}"
+      },
+      "expected_output": {
+        "event_type": "CredentialAccess",
+        "risk": "high",
+        "confidence": 85,
+        "summary": "Service ticket requested with weak RC4 encryption. Potential Kerberoasting attack where attacker requests service tickets to crack service account passwords offline.",
+        "mitre": ["T1558.003"],
+        "recommended_actions": [
+          "Review service account password strength",
+          "Migrate to AES encryption for Kerberos",
+          "Monitor for unusual service ticket requests",
+          "Consider managed service accounts (MSA/gMSA)",
+          "Investigate requesting account for compromise"
+        ]
+      }
+    },
+    {
+      "id": "test-020",
+      "name": "Process Injection - CreateRemoteThread",
+      "event": {
+        "event_id": 8,
+        "channel": "Microsoft-Windows-Sysmon/Operational",
+        "host": "WORKSTATION-16",
+        "user": "malicious_process",
+        "message": "CreateRemoteThread detected: SourceImage: C:\\Temp\\injector.exe TargetImage: C:\\Windows\\Explorer.exe",
+        "timestamp": "2025-10-16T13:45:00Z",
+        "raw_json": "{\"EventID\":8,\"SourceImage\":\"C:\\\\Temp\\\\injector.exe\",\"TargetImage\":\"C:\\\\Windows\\\\Explorer.exe\"}"
+      },
+      "expected_output": {
+        "event_type": "MaliciousActivity",
+        "risk": "critical",
+        "confidence": 94,
+        "summary": "Suspicious process (injector.exe) created remote thread in explorer.exe. Classic process injection technique used to hide malicious code execution within legitimate Windows process.",
+        "mitre": ["T1055.002"],
+        "recommended_actions": [
+          "Terminate both injector.exe and explorer.exe processes",
+          "Memory dump explorer.exe for forensic analysis",
+          "Quarantine injector.exe file",
+          "Enable exploit protection features",
+          "Scan system for additional malware components"
+        ]
+      }
+    }
+  ]
+}

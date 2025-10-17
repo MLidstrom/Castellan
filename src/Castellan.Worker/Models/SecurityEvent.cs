@@ -1,3 +1,4 @@
+using System.ComponentModel.DataAnnotations;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
@@ -277,24 +278,50 @@ public class SecurityEvent
 
 /// <summary>
 /// Represents the structure of an LLM response for security event detection.
+/// Includes DataAnnotations validation for strict schema enforcement.
 /// </summary>
 public class LlmSecurityEventResponse
 {
     [JsonPropertyName("event_type")]
     public string? EventType { get; set; }
-    
+
     [JsonPropertyName("risk")]
+    [Required(ErrorMessage = "Risk level is required")]
+    [RegularExpression("^(low|medium|high|critical)$", ErrorMessage = "Risk must be one of: low, medium, high, critical")]
     public string? RiskLevel { get; set; }
-    
+
     [JsonPropertyName("confidence")]
+    [Range(0, 100, ErrorMessage = "Confidence must be between 0 and 100")]
     public int? Confidence { get; set; }
-    
+
     [JsonPropertyName("summary")]
+    [Required(ErrorMessage = "Summary is required")]
+    [StringLength(500, MinimumLength = 10, ErrorMessage = "Summary must be between 10 and 500 characters")]
     public string? Summary { get; set; }
-    
+
     [JsonPropertyName("mitre")]
     public string[]? MitreTechniques { get; set; }
-    
+
     [JsonPropertyName("recommended_actions")]
     public string[]? RecommendedActions { get; set; }
+
+    /// <summary>
+    /// Validates the response object using DataAnnotations
+    /// </summary>
+    public bool IsValid(out List<string> validationErrors)
+    {
+        validationErrors = new List<string>();
+        var validationContext = new ValidationContext(this);
+        var validationResults = new List<ValidationResult>();
+
+        if (!Validator.TryValidateObject(this, validationContext, validationResults, true))
+        {
+            validationErrors = validationResults
+                .Select(vr => vr.ErrorMessage ?? "Unknown validation error")
+                .ToList();
+            return false;
+        }
+
+        return true;
+    }
 }

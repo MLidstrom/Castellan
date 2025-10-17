@@ -1,10 +1,10 @@
-# DASHBOARD - Castellan Dashboard (React + Tailwind)
+# DASHBOARD - CastellanAI Dashboard (React + Tailwind)
 
-Modern dashboard UI that connects to the Castellan backend via REST API and SignalR. Matches the Mission Control design (sidebar, metrics, recent activity, threat distribution).
+Modern dashboard UI that connects to the CastellanAI backend via REST API and SignalR. Matches the Mission Control design (sidebar, metrics, recent activity, threat distribution).
 
 ## Prerequisites
 - Node 18+
-- Castellan backend running at http://localhost:5000
+- CastellanAI backend running at http://localhost:5000
 
 ## Quick start (PowerShell-safe)
 ```powershell

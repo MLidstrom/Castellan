@@ -22,7 +22,7 @@
 
 ---
 
-**Castellan** is a **100% open source**, enterprise-grade security monitoring platform that transforms Windows event logs into actionable security intelligence using AI-powered analysis, vector search, and real-time threat correlation.
+**CastellanAI** is a **100% open source**, enterprise-grade security monitoring platform that transforms Windows event logs into actionable security intelligence using AI-powered analysis, vector search, and real-time threat correlation.
 
 🚀 **Enterprise Features**: 12K+ events/sec processing • Vector similarity search • Advanced correlation engine • Real-time Teams/Slack alerts • 800+ MITRE ATT&CK techniques • VirusTotal/MalwareBazaar integration • Complete YARA malware detection with auto-updates • Trend forecasting • Timeline visualization • Export capabilities • Centralized configuration management • Single consolidated database architecture
 
@@ -47,7 +47,7 @@
 ## 🖼️ Screenshots
 
 <p align="center">
-  <img alt="Castellan Dashboard" src="assets/images/readme/dashboard.png" width="800" />
+  <img alt="CastellanAI Dashboard" src="assets/images/readme/dashboard.png" width="800" />
   <br><em>Real-time security monitoring dashboard with live threat intelligence</em>
 </p>
 
@@ -93,7 +93,7 @@
 
 > **⚠️ Security Note**: See [Configuration Setup](docs/CONFIGURATION_SETUP.md) for detailed setup instructions.
 
-## 🔥 Why Castellan?
+## 🔥 Why CastellanAI?
 
 ### 🎆 **Production-Ready Enterprise Platform**
 - **AGPL-3.0 Licensed** - 100% open source with complete transparency and strong copyleft
@@ -103,7 +103,7 @@
 - **Zero Vendor Lock-in** - Fork, modify, deploy anywhere
 
 ### 🔄 **vs. Traditional SIEM Solutions**
-| Feature | Castellan | Splunk/QRadar/ELK |
+| Feature | CastellanAI | Splunk/QRadar/ELK |
 |---------|-----------|-------------------|
 | **Deployment** | 5 minutes | Weeks to months |
 | **AI/ML** | Built-in LLM + Vector | Add-on modules |
@@ -140,7 +140,7 @@
 
 This project is licensed under the **GNU Affero General Public License v3.0 (AGPL-3.0)** - see the [LICENSE](LICENSE) file for details.
 
-The AGPL-3.0 license ensures that any modifications to Castellan, including those used to provide network services, must be made available under the same license terms.
+The AGPL-3.0 license ensures that any modifications to CastellanAI, including those used to provide network services, must be made available under the same license terms.
 
 ## ™️ Trademark Notice
 
@@ -151,7 +151,7 @@ Forks and derivatives must not use the same name or branding in a way that sugge
 
 <div align="center">
 
-**Castellan** - Your digital fortress guardian. 🏰🛡️
+**CastellanAI** - Your digital fortress guardian. 🏰🛡️
 
 Built with ❤️ by the open source community
 
