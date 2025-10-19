@@ -22,6 +22,11 @@
 
 **2-Minute Setup**: 3 required fields → `.\scripts\start.ps1` → Open `http://localhost:3000` → Start monitoring
 
+<p align="center">
+  <img alt="CastellanAI in Action" src="assets/movies/CastellanAI.gif" width="800" />
+  <br><em>CastellanAI platform overview - AI-powered security monitoring in action</em>
+</p>
+
 ## Key Features
 
 - **Conversational AI Chat** - Natural language security queries with context-aware responses and Markdown formatting
