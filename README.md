@@ -1,12 +1,6 @@
-<p align="center">
-    <picture>
-        <source media="(prefers-color-scheme: dark)" srcset="assets/images/Castellan_light.png">
-        <source media="(prefers-color-scheme: light)" srcset="assets/images/Castellan_dark.png">
-        <img alt="Castellan logo" src="assets/images/Castellan.png">
-    </picture>
-</p>
-
 <div align="center">
+
+# 🏰 CastellanAI
 
 ![GitHub Tag](https://img.shields.io/github/v/tag/MLidstrom/Castellan)
 [![Open Source](https://img.shields.io/badge/Open%20Source-100%25-brightgreen.svg?logo=github)](#-open-source--enterprise-grade)
