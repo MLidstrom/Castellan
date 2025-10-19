@@ -28,15 +28,6 @@
 
 **2-Minute Setup**: 3 required fields → `.\scripts\start.ps1` → Open `http://localhost:3000` → Start monitoring
 
-## Demo Video
-
-<p align="center">
-  <video src="assets/movies/CastellanAI.mp4" width="800" controls>
-    Your browser does not support the video tag.
-  </video>
-  <br><em>CastellanAI in action - AI-powered security monitoring and threat detection</em>
-</p>
-
 ## Key Features
 
 - **Conversational AI Chat** - Natural language security queries with context-aware responses and Markdown formatting
@@ -56,17 +47,17 @@
 ## Screenshots
 
 <p align="center">
-  <img alt="CastellanAI Dashboard" src="assets/images/dashboard.png" width="800" />
+  <img alt="CastellanAI Dashboard" src="assets/images/Dashboard.png" width="800" />
   <br><em>Real-time security monitoring dashboard with live threat intelligence</em>
 </p>
 
 <p align="center">
-  <img alt="AI Chat" src="assets/images/conversations.png" width="800" />
+  <img alt="AI Chat" src="assets/images/Conversations.png" width="800" />
   <br><em>Natural language AI chat interface for conversational security analysis and threat investigation</em>
 </p>
 
 <p align="center">
-  <img alt="Notifications Configuration" src="assets/images/notifications.png" width="600" />
+  <img alt="Notifications Configuration" src="assets/images/Notifications.png" width="600" />
   <br><em>Centralized notification settings for Microsoft Teams and Slack integration</em>
 </p>
 
