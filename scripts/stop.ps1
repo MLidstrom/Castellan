@@ -216,26 +216,26 @@ if ($stopSystemTray) {
     Stop-SafeProcess -ProcessName "Castellan.Tray" -DisplayName "System Tray"
 }
 
-# Stop React Admin
+# Stop Tailwind Dashboard
 if ($stopReactAdmin) {
-    Write-Host "`nStopping React Admin..." -ForegroundColor Yellow
+    Write-Host "`nStopping Tailwind Dashboard..." -ForegroundColor Yellow
 $nodeProcesses = Get-CimInstance Win32_Process -Filter "Name='node.exe'" -ErrorAction SilentlyContinue | Where-Object {
-    $_.CommandLine -like "*castellan-admin*" -or $_.CommandLine -like "*:8080*"
+    $_.CommandLine -like "*dashboard*" -or $_.CommandLine -like "*:3000*"
 }
 
 if ($nodeProcesses) {
     foreach ($proc in $nodeProcesses) {
         try {
             Stop-Process -Id $proc.ProcessId -Force -ErrorAction Stop
-            Write-Host "OK: Stopped React Admin (PID: $($proc.ProcessId))" -ForegroundColor Green
-            $stoppedComponents += "React Admin"
+            Write-Host "OK: Stopped Tailwind Dashboard (PID: $($proc.ProcessId))" -ForegroundColor Green
+            $stoppedComponents += "Tailwind Dashboard"
         } catch {
-            Write-Host "ERROR: Failed to stop React Admin (PID: $($proc.ProcessId))" -ForegroundColor Red
-            $failedComponents += "React Admin"
+            Write-Host "ERROR: Failed to stop Tailwind Dashboard (PID: $($proc.ProcessId))" -ForegroundColor Red
+            $failedComponents += "Tailwind Dashboard"
         }
     }
 } else {
-    Write-Host "WARNING: React Admin was not running" -ForegroundColor Yellow
+    Write-Host "WARNING: Tailwind Dashboard was not running" -ForegroundColor Yellow
 }
 }
 

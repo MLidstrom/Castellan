@@ -7,7 +7,7 @@ This guide explains how to configure and customize the automatic startup behavio
 Castellan includes an automatic startup orchestrator (`StartupOrchestratorService.cs`) built into the Worker service that manages all required services from a single entry point. The orchestration logic is implemented entirely in C# code, not in PowerShell scripts. When you start the Worker service, it automatically launches:
 
 - **Qdrant** - Vector database (Docker container)
-- **React Admin** - Web administration interface
+- **Tailwind Dashboard** - Web administration interface
 - **System Tray** - Windows system tray application
 
 ## Quick Start
@@ -69,7 +69,7 @@ The automatic startup behavior is controlled via `appsettings.json` in the Worke
 .\scripts\run-qdrant-local.ps1
 ```
 
-### React Admin Interface
+### Tailwind Dashboard Interface
 
 **What it does:**
 - Checks for node_modules directory
@@ -83,7 +83,7 @@ The automatic startup behavior is controlled via `appsettings.json` in the Worke
 
 **Manual Start:**
 ```powershell
-cd castellan-admin
+cd dashboard
 npm install
 npm start
 ```
@@ -172,23 +172,23 @@ When the Worker service stops:
 4. Retry starting Castellan
 
 #### Port Already in Use
-**Error:** React Admin or other services fail to start due to port conflicts
+**Error:** Tailwind Dashboard or other services fail to start due to port conflicts
 
 **Solution:**
 ```powershell
 # Check what's using port 8080
-netstat -ano | findstr :8080
+netstat -ano | findstr :3000
 
 # Kill the process using the port (replace PID with actual process ID)
 taskkill /PID <PID> /F
 ```
 
 #### Node Modules Missing
-**Error:** React Admin fails to start
+**Error:** Tailwind Dashboard fails to start
 
 **Solution:**
 ```powershell
-cd castellan-admin
+cd dashboard
 npm install
 ```
 
@@ -200,7 +200,7 @@ If automatic startup fails, you can start services manually:
 # Start services individually
 .\scripts\run-qdrant-local.ps1        # Start Qdrant
 cd src\Castellan.Worker && dotnet run  # Start Worker
-cd castellan-admin && npm start        # Start React Admin
+cd dashboard && npm start        # Start Tailwind Dashboard
 .\scripts\start-tray.ps1               # Start System Tray
 ```
 
@@ -222,7 +222,7 @@ For development:
 
 1. **Selective Startup**: Disable services you're not working with
 2. **Debug Mode**: Run Worker in debug mode from Visual Studio/VS Code
-3. **Hot Reload**: React Admin supports hot module replacement
+3. **Hot Reload**: Tailwind Dashboard supports hot module replacement
 4. **Log Verbosity**: Increase log levels for troubleshooting
 
 ## Implementation Details

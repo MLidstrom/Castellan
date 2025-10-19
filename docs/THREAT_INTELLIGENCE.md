@@ -2,9 +2,8 @@
 
 Castellan now features **Tier 1 Threat Intelligence Integration** with external knowledge bases to significantly enhance malware detection capabilities beyond local heuristics.
 
-## 🌟 Overview
+## Overview
 
-**OPERATIONAL STATUS**: ✅ **All Tier 1 threat intelligence services are fully integrated and tested** (January 2025)
 
 The threat intelligence system integrates with multiple external services to provide real-time malware detection and threat correlation. When scanning files, Castellan:
 
@@ -16,39 +15,39 @@ The threat intelligence system integrates with multiple external services to pro
 
 **Verified Integration**: All three Tier 1 services (VirusTotal, MalwareBazaar, AlienVault OTX) are successfully initialized and operational in the production system.
 
-## 🔧 Supported Services
+## Supported Services
 
-### ✅ **Tier 1 Services (Implemented)**
+### **Tier 1 Services (Implemented)**
 
-#### 🦠 **VirusTotal**
+#### **VirusTotal**
 - **Purpose**: Comprehensive malware detection with 70+ antivirus engines
 - **Features**: File hash reputation, malware family identification, detection confidence
 - **API Key**: Required (free tier: 1,000 requests/day)
 - **Get API Key**: [https://www.virustotal.com/gui/my-apikey](https://www.virustotal.com/gui/my-apikey)
 
-#### 🗄️ **MalwareBazaar** (Abuse.ch)
+#### **MalwareBazaar** (Abuse.ch)
 - **Purpose**: Known malware sample database
 - **Features**: Malware family classification, ClamAV signatures, first/last seen dates
 - **API Key**: Not required (free public service)
 - **Documentation**: [https://bazaar.abuse.ch/api/](https://bazaar.abuse.ch/api/)
 
-#### 🛡️ **AlienVault OTX** (Open Threat Exchange)
+#### **AlienVault OTX** (Open Threat Exchange)
 - **Purpose**: Community-driven threat intelligence
 - **Features**: Threat indicators, pulse information, malware families
 - **API Key**: Required (free registration)
 - **Get API Key**: [https://otx.alienvault.com/api](https://otx.alienvault.com/api)
 
-### 🚧 **Tier 2 Services (Planned)**
+### **Tier 2 Services (Planned)**
 - YARA Engine Integration
 - Microsoft Defender Threat Intelligence
 - MISP Platform Integration
 
-### 🎯 **Tier 3 Services (Future)**
+### **Tier 3 Services (Future)**
 - CrowdStrike Falcon X
 - Premium VirusTotal features
 - Custom AI/ML models
 
-## ⚙️ Configuration
+## Configuration
 
 ### Environment Variables (Recommended)
 ```powershell
@@ -121,7 +120,7 @@ $env:THREATINTELLIGENCE__ALIENVAULTOTX__APIKEY = "your-otx-api-key"
 }
 ```
 
-## 🚀 Quick Setup
+## Quick Setup
 
 ### 1. Get API Keys (Optional but Recommended)
 
@@ -153,10 +152,10 @@ Get-Content src\Castellan.Worker\logs\*.log | Select-String "VirusTotal|MalwareB
 ```
 
 Look for successful initialization messages:
-- `✅ VirusTotal service initialized with base URL: https://www.virustotal.com/vtapi/v2/`
-- `✅ MalwareBazaar service initialized with base URL: https://mb-api.abuse.ch/api/v1/`
-- `✅ AlienVault OTX service initialized with base URL: https://otx.alienvault.com/api/v1/`
-- `⚠️ VirusTotal API key is not configured` (if not set - expected fallback behavior)
+- `VirusTotal service initialized with base URL: https://www.virustotal.com/vtapi/v2/`
+- `MalwareBazaar service initialized with base URL: https://mb-api.abuse.ch/api/v1/`
+- `AlienVault OTX service initialized with base URL: https://otx.alienvault.com/api/v1/`
+- `VirusTotal API key is not configured` (if not set - expected fallback behavior)
 
 Alternatively, check the system status API:
 ```powershell
@@ -164,28 +163,28 @@ Invoke-RestMethod -Uri "http://localhost:5000/api/system-status" | ConvertTo-Jso
 ```
 Look for "Threat Scanner" component showing as "Healthy".
 
-## 📊 Performance & Features
+## Performance & Features
 
-### 🎯 **Intelligent Query Strategy**
+### **Intelligent Query Strategy**
 1. **Cache Check**: Check local cache first (instant response)
 2. **Parallel Queries**: Query all enabled services simultaneously  
 3. **Priority Results**: VirusTotal → MalwareBazaar → OTX → Local Heuristics
 4. **Fallback Logic**: Graceful degradation if services are unavailable
 
-### ⚡ **Performance Optimizations**
+### **Performance Optimizations**
 - **Smart Caching**: Results cached with configurable TTL per service
 - **Rate Limiting**: Respects API limits to prevent quota exhaustion
 - **Connection Pooling**: Efficient HTTP connection reuse
 - **Circuit Breaker**: Automatic failover on service failures
 - **Exponential Backoff**: Intelligent retry logic for failed requests
 
-### 📈 **Monitoring & Metrics**
+### **Monitoring & Metrics**
 - API response times logged for performance monitoring
 - Cache hit rates and effectiveness tracking
 - Rate limit status and quota usage monitoring
 - Service health checks and availability metrics
 
-## 🔍 API Integration
+## API Integration
 
 ### Threat Scanner Endpoints
 The existing threat scanner APIs now include threat intelligence:
@@ -224,7 +223,7 @@ GET /api/threat-scanner/last-result
 }
 ```
 
-## 🛡️ Security & Privacy
+## Security & Privacy
 
 ### Data Protection
 - **No File Upload**: Only file hashes are sent to external services
@@ -237,7 +236,7 @@ GET /api/threat-scanner/last-result
 - **No Dependencies**: Local heuristics always available as fallback
 - **Error Isolation**: Service failures don't affect core scanning functionality
 
-## 📊 Expected Results
+## Expected Results
 
 ### Detection Improvements
 - **Reduced False Positives**: External validation reduces false alarms
@@ -251,7 +250,7 @@ GET /api/threat-scanner/last-result
 - **Parallel Processing**: Multiple services queried simultaneously
 - **Background Processing**: Doesn't block other system operations
 
-## 🔧 Troubleshooting
+## Troubleshooting
 
 ### Common Issues
 
@@ -282,38 +281,7 @@ Invoke-RestMethod -Uri "http://localhost:5000/api/threat-scanner/status" -Header
 Get-Content C:\Users\matsl\Castellan\src\Castellan.Worker\appsettings.json | Select-String "ThreatIntelligence" -A 20
 ```
 
-## 🚧 Development Status
-
-### ✅ Phase 1: Complete (OPERATIONAL) 🎆
-- VirusTotal service implementation ✅
-- Caching layer with TTL ✅
-- Service registration and DI ✅
-- ThreatScannerService integration ✅
-- Error handling and fallback logic ✅
-- Rate limiting and retry logic ✅
-- Comprehensive testing ✅
-
-### ✅ Phase 2: Complete (OPERATIONAL) 🎆
-- MalwareBazaar service implementation ✅
-- AlienVault OTX service implementation ✅
-- All three services integrated and tested ✅
-- Performance monitoring dashboard ✅
-- System status reporting ✅
-
-### 🚧 Phase 3: In Progress
-- Enhanced progress tracking and monitoring
-- Configuration UI in React admin panel
-- Real-time threat intelligence feeds
-- Custom threat intelligence sources
-- Advanced analytics and reporting
-
-### 🔮 Phase 4: Planned
-- Tier 2 services (YARA, Microsoft Defender TI, MISP)
-- Tier 3 premium services (CrowdStrike, enhanced VirusTotal)
-- Machine learning threat scoring models
-- Advanced correlation and attribution
-
-## 📝 API Reference
+## API Reference
 
 ### ThreatIntelligenceResult
 ```csharp
@@ -343,7 +311,7 @@ public interface IVirusTotalService
 
 ---
 
-## 🎉 Summary
+## Summary
 
 The Tier 1 Threat Intelligence Integration transforms Castellan from a local heuristics-based scanner into a **comprehensive threat detection platform** with:
 

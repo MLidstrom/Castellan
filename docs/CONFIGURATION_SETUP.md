@@ -27,7 +27,7 @@ Edit `src\Castellan.Worker\appsettings.json` and update the authentication secti
   "Jwt": {
     "SecretKey": "YOUR_SECURE_64_CHARACTER_KEY_HERE_REPLACE_THIS_IMMEDIATELY",
     "Issuer": "castellan-security",
-    "Audience": "castellan-admin",
+    "Audience": "dashboard",
     "ExpirationHours": 24
   },
   "AdminUser": {
@@ -157,7 +157,7 @@ Castellan includes a comprehensive YARA malware detection system that works auto
 - ✅ Performance metrics preserved across updates
 
 **Automatic Updates Configuration:**
-Access the Configuration page in the web UI (`http://localhost:8080/#/configuration`) and navigate to the "Malware Detection Rules" tab to:
+Access the Configuration page in the web UI (`http://localhost:3000/#/configuration`) and navigate to the "Malware Detection Rules" tab to:
 - Enable/disable automatic rule updates
 - Set update frequency (1-365 days)
 - Configure rule source URLs
@@ -242,11 +242,11 @@ Castellan includes parallel processing optimizations for improved performance:
 ```
 
 **Performance Benefits:**
-- ✅ 20% improvement in event processing speed with parallel processing
-- ✅ 3-5x improvement in vector operations with batch processing
-- ✅ Better CPU utilization across multiple cores
-- ✅ Reduced latency for independent operations
-- ✅ Automatic fallback to sequential processing on errors
+- 20% improvement in event processing speed with parallel processing
+- 3-5x improvement in vector operations with batch processing
+- Better CPU utilization across multiple cores
+- Reduced latency for independent operations
+- Automatic fallback to sequential processing on errors
 
 ### 7. Configure Connection Pools (Optional - Phase 2A)
 
@@ -290,11 +290,11 @@ Castellan includes enterprise-grade connection pooling for 15-25% I/O optimizati
 ```
 
 **Connection Pool Benefits:**
-- ✅ 15-25% I/O performance improvement through connection reuse
-- ✅ Automatic health monitoring and failover
-- ✅ Load balancing across multiple Qdrant instances
-- ✅ Intelligent connection lifecycle management
-- ✅ Reduced connection establishment overhead
+- 15-25% I/O performance improvement through connection reuse
+- Automatic health monitoring and failover
+- Load balancing across multiple Qdrant instances
+- Intelligent connection lifecycle management
+- Reduced connection establishment overhead
 
 ## Alternative: Environment Variables
 
@@ -374,6 +374,6 @@ $env:CONNECTIONPOOLS__LOADBALANCING__ALGORITHM = "WeightedRoundRobin"
 
 After configuration:
 1. Start the services: `.\scripts\start.ps1`
-2. Access the web interface: http://localhost:8080
+2. Access the web interface: http://localhost:3000
 3. Login with your configured credentials
 4. Refer to [GETTING_STARTED.md](GETTING_STARTED.md) for usage instructions

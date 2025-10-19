@@ -1,15 +1,10 @@
 # SignalR Real-time Integration Guide
 
-**Version**: 3.0
-**Created**: September 7, 2025
-**Updated**: October 9, 2025
-**Status**: ✅ **COMPLETE** - Dashboard Consolidation + Security Events Real-Time
-
-## 🎯 Overview
+## Overview
 
 Castellan includes comprehensive SignalR integration for real-time monitoring and live system updates. This implementation provides enterprise-grade WebSocket communication between the backend Worker service and the React admin interface.
 
-## 🏗️ Architecture
+## Architecture
 
 ### Backend Components
 
@@ -80,7 +75,7 @@ public class SystemMetricsController : ControllerBase
 ### Frontend Components
 
 #### 1. SignalR React Hook (`useSignalR.ts`)
-**Location**: `castellan-admin/src/hooks/useSignalR.ts`
+**Location**: `dashboard/src/hooks/useSignalR.ts`
 
 ```typescript
 export const useSignalR = (options: SignalROptions) => {
@@ -102,7 +97,7 @@ export const useSignalR = (options: SignalROptions) => {
 - Type-safe event handling
 
 #### 2. **NEW: Global SignalR Context** (`SignalRContext.tsx`)
-**Location**: `castellan-admin/src/contexts/SignalRContext.tsx`
+**Location**: `dashboard/src/contexts/SignalRContext.tsx`
 
 ```typescript
 export const SignalRProvider: React.FC = ({ children }) => {
@@ -121,14 +116,14 @@ export const useSignalRContext = () => {
 };
 ```
 
-**✅ Key Benefits**:
+**Key Benefits**:
 - **Persistent Connection**: Maintains SignalR connection across all page navigation
 - **Global State**: Single source of truth for real-time data
 - **Performance**: One connection shared across all components
 - **Navigation Fix**: Resolves disconnection issues when changing menu pages
 
 #### 2. Real-time System Metrics Component
-**Location**: `castellan-admin/src/components/RealtimeSystemMetrics.tsx`
+**Location**: `dashboard/src/components/RealtimeSystemMetrics.tsx`
 
 ```typescript
 export const RealtimeSystemMetrics: React.FC = () => {
@@ -148,7 +143,7 @@ export const RealtimeSystemMetrics: React.FC = () => {
 - Performance metrics charts
 - Connection status indicators
 
-## 🔧 Configuration
+## Configuration
 
 ### Backend Configuration (`Program.cs`)
 
@@ -171,7 +166,7 @@ builder.Services.AddCors(options =>
 {
     options.AddDefaultPolicy(policy =>
     {
-        policy.WithOrigins("http://localhost:8080")
+        policy.WithOrigins("http://localhost:3000")
               .AllowAnyMethod()
               .AllowAnyHeader()
               .AllowCredentials(); // Required for SignalR
@@ -222,7 +217,7 @@ function Dashboard() {
 }
 ```
 
-## 📡 Real-time Events
+## Real-time Events
 
 ### System Metrics Updates
 **Event**: `SystemMetricsUpdate`  
@@ -265,7 +260,7 @@ interface ThreatIntelligenceStatus {
 }
 ```
 
-## 🔐 Security
+## Security
 
 ### JWT Authentication
 All SignalR connections require JWT authentication:
@@ -289,7 +284,7 @@ Users can only join groups they have permission for:
 - System administrators: All groups
 - Regular users: Limited to their own scan groups
 
-## 🚀 Usage Examples
+## Usage Examples
 
 ### 1. Basic System Monitoring
 
@@ -351,7 +346,7 @@ const response = await fetch('/api/systemmetrics/broadcast', {
 });
 ```
 
-## 🔧 Troubleshooting
+## Troubleshooting
 
 ### Common Issues
 
@@ -377,7 +372,7 @@ const response = await fetch('/api/systemmetrics/broadcast', {
 - Ensure periodic timer is configured correctly
 
 #### 4. **FIXED: Connection Drops on Page Navigation**
-**Previous Issue**: SignalR connection disconnected when navigating between React Admin pages
+**Previous Issue**: SignalR connection disconnected when navigating between Tailwind Dashboard pages
 **✅ **Solution Implemented**: Global SignalR Context
 - **Root Cause**: Connection was component-scoped, got destroyed on page changes
 - **Fix**: Moved connection to app-level context provider
@@ -406,7 +401,7 @@ builder.Services.AddLogging(logging =>
 });
 ```
 
-## 📊 Performance Considerations
+## Performance Considerations
 
 ### Connection Limits
 - Default: 100 concurrent connections per hub
@@ -423,7 +418,7 @@ builder.Services.AddLogging(logging =>
 - Group subscriptions add minimal overhead
 - Monitor memory usage with many concurrent connections
 
-## 🚀 Production Deployment
+## Production Deployment
 
 ### Health Checks
 ```csharp
@@ -442,14 +437,9 @@ builder.Services.AddHealthChecks()
 - Configure sticky sessions for load balancing
 - Monitor WebSocket connection limits
 
-## 📚 References
+## References
 
 - [ASP.NET Core SignalR Documentation](https://docs.microsoft.com/en-us/aspnet/core/signalr/)
 - [SignalR JavaScript Client](https://docs.microsoft.com/en-us/aspnet/core/signalr/javascript-client)
 - [React SignalR Integration Patterns](https://docs.microsoft.com/en-us/aspnet/core/signalr/client-features)
 
----
-
-**Status**: ✅ Production Ready  
-**Last Updated**: September 7, 2025  
-**Next Review**: October 2025

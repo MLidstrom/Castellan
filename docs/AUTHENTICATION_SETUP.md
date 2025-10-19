@@ -4,17 +4,13 @@
 
 The hardcoded credentials have been removed from Castellan and replaced with a secure configuration system. Authentication credentials and JWT secrets must now be configured via environment variables or configuration files.
 
-## ⚠️ Critical Security Changes
+## Critical Security Changes
 
 ### What Was Fixed
-- ✅ **Hardcoded credentials removed** from AuthController.cs
-- ✅ **JWT secret externalized** from source code  
-- ✅ **Configuration-based authentication** implemented
-- ✅ **Environment variable support** added
-
-### What Was Removed
-- ❌ `admin` / `castellan2024` hardcoded credentials
-- ❌ `castellan-jwt-secret-key-2024-very-secure` hardcoded JWT secret
+- **Hardcoded credentials removed** from AuthController.cs
+- **JWT secret externalized** from source code  
+- **Configuration-based authentication** implemented
+- **Environment variable support** added
 
 ## Configuration Methods
 
@@ -41,7 +37,7 @@ Update `appsettings.json`:
     "Jwt": {
       "SecretKey": "your-very-secure-jwt-secret-key-at-least-64-characters-long-please",
       "Issuer": "castellan-security",
-      "Audience": "castellan-admin",
+      "Audience": "dashboard",
       "ExpirationHours": 24
     },
     "AdminUser": {
@@ -136,15 +132,6 @@ ENV AUTHENTICATION__ADMINUSER__PASSWORD="your-production-secure-password"
 Invoke-RestMethod -Method POST -Uri 'http://localhost:5000/api/auth/login' -ContentType 'application/json' -Body '{"username":"your-username","password":"your-password"}'
 ```
 
-## Migration from Hardcoded Credentials
-
-If you were using the previous hardcoded system:
-
-1. **Update any scripts** that used `admin` / `castellan2024`
-2. **Set new credentials** via environment variables
-3. **Update React admin interface** credentials (now authenticates via API)
-4. **Test authentication** before deployment
-
 ## Security Best Practices
 
 ### Development
@@ -159,15 +146,6 @@ If you were using the previous hardcoded system:
 - Monitor authentication logs for suspicious activity
 - Consider implementing password hashing (planned future enhancement)
 
-## Next Steps (Recommended Security Improvements)
-
-1. **Password hashing:** Implement bcrypt/Argon2 password hashing
-2. **Multi-factor authentication:** Add TOTP/SMS verification  
-3. **User management:** Replace single admin with proper user store
-4. **Session management:** Implement proper refresh token validation
-5. **Rate limiting:** Add brute force protection
-6. **Audit logging:** Enhanced authentication event logging
-
 ---
 
-**⚠️ IMPORTANT:** Never commit authentication credentials to source control. Use environment variables or secure configuration management systems in production.
+**IMPORTANT:** Never commit authentication credentials to source control. Use environment variables or secure configuration management systems in production.

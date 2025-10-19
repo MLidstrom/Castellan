@@ -2,6 +2,36 @@
 
 This is Castellan, an open source security monitoring platform focused on comprehensive security capabilities including Teams/Slack notifications, AI-powered analysis, and local deployment.
 
+## Ultra-Quick Start (< 2 Minutes)
+
+Get Castellan running with just 3 required fields - perfect for trying it out or development:
+
+```powershell
+# 1. Navigate to Worker directory
+cd src\Castellan.Worker
+
+# 2. Copy minimal template (only 3 required fields!)
+Copy-Item appsettings.template.json appsettings.json
+
+# 3. Edit appsettings.json and set these 3 fields:
+#    - Authentication.Jwt.SecretKey (64+ characters)
+#    - Authentication.AdminUser.Username (your choice)
+#    - Authentication.AdminUser.Password (your choice)
+
+# 4. Start Castellan
+cd ..\..
+.\scripts\start.ps1
+```
+
+**That's it!** Open http://localhost:3000 and login with your credentials.
+
+**Need more configuration?** See templates below:
+- `appsettings.template.json` - Minimal (3 fields, default)
+- `appsettings.standard.json` - Common customizations (Teams/Slack, Threat Intel)
+- `appsettings.advanced.json` - All performance tuning and advanced options
+
+---
+
 ## Quick Start (Automatic)
 
 ### Prerequisites
@@ -49,7 +79,7 @@ Open your browser to http://localhost:3000 to access the Tailwind Dashboard.
 
 **Login Credentials:** Use the username and password you configured in step 1.
 
-**Performance Note:** After login, the dashboard uses advanced caching for instant navigation. See [Caching Improvements](CACHING_IMPROVEMENTS.md) for details on the enhanced performance features.
+**Performance Note:** After login, the dashboard uses React Query caching with 30-minute memory retention and 24-hour localStorage persistence for instant page loads (<50ms).
 
 ### 4. Stop All Services
 
@@ -138,15 +168,18 @@ npm run dev # Runs on http://localhost:3000
 
 ## Key Features
 
-- ✅ Windows Event Log monitoring
-- ✅ AI-powered security event analysis 
-- ✅ Vector-based threat detection with batch processing (3-5x performance improvement)
-- ✅ Persistent storage with 24-hour rolling window
-- ✅ Advanced performance optimization (parallel processing, batching, throttling)
-- ✅ Desktop notifications
-- ✅ Web admin interface
-- ✅ Teams/Slack integration
-- ✅ Local deployment only
+- **Conversational AI Chat** - Natural language security queries with context-aware responses
+- **Windows Event Log Monitoring** - Real-time EventLogWatcher with sub-second correlation
+- **AI-Powered Analysis** - LLM-based threat classification with vector similarity search
+- **YARA Malware Detection** - 70+ active rules with automatic updates
+- **Threat Scanner** - On-demand Quick/Full scans with real-time progress tracking
+- **Advanced Correlation** - Attack chain detection, temporal bursts, lateral movement patterns
+- **MITRE ATT&CK Integration** - 800+ auto-updated techniques with threat mapping
+- **Tailwind Dashboard** - Modern UI with instant page loads (<50ms) and real-time SignalR updates
+- **Teams/Slack Integration** - Rich alerts with adaptive rate limiting
+- **Enterprise Scale** - 12K+ events/sec processing with connection pooling
+- **24-Hour Rolling Window** - Optimized for AI pattern detection
+- **Local Deployment** - Complete data privacy with on-premise hosting
 
 ## Configuration
 

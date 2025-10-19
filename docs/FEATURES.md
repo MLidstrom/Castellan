@@ -1,6 +1,14 @@
 # Castellan Features
 
-## 🔍 **Intelligent Log Analysis**
+## **Conversational AI Chat** (v0.7.0)
+- **Natural Language Queries** - Ask questions about your security data in plain English
+- **Context-Aware Responses** - AI understands security context and provides relevant insights
+- **Markdown Formatting** - Rich text responses with code blocks, lists, and tables
+- **Real-time Analysis** - Query security events, patterns, and threats conversationally
+- **Security Intelligence** - Get threat summaries, risk assessments, and recommendations
+- **Interactive Interface** - Chat-based UI available in Tailwind Dashboard
+
+## **Intelligent Log Analysis**
 - **EventLogWatcher Real-time Collection** - Interrupt-driven Windows Event Log monitoring with sub-second latency
 - **Zero Event Loss** - Bookmark-based persistence ensures no missed events across service restarts
 - **Multi-Channel Support** - Security, Sysmon, PowerShell, and Windows Defender event monitoring
@@ -24,14 +32,14 @@
 - **File Threat Scanning** - Real-time malware detection with VirusTotal integration and local heuristics
 - **MITRE ATT&CK Integration** - 800+ techniques with configuration management and import functionality
 
-## 🛡️ **Security Detection**
+## **Security Detection**
 - **Anomaly Detection** - Machine learning-based behavioral analysis with vector similarity
 - **Automated Response** - Real-time threat response with configurable actions and escalation
 - **MITRE ATT&CK Mapping** - Automatic threat technique classification with 800+ techniques
 - **Security Event Rules Management** - Database-backed detection rules with web UI (v0.7.0)
   - **Rule Storage** - EF Core-backed rule store with 15-minute in-memory caching
   - **Full CRUD API** - Complete REST API at `/api/security-event-rules` with role-based access
-  - **Web Interface** - React Admin UI positioned under "Security Events" in navigation
+  - **Web Interface** - Tailwind Dashboard UI positioned under "Security Events" in navigation
   - **Rule Properties** - EventId, Channel, EventType, RiskLevel, Confidence, Summary, MITRE Techniques, Recommended Actions, Priority, Tags
   - **Flexible Filtering** - Query by enabled status, event ID, or channel for targeted rule retrieval
   - **Cache Management** - Automatic cache refresh on modifications with manual refresh endpoint
@@ -46,7 +54,7 @@
   - **Rule Deduplication** - Automatic prevention of duplicate rules using `ON CONFLICT(Name) DO UPDATE`
   - **Performance Preservation** - Hit counts, metrics, and user preferences maintained across updates
   - **Database-Level Pagination** - 70-80% faster malware detection rule loading (1-3s vs 7-10s)
-- **React Admin Interface** - Complete web UI for rule management and match analysis
+- **Tailwind Dashboard Interface** - Complete web UI for rule management and match analysis
 - **Full CRUD Operations** - REST API and web interface for all rule operations
 - **Performance Metrics** - Thread-safe scanning with execution time tracking
 - **Match History** - Complete audit trail with detailed forensic analysis
@@ -54,7 +62,7 @@
 - **Tier 1 Threat Intelligence** - Fully operational VirusTotal, MalwareBazaar, and AlienVault OTX integration for enhanced malware detection
 - **IP Reputation & Geolocation** - MaxMind GeoLite2 database integration with automated downloads, real IP geolocation, ASN data, and secure HTTP Basic Authentication
 
-## 📊 **Monitoring & Analysis**
+## **Monitoring & Analysis**
 - **Advanced Search & Filtering** - Comprehensive security event search system with complete v0.5.0 implementation
   - **Enhanced Search Interface** - Advanced search drawer with collapsible sections and intuitive controls
   - **Multi-Criteria Filtering** - Date ranges, risk levels, event types, MITRE ATT&CK techniques, machines, users, sources
@@ -97,7 +105,7 @@
 - **Persistent Storage** - 24-hour rolling window with automatic restart recovery
 - **Application Data Management** - SQLite database with FTS5 full-text search for enhanced performance, MITRE ATT&CK techniques, and unified security event storage
 
-## 🔔 **Notifications & Interface**
+## **Notifications & Interface**
 - **Teams/Slack Integration** - Real-time security alerts in Microsoft Teams and Slack channels
 - **Enhanced Performance Dashboard** - Full-featured performance monitoring with real-time metrics, multi-timeframe analytics (1h-7d), and interactive charts
 - **Threat Intelligence Health Dashboard** - Service status monitoring with API rate limiting, cache efficiency, and automated alerting
@@ -115,7 +123,7 @@
   - **SignalR Real-time Updates** - Live data streams for dashboard, events, and scan progress
   - **Dark Mode Support** - Complete dark theme implementation across all pages
   - **Responsive Design** - Mobile-friendly layouts with Tailwind CSS
-- **React Admin Interface with Instant Page Loading (Port 8080 - Legacy)** - Complete management system with all 11 admin pages fully operational and sub-150ms transitions:
+- **Tailwind Dashboard Interface with Instant Page Loading (Port 8080 - Legacy)** - Complete management system with all 11 admin pages fully operational and sub-150ms transitions:
   - **Smart Preloading** - Navigation pattern prediction with hover-based component loading
   - **Enhanced Data Provider** - Cache-first strategy with 90% faster data fetch times
   - **Predictive Loading** - 80%+ cache hit rate for predicted pages
@@ -204,7 +212,7 @@
 - **Consolidated Dashboard API** - Single endpoint for all dashboard data (v0.7.0)
   - `/api/dashboard/consolidated/{timeRange}` - Comprehensive dashboard data including security events, system status, threat scanner metadata, YARA statistics, and recent activity
 
-## 🔒 **Enterprise Security**
+## **Enterprise Security**
 - **BCrypt Password Hashing** - Industry-standard password security with configurable work factors
 - **JWT Token Management** - Secure refresh token rotation and server-side invalidation
 - **Token Blacklisting** - Real-time token revocation with automatic cleanup

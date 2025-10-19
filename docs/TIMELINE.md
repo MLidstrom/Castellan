@@ -2,7 +2,7 @@
 
 **Castellan Timeline** provides comprehensive visual analysis of security events over time, enabling security analysts to identify patterns, trends, and anomalies in security data.
 
-## 🎯 Overview
+## Overview
 
 The Timeline visualization feature transforms temporal security data into interactive charts and statistics, helping analysts understand:
 
@@ -12,13 +12,13 @@ The Timeline visualization feature transforms temporal security data into intera
 - **Anomaly Detection**: Identification of unusual activity patterns
 - **Incident Response**: Timeline context for security investigations
 
-## 🚀 Quick Start
+## Quick Start
 
 ### Accessing Timeline
 
-1. **Login to Castellan**: Navigate to `http://localhost:8080`
+1. **Login to Castellan**: Navigate to `http://localhost:3000`
 2. **Authentication**: Login with your admin credentials
-3. **Timeline Navigation**: Click the **Timeline** icon (📊) in the left navigation menu
+3. **Timeline Navigation**: Click the **Timeline** icon in the left navigation menu
 4. **View Data**: The timeline will load showing the past 7 days of security events
 
 ### Basic Usage
@@ -40,7 +40,7 @@ The Timeline visualization feature transforms temporal security data into intera
 └─────────────────────────────────────────────────────────────┘
 ```
 
-## 🎮 Features
+## Features
 
 ### Interactive Timeline Controls
 
@@ -97,7 +97,7 @@ interface TimelineStats {
 - **Event Type Analysis**: Most common security event categories
 - **Trend Indicators**: Future enhancement for period-over-period comparison
 
-## 🔧 Technical Implementation
+## Technical Implementation
 
 ### Frontend Architecture
 
@@ -109,7 +109,7 @@ src/components/
 └── TimelineToolbar.tsx    # Interactive controls component
 
 src/resources/
-└── Timeline.tsx           # React Admin resource wrapper
+└── Timeline.tsx           # Tailwind Dashboard resource wrapper
 ```
 
 #### Data Flow
@@ -194,7 +194,7 @@ getTimelineStats(params?: {
 - **Refresh**: Loading spinner with disabled controls
 - **Partial Load**: Progressive loading for large datasets
 
-## 📊 Use Cases
+## Use Cases
 
 ### Security Incident Response
 
@@ -228,7 +228,7 @@ Scenario: Monthly security audit
 3. **Anomaly Detection**: Identify unusual activity patterns
 4. **Documentation**: Screenshot timeline for audit documentation
 
-## 🚀 Best Practices
+## Best Practices
 
 ### Performance Optimization
 
@@ -258,7 +258,7 @@ Scenario: Monthly security audit
 - **Data Retention**: Timeline data subject to retention policies
 - **Export Controls**: Timeline exports require additional permissions
 
-## 🔧 Customization
+## Customization
 
 ### Chart Styling
 Timeline chart appearance can be customized via Material-UI theme:
@@ -288,7 +288,7 @@ const defaultSettings = {
 };
 ```
 
-## 🐛 Troubleshooting
+## Troubleshooting
 
 ### Common Issues
 
@@ -354,7 +354,7 @@ Monitor timeline API requests in browser Network tab:
 - **Status 404**: Backend endpoint not available
 - **Status 500**: Backend server error (check logs)
 
-## 📚 Related Documentation
+## Related Documentation
 
 - **[Security Events](SECURITY_EVENTS.md)**: Understanding security event data
 - **[API Reference](API.md)**: Complete backend API documentation
@@ -362,9 +362,9 @@ Monitor timeline API requests in browser Network tab:
 - **[Performance](PERFORMANCE.md)**: Performance optimization guidelines
 - **[Troubleshooting](TROUBLESHOOTING.md)**: General troubleshooting guide
 
-## 🔗 Integration Points
+## Integration Points
 
-### React Admin Resources
+### Tailwind Dashboard Resources
 Timeline integrates with other Castellan resources:
 - **Security Events**: Drill down from timeline to event details
 - **MITRE Techniques**: View timeline filtered by ATT&CK techniques

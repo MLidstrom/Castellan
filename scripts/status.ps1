@@ -85,17 +85,17 @@ try {
     Write-Host "  Install from: https://ollama.ai" -ForegroundColor Yellow
 }
 
-# Check React Admin Interface
-Write-Host "`nChecking React Admin Interface..." -ForegroundColor Yellow
+# Check Tailwind Dashboard
+Write-Host "`nChecking Tailwind Dashboard..." -ForegroundColor Yellow
 try {
-    $adminResponse = Invoke-WebRequest -Uri "http://localhost:8080" -UseBasicParsing -TimeoutSec 5 -ErrorAction Stop
+    $adminResponse = Invoke-WebRequest -Uri "http://localhost:3000" -UseBasicParsing -TimeoutSec 5 -ErrorAction Stop
     if ($adminResponse.StatusCode -eq 200) {
-        Write-Host "OK: React Admin is running on localhost:8080" -ForegroundColor Green
+        Write-Host "OK: Tailwind Dashboard is running on localhost:3000" -ForegroundColor Green
         $statusSummary.ReactAdmin = $true
     }
 } catch {
-    Write-Host "ERROR: React Admin is not accessible (port 8080)" -ForegroundColor Red
-    Write-Host "  Run: cd castellan-admin && npm start" -ForegroundColor Yellow
+    Write-Host "ERROR: Tailwind Dashboard is not accessible (port 3000)" -ForegroundColor Red
+    Write-Host "  Run: cd dashboard && npm run dev" -ForegroundColor Yellow
 }
 
 # Check System Tray Application

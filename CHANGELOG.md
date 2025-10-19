@@ -294,7 +294,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Always shows previous data while fetching new data
 - Seamless, app-like navigation experience
 - Applied globally via `createConfiguredQueryClient` defaults
-- All React Admin pages and custom queries benefit automatically
+- All Tailwind Dashboard pages and custom queries benefit automatically
 
 **Performance Impact**:
 - **Instant navigation**: Pages load < 50ms when cached (vs 200-2000ms before)
@@ -370,7 +370,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Skeleton Components**: Created reusable skeleton components for consistent loading states
   - `MetricCardSkeleton` - Reusable metric card skeleton with staggered animation support
   - `ChartSkeleton` - Flexible chart skeleton (pie, bar, area, rectangular types)
-  - Organized in `castellan-admin/src/components/skeletons/` directory
+  - Organized in `dashboard/src/components/skeletons/` directory
 - **Top-Bar Progress Indicator**: Added fixed LinearProgress component for visual loading feedback
 - **Staggered Animations**: Implemented cascading effect with 0s, 0.1s, 0.2s delays for polished UX
 - **All Sub-Components**: Added skeletons to ApiDiagnostic, YaraSummaryCard, Connection Pool Monitor, System Metrics, Geographic Threat Map, Performance Dashboard, and Threat Intelligence Health
@@ -446,7 +446,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **React UI Framework Correction**: Updated hardcoded framework choices in ComplianceReports.tsx to show correct organizational frameworks (HIPAA, SOX, PCI DSS, ISO 27001, SOC2)
 - **Comprehensive Framework Verification**: All 5 organizational compliance frameworks now have 100% functional report creation success
 - **PreloadManager Timelines Fix**: Resolved "No import mapping for component: timelines" error by correcting component path to import from Timelines resource
-- **Framework Database Consistency**: Ensured all organizational frameworks are properly visible via API and React Admin interface
+- **Framework Database Consistency**: Ensured all organizational frameworks are properly visible via API and Tailwind Dashboard interface
 
 ### Added - Compliance Framework Phase 4 Week 2 (September 29, 2025)
 - **Enhanced Report Generation**: Comprehensive ComplianceReportGenerationService with advanced reporting capabilities
@@ -500,7 +500,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 - **Admin Menu Components**: Fixed missing menu items issue where only 3 of 11 admin interface pages were visible
-  - **Root Cause**: Permission structure mismatch between React Admin and auth provider - `usePermissions()` expected an array but received an object
+  - **Root Cause**: Permission structure mismatch between Tailwind Dashboard and auth provider - `usePermissions()` expected an array but received an object
   - **Solution**: Updated `authProvider.getPermissions()` to return permissions array directly and enhanced admin user permissions
   - **Enhanced Admin Permissions**: Added `security.read`, `analytics.read`, `system.read`, `compliance.read`, `role:admin` to backend JWT tokens
   - **Files Updated**: `AuthController.cs` (backend permissions), `authProvider.ts` (frontend structure), `MenuWithPreloading.tsx` (permission logic)
@@ -576,7 +576,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 - **Timeline Icon Update**: Changed Timeline menu icon from `Timeline` to `Schedule` for better visual distinction from Trend Analysis icon
-- **MitreController Enhancement**: Added React Admin compatible pagination and sorting support
+- **MitreController Enhancement**: Added Tailwind Dashboard compatible pagination and sorting support
 
 ### Fixed
 - **Database Corruption Issue**: Fixed SQLite database corruption preventing Worker API from starting
@@ -596,7 +596,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 - **✅ SignalR Connection Persistence**: Resolved critical issue where real-time connection disconnected on page navigation
-  - **Root Cause**: SignalR connection was component-scoped in Dashboard, got destroyed on React Admin page changes
+  - **Root Cause**: SignalR connection was component-scoped in Dashboard, got destroyed on Tailwind Dashboard page changes
   - **Solution**: Implemented global SignalR context provider at application level
   - **Impact**: Real-time updates now persist seamlessly across all menu navigation
   - **Files Updated**: `SignalRContext.tsx` (new), `App.tsx`, `Dashboard.tsx`, `RealtimeSystemMetrics.tsx`, `NotificationSystem.tsx`
@@ -681,7 +681,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - **Persistent Storage**: File-based JSON storage in `data/threat-intelligence-config.json`
   - **Comprehensive Validation**: Rate limits (1-1000/min), API key management
   - **Multi-Provider Support**: VirusTotal, MalwareBazaar, AlienVault OTX configuration
-  - **React Admin Integration**: Enhanced dataProvider with configuration resource mapping
+  - **Tailwind Dashboard Integration**: Enhanced dataProvider with configuration resource mapping
   - **Default Fallbacks**: Sensible defaults when no configuration file exists
   - **Error Handling**: Comprehensive validation with detailed error messages
 
@@ -699,7 +699,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     - `getTimelineHeatmap()` - Activity heatmap data for visualization
     - `getTimelineStats()` - Summary statistics and risk level breakdown
     - `getTimelineAnomalies()` - Anomaly detection and alert analysis
-  - **React Admin Integration**: Timeline resource with Material-UI Timeline icon
+  - **Tailwind Dashboard Integration**: Timeline resource with Material-UI Timeline icon
     - Read-only timeline resource for visual security event analysis
     - Consistent design with existing admin interface components
     - TypeScript support with full type safety and error handling
@@ -720,7 +720,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     - Comprehensive error handling and validation
     - Memory-efficient streaming for large data exports
 
-- **✅ Frontend Configuration UI**: Complete React Admin interface for threat intelligence settings
+- **✅ Frontend Configuration UI**: Complete Tailwind Dashboard interface for threat intelligence settings
   - **Configuration Components**: Comprehensive form-based configuration management
     - Three-panel layout: VirusTotal, MalwareBazaar, AlienVault OTX providers
     - Provider toggle switches with conditional field display
@@ -732,7 +732,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     - Configuration persisted to secure JSON file storage
     - JWT authentication for all configuration endpoints
     - Compliance with security rules (no plaintext passwords in repository)
-  - **Integration**: Seamless React Admin integration
+  - **Integration**: Seamless Tailwind Dashboard integration
     - Custom dataProvider methods for configuration resource
     - Optimistic UI updates with error rollback handling
     - Consistent Material-UI design with existing interface components
@@ -744,7 +744,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     - Pagination support for large rule sets with performance optimization
     - Rule testing and validation endpoints with syntax checking
     - Bulk operations for importing/exporting rule collections
-  - **Frontend Integration**: Complete React Admin YARA management interface
+  - **Frontend Integration**: Complete Tailwind Dashboard YARA management interface
     - MalwareRules resource with full CRUD capabilities and rule editor
     - YaraMatches resource for viewing detection results and analysis
     - YARA analytics dashboard with rule performance metrics
@@ -833,14 +833,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **📋 Dashboard Security Events Count**: Fixed incorrect total events display in dashboard KPI cards
   - Root cause: Dashboard used paginated data array length (`data.length` = 10) instead of API total field (`total` = 2168+)
   - Impact: Dashboard now shows accurate total security events count matching Security Events page
-  - Files: `castellan-admin/src/components/Dashboard.tsx` (Lines 242-244, 313)
+  - Files: `dashboard/src/components/Dashboard.tsx` (Lines 242-244, 313)
   - Technical fix: Modified API response parsing to extract both `events` array and `total` count
   - Result: Consistent event counts across dashboard and detail pages
 
-- **🔧 React Admin Interface**: Fixed missing RealtimeSystemMetrics component compilation failure
+- **🔧 Tailwind Dashboard Interface**: Fixed missing RealtimeSystemMetrics component compilation failure
   - Root cause: Missing `RealtimeSystemMetrics.tsx` component referenced in Dashboard
-  - Impact: React Admin now compiles successfully and displays real-time system metrics
-  - Files: `castellan-admin/src/components/RealtimeSystemMetrics.tsx`
+  - Impact: Tailwind Dashboard now compiles successfully and displays real-time system metrics
+  - Files: `dashboard/src/components/RealtimeSystemMetrics.tsx`
   - Features: Real-time health overview, component metrics, auto-refresh every 10 seconds
   - Result: Full dashboard functionality restored with Material UI integration
 
@@ -881,16 +881,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Files: `src/Castellan.Worker/Pipeline.cs` (Lines 98-122, 389-469)
   - Result: Services can run for extended periods without interruption
 
-- **📊 MITRE ATT&CK DataProvider**: Resolved "dataProvider error" in React Admin interface
+- **📊 MITRE ATT&CK DataProvider**: Resolved "dataProvider error" in Tailwind Dashboard interface
   - Root cause: MITRE endpoints return `{ techniques: [...] }` format, dataProvider expected arrays
   - Impact: MITRE ATT&CK Techniques page now displays 50+ techniques properly
-  - Files: `castellan-admin/src/dataProvider/castellanDataProvider.ts` (Lines 86-109)
+  - Files: `dashboard/src/dataProvider/castellanDataProvider.ts` (Lines 86-109)
   - Result: Full MITRE integration functional in web interface
 
 - **🔐 Authentication Error Handling**: Enhanced login experience and error messaging
   - Root cause: Confusing "No tokens found" errors on initial page load
   - Impact: Cleaner login flow with better backend unavailability messages
-  - Files: React Admin auth provider components
+  - Files: Tailwind Dashboard auth provider components
   - Result: Improved user experience during authentication
 
 #### Enhanced

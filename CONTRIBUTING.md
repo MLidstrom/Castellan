@@ -61,11 +61,11 @@ dotnet run
 
 **Important:** See [AUTHENTICATION_SETUP.md](AUTHENTICATION_SETUP.md) for detailed authentication configuration.
 
-### React Admin Development
+### Tailwind Dashboard Development
 ```powershell
-cd castellan-admin
+cd dashboard
 npm install
-npm start  # Runs on http://localhost:8080
+npm start  # Runs on http://localhost:3000
 ```
 
 ### Troubleshooting

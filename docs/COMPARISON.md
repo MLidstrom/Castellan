@@ -6,7 +6,7 @@
 |----------------|---------------|---------------|----------------|---------------|-----------|
 | **🤖 AI/ML Integration** | **✅ Advanced (LLM + Vector)** | ⚠️ Add-on modules | ⚠️ Add-on modules | ❌ Manual setup | ⚠️ Basic rules |
 | **🔍 Vector Search** | **✅ Semantic similarity** | ❌ Not available | ❌ Not available | ⚠️ Manual setup | ❌ Not available |
-| **⏱️ Deployment Time** | **✅ 5 minutes** | Weeks to months | Weeks to months | Days to weeks | Days to weeks |
+| **⏱️ Deployment Time** | **✅ 2 minutes** | Weeks to months | Weeks to months | Days to weeks | Days to weeks |
 | **📊 Real-time Processing** | **✅ 12K+ events/sec** | ✅ Enterprise scale | ✅ Enterprise scale | ⚠️ Configuration dependent | ✅ Good performance |
 | **📱 Rich Notifications** | **✅ Teams/Slack cards** | Basic integrations | Basic integrations | Manual webhooks | Manual setup |
 | **🎯 MITRE ATT&CK** | **✅ Auto-updated (800+)** | Manual mapping | Manual mapping | Not built-in | Good coverage |
@@ -42,7 +42,7 @@
 - **Modern Architecture**: Built with latest technologies and best practices
 
 ### 🚀 **Operational Excellence**
-- **Instant Deployment**: 5-minute setup vs. weeks/months for traditional solutions
+- **Instant Deployment**: 2-minute setup vs. weeks/months for traditional solutions
 - **Windows Native**: Deep integration with Windows Event Log system and services
 - **Container-Ready**: Native Docker support with orchestration capabilities
 - **Air-Gap Compatible**: Fully functional in disconnected environments
@@ -74,9 +74,9 @@
 | **AI/ML Integration** | ✅ Advanced (LLM + Vector Search) | Often add-on modules | **Built-in from day one** |
 | **Teams/Slack Alerts** | ✅ Rich card integration | Basic webhook support | **Native rich formatting** |
 | **MITRE ATT&CK** | ✅ Auto-updated (800+ techniques) | Manual mapping required | **Automated intelligence** |
-| **Deployment** | ✅ 5-minute setup | Weeks to months | **Instant productivity** |
+| **Deployment** | ✅ 2-minute setup | Weeks to months | **Instant productivity** |
 | **Customization** | ✅ Fork & modify freely | Vendor-dependent | **Unlimited flexibility** |
 | **Windows Focus** | ✅ Native Windows optimization | Often generic approach | **Platform-specific expertise** |
 | **Performance** | ✅ Connection pooling & caching | Basic optimization | **Advanced engineering** |
 
-> **💡 Technical Advantage**: Castellan combines cutting-edge AI capabilities with enterprise-grade performance engineering, offering 5-minute deployment, advanced connection pooling (15-25% I/O improvement), and intelligent caching (30-50% performance boost) - features typically found only in premium solutions.
+> **💡 Technical Advantage**: Castellan combines cutting-edge AI capabilities with enterprise-grade performance engineering, offering 2-minute deployment, advanced connection pooling (15-25% I/O improvement), and intelligent caching (30-50% performance boost) - features typically found only in premium solutions.

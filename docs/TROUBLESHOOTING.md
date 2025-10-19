@@ -2,7 +2,7 @@
 
 This guide covers common issues you might encounter while using Castellan and their solutions.
 
-## React Admin Interface Issues
+## Tailwind Dashboard Interface Issues
 
 ### Dashboard Security Events Count Discrepancy
 
@@ -57,9 +57,9 @@ This guide covers common issues you might encounter while using Castellan and th
    Invoke-WebRequest -Uri "http://localhost:5000/api/mitre/import" -Method POST -Headers $headers
    ```
 
-3. **Clear Browser Cache**: Force reload the React Admin interface
+3. **Clear Browser Cache**: Force reload the Tailwind Dashboard interface
    - Press Ctrl+F5 for hard refresh
-   - Or clear browser cache and cookies for localhost:8080
+   - Or clear browser cache and cookies for localhost:3000
 
 4. **Check Browser Console**: Open DevTools (F12) → Console tab for specific errors
    - Look for authentication token issues
@@ -69,7 +69,7 @@ This guide covers common issues you might encounter while using Castellan and th
 **Root Cause**: The issue was caused by MITRE API endpoints returning `{ techniques: [...] }` format while the dataProvider expected standard array responses. This has been fixed in the castellanDataProvider.ts transformation logic.
 
 ### Threat Scanner Buttons Not Working
-If the \"Quick Scan\" or \"Full Scan\" buttons in the React Admin interface don't work:
+If the \"Quick Scan\" or \"Full Scan\" buttons in the Tailwind Dashboard interface don't work:
 
 1. **Check Backend Connection**: Ensure backend is running on `http://localhost:5000`
    ```powershell
@@ -96,7 +96,7 @@ If `npm start` or `npm run start` fails when running as a background job with `S
 
 ### Frontend "Failed to fetch" Errors
 
-**Symptom**: React Admin Interface shows "Failed to fetch" errors and won't load properly at http://localhost:8080
+**Symptom**: Tailwind Dashboard Interface shows "Failed to fetch" errors and won't load properly at http://localhost:3000
 
 **Quick Fix**: Use the approved startup script to start both backend and frontend properly:
 ```powershell
@@ -119,16 +119,16 @@ If `npm start` or `npm run start` fails when running as a background job with `S
 
 3. **Install Frontend Dependencies**: Ensure React dependencies are current
    ```powershell
-   cd castellan-admin
+   cd dashboard
    npm ci
    ```
 
 4. **Start Frontend Manually** (if the script doesn't work):
    ```powershell
-   cd castellan-admin
+   cd dashboard
    npm start
    ```
-   - This will start the dev server on http://localhost:8080
+   - This will start the dev server on http://localhost:3000
    - The app will proxy API requests to http://localhost:5000 automatically
 
 **Root Cause**: The React frontend server wasn't running. The backend API on port 5000 was working correctly, but without the frontend server on port 8080, users see "Failed to fetch" errors because there's no web interface to serve the React application.
@@ -137,7 +137,7 @@ If `npm start` or `npm run start` fails when running as a background job with `S
 
 ### Common Port Issues
 - **Backend API**: Always runs on `http://localhost:5000`
-- **React Admin Interface**: Always runs on `http://localhost:8080`
+- **Tailwind Dashboard Interface**: Always runs on `http://localhost:3000`
 - **CORS Errors**: Make sure the React app uses full URLs (`http://localhost:5000/api/...`) not relative paths
 - **Custom API URL**: Set `REACT_APP_API_BASE_URL` environment variable to override default backend URL
 
@@ -169,14 +169,14 @@ If `npm start` or `npm run start` fails when running as a background job with `S
    # Start Worker API directly
    Start-Process powershell -ArgumentList "-NoProfile", "-Command", "cd C:\Users\matsl\Castellan\src\Castellan.Worker; dotnet run" -WindowStyle Hidden
    
-   # Start React Admin
-   Start-Process powershell -ArgumentList "-NoProfile", "-Command", "cd C:\Users\matsl\Castellan\castellan-admin; npm start" -WindowStyle Hidden
+   # Start Tailwind Dashboard
+   Start-Process powershell -ArgumentList "-NoProfile", "-Command", "cd C:\Users\matsl\Castellan\dashboard; npm start" -WindowStyle Hidden
    ```
 
 4. **Verify services are running despite the hang**:
    - Qdrant: http://localhost:6333 (should return status 200)
    - Worker API: http://localhost:5000/api/security-events (returns 401 if working)
-   - React Admin: http://localhost:8080 (should show login page)
+   - Tailwind Dashboard: http://localhost:3000 (should show login page)
 
 **Note**: Even if the script hangs, all services may still be running correctly. Check the status before assuming failure.
 
@@ -200,7 +200,7 @@ Invoke-WebRequest -Uri "http://localhost:5000/api/security-events" -UseBasicPars
    Get-Process Castellan.Worker -ErrorAction SilentlyContinue
    ```
 3. **Login to confirm API access**:
-   - Navigate to http://localhost:8080
+   - Navigate to http://localhost:3000
    - Login with your configured credentials
    - If the dashboard loads data, the API is working
 
@@ -388,7 +388,7 @@ If the system tray application doesn't start automatically:
 **Testing Steps**:
 ```powershell
 # 1. Login to the application
-# URL: http://localhost:8080
+# URL: http://localhost:3000
 # Username: admin
 # Password: CastellanAdmin2024!
 

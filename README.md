@@ -24,39 +24,44 @@
 
 **CastellanAI** is a **100% open source**, enterprise-grade security monitoring platform that transforms Windows event logs into actionable security intelligence using AI-powered analysis, vector search, and real-time threat correlation.
 
-🚀 **Enterprise Features**: 12K+ events/sec processing • Vector similarity search • Advanced correlation engine • Real-time Teams/Slack alerts • 800+ MITRE ATT&CK techniques • VirusTotal/MalwareBazaar integration • Complete YARA malware detection with auto-updates • Trend forecasting • Timeline visualization • Export capabilities • Centralized configuration management • Single consolidated database architecture
+**Enterprise Features**: 12K+ events/sec processing • Vector similarity search • Advanced correlation engine • Real-time Teams/Slack alerts • 800+ MITRE ATT&CK techniques • VirusTotal/MalwareBazaar integration • Complete YARA malware detection with auto-updates • Trend forecasting • Timeline visualization • Export capabilities • Centralized configuration management • Single consolidated database architecture
 
-⚡ **5-Minute Setup**: `.\scripts\start.ps1` → Open `http://localhost:3000` → Start monitoring
+**2-Minute Setup**: 3 required fields → `.\scripts\start.ps1` → Open `http://localhost:3000` → Start monitoring
 
-## 🔥 Key Features
+## Key Features
 
-- **🧠 AI-Powered Analysis** - LLM-based threat classification with vector similarity search
-- **🛡️ Real-time Detection** - EventLogWatcher-powered live Windows Event Log monitoring with sub-second threat correlation
-- **🔗 Advanced Correlation** - Attack chain detection, temporal bursts, lateral movement, and privilege escalation patterns
-- **📊 Enterprise Scale** - 12K+ events/sec processing with optimized performance
-- **🔔 Smart Notifications** - Rich Teams/Slack alerts with adaptive rate limiting
-- **🎯 MITRE Integration** - Auto-updated 800+ ATT&CK techniques with threat mapping
-- **🔍 Threat Intelligence** - VirusTotal, MalwareBazaar, AlienVault OTX with configuration UI
-- **⚡ Malware Detection** - Complete signature-based detection with automatic rule updates and deduplication
-- **🔬 Threat Scanner** - On-demand Quick/Full scans with real-time progress tracking, scheduled scanning, quarantine management, and exclusions
-- **📋 Timeline Visualization** - Interactive security event timeline with granular analysis
-- **📤 Data Export** - CSV, JSON, PDF export with filtering and background processing
-- **📱 Dual Dashboards** - Primary Tailwind Dashboard (port 3000) with modern UI/UX + Legacy React Admin (port 8080) with enterprise data management, both with real-time SignalR updates
-- **🔒 Enterprise Security** - BCrypt passwords, JWT tokens, audit trails
+- **Conversational AI Chat** - Natural language security queries with context-aware responses and Markdown formatting
+- **AI-Powered Analysis** - LLM-based threat classification with vector similarity search
+- **Real-time Detection** - EventLogWatcher-powered live Windows Event Log monitoring with sub-second threat correlation
+- **Advanced Correlation** - Attack chain detection, temporal bursts, lateral movement, and privilege escalation patterns
+- **Enterprise Scale** - 12K+ events/sec processing with optimized performance
+- **Smart Notifications** - Rich Teams/Slack alerts with adaptive rate limiting
+- **MITRE Integration** - Auto-updated 800+ ATT&CK techniques with threat mapping
+- **Threat Intelligence** - VirusTotal, MalwareBazaar, AlienVault OTX with configuration UI
+- **Malware Detection** - Complete signature-based detection with automatic rule updates and deduplication
+- **Threat Scanner** - On-demand Quick/Full scans with real-time progress tracking, scheduled scanning, quarantine management, and exclusions
+- **Timeline Visualization** - Interactive security event timeline with granular analysis
+- **Data Export** - CSV, JSON, PDF export with filtering and background processing
+- **Enterprise Security** - BCrypt passwords, JWT tokens, audit trails
 
-## 🖼️ Screenshots
+## Screenshots
 
 <p align="center">
-  <img alt="CastellanAI Dashboard" src="assets/images/readme/dashboard.png" width="800" />
+  <img alt="CastellanAI Dashboard" src="assets/images/dashboard.png" width="800" />
   <br><em>Real-time security monitoring dashboard with live threat intelligence</em>
 </p>
 
 <p align="center">
-  <img alt="Teams Alert" src="assets/images/readme/teams-alert.png" width="600" />
-  <br><em>Rich Microsoft Teams alert cards with actionable security context</em>
+  <img alt="AI Chat" src="assets/images/conversations.png" width="800" />
+  <br><em>Natural language AI chat interface for conversational security analysis and threat investigation</em>
 </p>
 
-## 🚀 Quick Start
+<p align="center">
+  <img alt="Notifications Configuration" src="assets/images/notifications.png" width="600" />
+  <br><em>Centralized notification settings for Microsoft Teams and Slack integration</em>
+</p>
+
+## Quick Start
 
 ### Prerequisites
 - [.NET 8.0 SDK](https://dotnet.microsoft.com/download/dotnet/8.0) 
@@ -93,56 +98,56 @@
 
 > **⚠️ Security Note**: See [Configuration Setup](docs/CONFIGURATION_SETUP.md) for detailed setup instructions.
 
-## 🔥 Why CastellanAI?
+## Why CastellanAI?
 
-### 🎆 **Production-Ready Enterprise Platform**
+### **Production-Ready Enterprise Platform**
 - **AGPL-3.0 Licensed** - 100% open source with complete transparency and strong copyleft
-- **5-Minute Setup** - From clone to monitoring in minutes
+- **2-Minute Setup** - Simplified configuration with only 3 required fields
 - **Enterprise Scale** - 12K+ events/sec with snapshot caching for <50ms instant page loads
 - **AI-First** - Vector search + LLM analysis built-in
 - **Zero Vendor Lock-in** - Fork, modify, deploy anywhere
 
-### 🔄 **vs. Traditional SIEM Solutions**
+### **vs. Traditional SIEM Solutions**
 | Feature | CastellanAI | Splunk/QRadar/ELK |
 |---------|-----------|-------------------|
-| **Deployment** | 5 minutes | Weeks to months |
+| **Deployment** | 2 minutes | Weeks to months |
 | **AI/ML** | Built-in LLM + Vector | Add-on modules |
 | **Customization** | Full source access | Vendor limited |
 | **Cost** | Free + self-hosted | $$$$ + licensing |
 | **Windows Focus** | Native optimization | Generic approach |
 
-## 📚 Documentation
+## Documentation
 
-**[📖 Complete Documentation Index](docs/README.md)** - Master documentation hub with organized access to all guides, features, and technical references.
+**[Complete Documentation Index](docs/README.md)** - Master documentation hub with organized access to all guides, features, and technical references.
 
 ### Quick Reference
 | Topic | Description |
 |-------|-------------|
-| **[🚀 Quick Start Guide](docs/GETTING_STARTED.md)** | Complete installation and setup instructions |
-| **[🔥 Features](docs/FEATURES.md)** | Comprehensive feature overview and capabilities |
-| **[🆕 YARA Detection](docs/MALWARE_DETECTION.md)** | Signature-based malware detection and rule management |
-| **[🔧 Configuration](docs/CONFIGURATION_SETUP.md)** | Authentication, AI providers, centralized settings management |
-| **[🔔 Notifications](docs/NOTIFICATIONS.md)** | Teams/Slack integration via Configuration tab |
-| **[🏢 Architecture](docs/ARCHITECTURE.md)** | System architecture, security, and observability |
-| **[📈 Performance](docs/PERFORMANCE.md)** | Performance metrics, benchmarks, and optimization |
-| **[🚑 Troubleshooting](docs/TROUBLESHOOTING.md)** | Common issues and solutions |
+| **[Quick Start Guide](docs/GETTING_STARTED.md)** | Complete installation and setup instructions |
+| **[Features](docs/FEATURES.md)** | Comprehensive feature overview and capabilities |
+| **[YARA Detection](docs/MALWARE_DETECTION.md)** | Signature-based malware detection and rule management |
+| **[Configuration](docs/CONFIGURATION_SETUP.md)** | Authentication, AI providers, centralized settings management |
+| **[Notifications](docs/NOTIFICATIONS.md)** | Teams/Slack integration via Configuration tab |
+| **[Architecture](docs/ARCHITECTURE.md)** | System architecture, security, and observability |
+| **[Performance](docs/PERFORMANCE.md)** | Performance metrics, benchmarks, and optimization |
+| **[Troubleshooting](docs/TROUBLESHOOTING.md)** | Common issues and solutions |
 
-> **📚 For the complete documentation catalog** including API references, build guides, security features, integrations, and specialized guides, visit **[docs/README.md](docs/README.md)**.
+> **For the complete documentation catalog** including API references, build guides, security features, integrations, and specialized guides, visit **[docs/README.md](docs/README.md)**.
 
-## 🤝 Community & Support
+## Community & Support
 
 - **[GitHub Issues](https://github.com/MLidstrom/Castellan/issues)** - Bug reports and feature requests
 - **[GitHub Discussions](https://github.com/MLidstrom/Castellan/discussions)** - Community support and questions  
 - **[Contributing Guide](CONTRIBUTING.md)** - How to contribute to the project
 - **[Security Policy](SECURITY.md)** - Security practices and responsible disclosure
 
-## 📄 License
+## License
 
 This project is licensed under the **GNU Affero General Public License v3.0 (AGPL-3.0)** - see the [LICENSE](LICENSE) file for details.
 
 The AGPL-3.0 license ensures that any modifications to CastellanAI, including those used to provide network services, must be made available under the same license terms.
 
-## ™️ Trademark Notice
+## Trademark Notice
 
 The name **Castellan / CastellanAI** and the official logo are trademarks of Mats L. Canderfalk.
 Forks and derivatives must not use the same name or branding in a way that suggests official support.
@@ -151,7 +156,7 @@ Forks and derivatives must not use the same name or branding in a way that sugge
 
 <div align="center">
 
-**CastellanAI** - Your digital fortress guardian. 🏰🛡️
+**CastellanAI** - Your digital fortress guardian. 🏰
 
 Built with ❤️ by the open source community
 

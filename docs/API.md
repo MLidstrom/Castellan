@@ -1,14 +1,14 @@
 # Castellan API Documentation
 
-**Status**: ✅ **Production Ready**
+**Status**: **Production Ready**
 **Last Updated**: October 14, 2025
 **API Version**: v1.4 - Threat Scanner Configuration & Dashboard Enhancements
 
-## 🎯 Overview
+## Overview
 
 Castellan provides a comprehensive REST API for security monitoring, threat analysis, and system management. This documentation covers all available endpoints, authentication, and integration patterns.
 
-## 🔐 Authentication
+## Authentication
 
 ### JWT Token Authentication
 All API endpoints require JWT authentication with proper token management.
@@ -48,7 +48,7 @@ Content-Type: application/json
 }
 ```
 
-## 📊 System Status API
+## System Status API
 
 ### Get System Status
 ```http
@@ -95,8 +95,8 @@ GET /api/system-status
 GET /api/system-status/{componentId}
 ```
 
-## 🚨 Security Events API
-## 📈 Dashboard Consolidated Data
+## Security Events API
+## Dashboard Consolidated Data
 
 ### Get Consolidated Dashboard Data
 ```http
@@ -152,7 +152,7 @@ Authorization: Bearer {token}
 ```
 Sends a consolidated update over SignalR to connected dashboards.
 
-## 📡 Real-time (SignalR)
+## Real-time (SignalR)
 
 **Hub:** `/hubs/scan-progress`
 
@@ -239,7 +239,7 @@ Content-Type: application/json
 }
 ```
 
-## 🛡️ Security Event Rules API
+## Security Event Rules API
 
 ### List Security Event Rules
 ```http
@@ -423,7 +423,7 @@ Authorization: Bearer {token}
 - **Pagination Support** - Efficient handling of large rule sets with sorting and pagination
 - **Cache Management** - 15-minute in-memory cache with manual refresh capability
 
-## 🧠 AI Analysis API
+## AI Analysis API
 
 ### Analyze Event with AI
 ```http
@@ -465,7 +465,7 @@ Content-Type: application/json
 GET /api/ai/analysis-history?limit=20&analysisType=threat_classification
 ```
 
-## 🔍 Vector Search API
+## Vector Search API
 
 ### Semantic Search
 ```http
@@ -514,7 +514,7 @@ GET /api/vector/stats
 }
 ```
 
-## 📈 Performance Metrics API
+## Performance Metrics API
 
 ### Get Performance Metrics
 ```http
@@ -654,7 +654,7 @@ GET /api/performance/system-resources
 }
 ```
 
-## 💾 Database Connection Pool API
+## Database Connection Pool API
 
 ### Get Database Pool Health
 ```http
@@ -737,7 +737,7 @@ Authorization: Bearer {token}
 - **PostgreSQL Ready** - Architecture supports seamless migration without code changes
 - **Performance Metrics** - Tracks active/idle connections, utilization, failure counts, wait times
 
-## 📊 Analytics API
+## Analytics API
 
 ### Get Historical Trends
 ```http
@@ -803,7 +803,7 @@ GET /api/analytics/forecast?metric=TotalEvents&forecastPeriod=7
 - **Anonymous Access** - No authentication required for analytics endpoints
 - **Real-time Processing** - On-demand forecast generation with sub-second response times
 
-## 🎯 MITRE ATT&CK API
+## MITRE ATT&CK API
 
 ### Get MITRE Technique Count
 ```http
@@ -874,7 +874,7 @@ GET /api/mitre/techniques?category=execution&limit=50
 GET /api/mitre/techniques/{techniqueId}/events
 ```
 
-## 🔗 Correlation Engine API
+## Correlation Engine API
 
 **Note**: The Correlation Engine operates as background intelligence and automatically enhances security events. These APIs provide access to correlation statistics and configuration, but the correlation analysis runs automatically without requiring dashboard interaction.
 
@@ -1169,7 +1169,7 @@ DELETE /api/correlation/cleanup?retentionPeriod=30
 - **Smart Notifications** - Correlation-aware alerts with adaptive throttling
 - **Performance Optimized** - Continuous background processing with efficient batch analysis
 
-## 🔔 Notifications API
+## Notifications API
 
 ### Get Notification Configuration
 ```http
@@ -1237,7 +1237,7 @@ Content-Type: application/json
 }
 ```
 
-## 🆕 Malware Detection API
+## Malware Detection API
 
 ### List Malware Detection Rules
 ```http
@@ -1386,7 +1386,7 @@ Content-Type: application/json
 }
 ```
 
-## 🆕 YARA Configuration API
+## YARA Configuration API
 
 ### Get YARA Configuration
 ```http
@@ -1538,7 +1538,7 @@ GET /api/yara-configuration/check-update
 }
 ```
 
-## 🔍 YARA Matches API
+## YARA Matches API
 
 ### Get YARA Matches
 ```http
@@ -1580,7 +1580,7 @@ GET /api/malware-rules/matches?securityEventId={eventId}&count=100
 }
 ```
 
-## 📈 Timeline Visualization API
+## Timeline Visualization API
 
 ### Get Timeline Data
 ```http
@@ -1762,7 +1762,7 @@ GET /api/timeline/metrics?startTime=2025-09-01T00:00:00Z&endTime=2025-09-30T23:5
 }
 ```
 
-## 💾 Export API
+## Export API
 
 ### Get Available Export Formats
 ```http
@@ -1969,7 +1969,7 @@ GET /api/export/download/{exportId}
 
 Returns the exported file with appropriate Content-Type and Content-Disposition headers.
 
-## 🔬 Threat Scanner Configuration API
+## Threat Scanner Configuration API
 
 ### Get Threat Scanner Configuration
 ```http
@@ -2096,7 +2096,7 @@ Authorization: Bearer {token}
 - **Real-time Status** - Monitor scheduler status with last/next scan times and current operation
 - **TimeSpan Format** - .NET format "d.hh:mm:ss" for flexible interval configuration
 
-## 🔍 Malware Scanning API
+## Malware Scanning API
 
 ### Scan Content with Malware Detection Rules
 ```http
@@ -2158,7 +2158,7 @@ GET /api/malware-rules/status
 }
 ```
 
-## 📊 Reporting API
+## Reporting API
 
 ### Generate Security Report
 ```http
@@ -2203,7 +2203,7 @@ Content-Type: application/json
 GET /api/reports/{reportId}/export?format=pdf
 ```
 
-## 🔍 Advanced Search APIs
+## Advanced Search APIs
 
 ### Search History API
 
@@ -2367,7 +2367,7 @@ Content-Type: application/json
 }
 ```
 
-## 🌐 IP Enrichment Configuration API
+## IP Enrichment Configuration API
 
 ### Get IP Enrichment Configuration
 ```http
@@ -2475,7 +2475,7 @@ Content-Type: application/json
 }
 ```
 
-## 🔧 Threat Intelligence Configuration API
+## Threat Intelligence Configuration API
 
 ### Get Threat Intelligence Configuration
 ```http
@@ -2574,7 +2574,7 @@ Content-Type: application/json
 }
 ```
 
-## 🔧 Configuration API
+## Configuration API
 
 ### Get Configuration
 ```http
@@ -2613,7 +2613,7 @@ Content-Type: application/json
 }
 ```
 
-## 🚀 Batch Operations API
+## Batch Operations API
 
 ### Batch Event Analysis
 ```http
@@ -2656,7 +2656,7 @@ Content-Type: application/json
 }
 ```
 
-## 📊 Dashboard Data Consolidation API
+## Dashboard Data Consolidation API
 
 ### Get Consolidated Dashboard Data
 ```http
@@ -3027,7 +3027,7 @@ ws.onmessage = function(event) {
 };
 ```
 
-## 📋 Error Responses
+## Error Responses
 
 ### Standard Error Format
 ```json
@@ -3055,7 +3055,7 @@ ws.onmessage = function(event) {
 | `RATE_LIMITED` | 429 | Too many requests |
 | `INTERNAL_ERROR` | 500 | Server error |
 
-## 🔄 Rate Limiting
+## Rate Limiting
 
 ### Rate Limit Headers
 ```http
@@ -3087,7 +3087,7 @@ X-RateLimit-Reset: 1693958400
 | IP Enrichment Config | 50 |
 | Threat Intelligence Config | 50 |
 
-## 📞 Support and Integration
+## Support and Integration
 
 ### SDK and Libraries
 - **.NET Client**: Available via NuGet package
@@ -3206,4 +3206,4 @@ Authorization: Bearer {token}
 
 ---
 
-**Castellan** - Comprehensive REST API for enterprise security monitoring and threat intelligence. 🏰🛡️
+**Castellan** - Comprehensive REST API for enterprise security monitoring and threat intelligence. 🏰

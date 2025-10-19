@@ -1,16 +1,12 @@
-# 🔍 Advanced Search & Filtering Feature Specification v0.5.0
+# Advanced Search & Filtering Feature Specification v0.5.0
 
-**Status**: ✅ **COMPLETED** (Phase 1 Frontend)  
-**Priority**: 1 (v0.5.0 Phase 1)  
-**Completed**: September 12, 2025
-
-## 📋 Overview
+## Overview
 
 This specification defined the Advanced Search & Filtering capability for Castellan v0.5.0, building upon the existing basic filters to provide comprehensive search functionality for security events.
 
-## ✅ **IMPLEMENTATION COMPLETED**
+## **IMPLEMENTATION COMPLETED**
 
-### ✅ Phase 1 Frontend (September 12, 2025)
+### Phase 1 Frontend (September 12, 2025)
 - **AdvancedSearchDrawer Component**: Complete responsive drawer interface with accordion-style filter sections
 - **Supporting Components**: FullTextSearchInput, DateRangePicker, MultiSelectFilter, RangeSliderFilter, MitreTechniqueFilter
 - **State Management**: useAdvancedSearch hook with URL synchronization and debounced API calls
@@ -19,20 +15,20 @@ This specification defined the Advanced Search & Filtering capability for Castel
 - **TypeScript Support**: Complete type definitions for all search interactions
 - **Performance**: SQLite FTS5 optimization with composite indexes for sub-2-second query response
 
-### 📋 Phase 2 Planned
+### Phase 2 Planned
 - **Analytics Dashboard**: Visual trend analysis and correlation widgets
 - **Saved Searches**: Bookmark and manage frequently used search configurations
 - **Advanced Correlation**: Machine learning-based event relationship analysis
 
-## 🎯 Current State Analysis
+## Current State Analysis
 
-### ✅ Existing Implementation
+### Existing Implementation
 - **Basic Filters**: eventType, riskLevel, machine, user, source 
 - **Backend Support**: SecurityEventsController already accepts filter parameters
 - **React Components**: Filter component with TextInput and SelectInput
 - **API Structure**: GET `/api/security-events` with query parameters
 
-### 🆕 Enhancement Requirements
+### Enhancement Requirements
 1. **Date Range Filtering**: Start/end date selection
 2. **Multi-Select Filters**: Multiple values for eventType, riskLevel
 3. **Advanced Text Search**: Full-text search across messages  
@@ -42,9 +38,9 @@ This specification defined the Advanced Search & Filtering capability for Castel
 
 ---
 
-## 🏗️ Technical Architecture
+## Technical Architecture
 
-### 🔧 Backend API Enhancements
+### Backend API Enhancements
 
 #### Enhanced Query Parameters
 ```typescript
@@ -86,7 +82,7 @@ GET /api/security-events?
 }
 ```
 
-### 🎨 Frontend UI Design
+### Frontend UI Design
 
 #### Filter Drawer Layout
 ```
@@ -123,7 +119,7 @@ GET /api/security-events?
 └───────────────────────────────────────────────────────────┘
 ```
 
-### 🔄 Component Architecture
+### Component Architecture
 
 #### React Components Structure
 ```
@@ -143,11 +139,11 @@ SecurityEvents/
 
 ---
 
-## 🛠️ Implementation Plan
+## Implementation Plan
 
 ### Phase 1: Backend API Enhancement (16-24h)
 
-#### ✅ SecurityEventsController Updates
+#### SecurityEventsController Updates
 ```csharp
 [HttpGet]
 public Task<IActionResult> GetList(
@@ -174,7 +170,7 @@ public Task<IActionResult> GetList(
     [FromQuery] string? mitreTechnique = null)
 ```
 
-#### 🗄️ Database/Store Enhancements
+#### Database/Store Enhancements
 - Update `ISecurityEventStore.GetSecurityEvents()` to handle new filter criteria
 - Add indexed searching for performance on timestamp, eventType, riskLevel fields
 - Implement full-text search capability across message fields
@@ -206,7 +202,7 @@ public Task<IActionResult> GetList(
 
 ---
 
-## 📊 Performance Targets
+## Performance Targets
 
 ### Response Time Goals
 - **Simple Filters**: < 500ms for up to 10,000 records
@@ -228,13 +224,13 @@ USING gin(to_tsvector('english', message || ' ' || summary));
 ```
 
 ### Pagination Strategy
-- **Client-Side**: React Admin's existing pagination (25 records per page)
+- **Client-Side**: Tailwind Dashboard's existing pagination (25 records per page)
 - **Server-Side**: Offset + Limit with total count optimization
 - **Large Datasets**: Virtual scrolling for 1000+ results (future enhancement)
 
 ---
 
-## 🎨 User Experience Flow
+## User Experience Flow
 
 ### 1. Basic Filter Usage (Existing)
 ```
@@ -269,7 +265,7 @@ User types "malware" in search box
 
 ---
 
-## 🧪 Testing Strategy
+## Testing Strategy
 
 ### Unit Tests
 - [ ] Individual filter component logic
@@ -294,7 +290,7 @@ User types "malware" in search box
 
 ---
 
-## 🚀 Deployment Checklist
+## Deployment Checklist
 
 ### Backend Deployment
 - [ ] Database schema updates/migrations  
@@ -316,7 +312,7 @@ User types "malware" in search box
 
 ---
 
-## 🎯 Success Metrics
+## Success Metrics
 
 ### Functional Success
 - ✅ All filter types work individually and in combination
@@ -335,10 +331,3 @@ User types "malware" in search box
 - ✅ Filter combinations work intuitively  
 - ✅ Mobile experience is fully functional
 - ✅ No user-reported usability issues
-
----
-
-**Document Version**: 1.0  
-**Author**: AI Development Team  
-**Last Updated**: September 9, 2025  
-**Review Status**: Ready for Implementation

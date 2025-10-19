@@ -2,16 +2,16 @@
 
 Welcome to the complete documentation for **Castellan**, the AI-powered Windows security monitoring platform.
 
-## 📚 Quick Navigation
+## Quick Navigation
 
 | Category | Document | Description |
 |----------|-----------|-------------|
-| **🚀 Getting Started** | [GETTING_STARTED.md](GETTING_STARTED.md) | Complete installation and setup guide |
-| **🔥 Core Features** | [FEATURES.md](FEATURES.md) | Comprehensive feature overview |
-| **🏗️ Architecture** | [ARCHITECTURE.md](ARCHITECTURE.md) | System architecture and security design |
-| **⚙️ Configuration** | [CONFIGURATION_SETUP.md](CONFIGURATION_SETUP.md) | Authentication, AI, and service setup |
+| **Getting Started** | [GETTING_STARTED.md](GETTING_STARTED.md) | Complete installation and setup guide |
+| **Core Features** | [FEATURES.md](FEATURES.md) | Comprehensive feature overview |
+| **Architecture** | [ARCHITECTURE.md](ARCHITECTURE.md) | System architecture and security design |
+| **Configuration** | [CONFIGURATION_SETUP.md](CONFIGURATION_SETUP.md) | 3 templates (Minimal/Standard/Advanced), authentication, AI, and service setup |
 
-## 🛡️ Security Features
+## Security Features
 
 | Component | Document | Description |
 |-----------|----------|-------------|
@@ -21,7 +21,7 @@ Welcome to the complete documentation for **Castellan**, the AI-powered Windows 
 | **Authentication** | [AUTHENTICATION_SETUP.md](AUTHENTICATION_SETUP.md) | BCrypt passwords, JWT tokens, and user management |
 | **Notifications** | [NOTIFICATIONS.md](NOTIFICATIONS.md) | Teams/Slack integration and alert configuration |
 
-## 🔧 Technical Documentation
+## Technical Documentation
 
 | Topic | Document | Description |
 |-------|----------|-------------|
@@ -30,7 +30,7 @@ Welcome to the complete documentation for **Castellan**, the AI-powered Windows 
 | **Build Guide** | [BUILD_GUIDE.md](BUILD_GUIDE.md) | Development and deployment |
 | **Troubleshooting** | [TROUBLESHOOTING.md](TROUBLESHOOTING.md) | Common issues and solutions |
 
-## 🔄 Integrations
+## Integrations
 
 | Service | Documentation | Description |
 |---------|---------------|-------------|
@@ -38,19 +38,19 @@ Welcome to the complete documentation for **Castellan**, the AI-powered Windows 
 | **VirusTotal/MalwareBazaar** | [THREAT_INTELLIGENCE.md](THREAT_INTELLIGENCE.md) | Threat intel services |
 | **SignalR Real-time** | [SIGNALR_REALTIME_INTEGRATION.md](SIGNALR_REALTIME_INTEGRATION.md) | Live dashboard updates |
 
-## 🎯 Specialized Guides
+## Specialized Guides
 
 | Use Case | Document | Description |
 |----------|----------|-------------|
-| **Performance Tuning** | [PERFORMANCE_TUNING.md](PERFORMANCE_TUNING.md) | Optimization strategies |
+| **Performance Tuning** | [PERFORMANCE.md](PERFORMANCE.md) | Optimization strategies |
 | **Windows Compatibility** | [WINDOWS_POWERSHELL_COMPATIBILITY.md](WINDOWS_POWERSHELL_COMPATIBILITY.md) | Native Windows support |
 | **Advanced Search** | [ADVANCED_SEARCH_SPEC.md](ADVANCED_SEARCH_SPEC.md) | Search and filtering capabilities |
 | **Startup Configuration** | [STARTUP_CONFIGURATION.md](STARTUP_CONFIGURATION.md) | Service startup and initialization |
 | **Comparison Analysis** | [COMPARISON.md](COMPARISON.md) | Castellan vs traditional SIEM platforms |
 
-## 🏢 Enterprise Features
+## Enterprise Features
 
-### Complete React Admin Interface
+### Complete Tailwind Dashboard Interface
 - **Security Events Management** - Full CRUD with MITRE integration
 - **Timeline Visualization** - Interactive security event timeline analysis with granularity controls
 - **Malware Detection Rules Management** - Complete malware detection rule system
@@ -60,18 +60,20 @@ Welcome to the complete documentation for **Castellan**, the AI-powered Windows 
 - **Threat Intelligence Configuration** - Service management
 
 ### Production-Ready Components
-- ✅ **Native YARA Integration** - dnYara 2.1.0 with real malware scanning
-- ✅ **Timeline Visualization** - Interactive security event analysis with React Admin UI
-- ✅ **Advanced Search & Filtering** - Multi-criteria search with MITRE technique filtering
-- ✅ **Export Capabilities** - CSV/JSON/PDF export for security data and reports
-- ✅ **AI-Powered Analysis** - LLM threat classification with vector search
-- ✅ **Enterprise Scale** - 12K+ events/sec with intelligent caching
-- ✅ **Real-time Notifications** - Teams/Slack with adaptive rate limiting
-- ✅ **Threat Intelligence** - VirusTotal/MalwareBazaar/OTX integration
+- **Conversational AI Chat** - Natural language security queries with context-aware responses
+- **Native YARA Integration** - dnYara 2.1.0 with real malware scanning
+- **Timeline Visualization** - Interactive security event analysis with Tailwind Dashboard UI
+- **Advanced Search & Filtering** - Multi-criteria search with MITRE technique filtering
+- **Export Capabilities** - CSV/JSON/PDF export for security data and reports
+- **AI-Powered Analysis** - LLM threat classification with vector search
+- **Enterprise Scale** - 12K+ events/sec with connection pooling and caching
+- **Real-time Notifications** - Teams/Slack with adaptive rate limiting
+- **Threat Intelligence** - VirusTotal/MalwareBazaar/OTX integration
+- **Modern Dashboard** - Tailwind CSS dashboard (port 3000) with real-time updates
 
-## 🚀 Quick Links
+## Quick Links
 
-- **[Installation Guide](GETTING_STARTED.md)** - Get started in 5 minutes
+- **[Installation Guide](GETTING_STARTED.md)** - Get started in 2 minutes
 - **[Feature Overview](FEATURES.md)** - See what Castellan can do
 - **[Timeline Analysis](TIMELINE.md)** - Interactive security event visualization
 - **[YARA Detection](MALWARE_DETECTION.md)** - Malware detection capabilities
@@ -80,7 +82,7 @@ Welcome to the complete documentation for **Castellan**, the AI-powered Windows 
 
 ---
 
-**Castellan** - Your digital fortress guardian. 🏰🛡️
+**Castellan** - Your digital fortress guardian. 🏰
 
 For the latest updates and community support:
 - [GitHub Repository](https://github.com/MLidstrom/Castellan)

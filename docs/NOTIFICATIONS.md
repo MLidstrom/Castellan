@@ -2,7 +2,7 @@
 
 Castellan provides multiple channels for real-time security alert delivery:
 
-## 🆕 Teams & Slack Integration
+## Teams & Slack Integration
 
 ### Microsoft Teams
 - **Rich Adaptive Cards** with detailed security event information
@@ -53,7 +53,7 @@ Configurable throttling per severity level to prevent notification spam:
 ## Configuration
 
 ### Access Admin Interface
-Navigate to `http://localhost:8080` for comprehensive notification settings management.
+Navigate to `http://localhost:3000` for comprehensive notification settings management.
 
 ### Notification Settings Configuration
 
@@ -151,7 +151,7 @@ $env:NOTIFICATIONS__RATELIMITING__LOW__INTERVALMINUTES = "60"       # 1 hour
     {
       "type": "Action.OpenUrl",
       "title": "Investigate",
-      "url": "http://localhost:8080/events/12345"
+      "url": "http://localhost:3000/events/12345"
     }
   ]
 }
@@ -183,7 +183,7 @@ $env:NOTIFICATIONS__RATELIMITING__LOW__INTERVALMINUTES = "60"       # 1 hour
         {
           "type": "button",
           "text": {"type": "plain_text", "text": "Investigate"},
-          "url": "http://localhost:8080/events/12345",
+          "url": "http://localhost:3000/events/12345",
           "style": "primary"
         }
       ]

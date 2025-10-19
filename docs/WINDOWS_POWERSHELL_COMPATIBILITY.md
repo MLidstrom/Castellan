@@ -6,7 +6,7 @@ All Castellan PowerShell scripts are designed to work seamlessly with native **W
 
 ## Compatibility Features
 
-### ✅ **Full Windows PowerShell 5.1 Support**
+### **Full Windows PowerShell 5.1 Support**
 
 Our scripts include specific optimizations for Windows PowerShell 5.1:
 
@@ -16,7 +16,7 @@ Our scripts include specific optimizations for Windows PowerShell 5.1:
 - **Error Handling**: Robust error handling for network and system operations
 - **CIM/WMI Support**: Uses Get-CimInstance for reliable system information
 
-### 🔧 **Technical Optimizations**
+### **Technical Optimizations**
 
 #### **Web Requests**
 ```powershell
@@ -42,7 +42,7 @@ $processes = Get-CimInstance Win32_Process -Filter "Name='dotnet.exe'" | Where-O
 
 ## Script Features
 
-### 📁 **Enhanced Scripts**
+### **Enhanced Scripts**
 
 | Script | Windows PowerShell Features |
 |--------|------------------------------|
@@ -51,7 +51,7 @@ $processes = Get-CimInstance Win32_Process -Filter "Name='dotnet.exe'" | Where-O
 | `stop.ps1` | Multi-method process detection, graceful shutdown attempts |
 || `test-ps51-compatibility.ps1` | Comprehensive compatibility verification |
 
-### 🚀 **Usage Examples**
+### **Usage Examples**
 
 #### **Basic Operations**
 ```powershell
@@ -85,7 +85,7 @@ $processes = Get-CimInstance Win32_Process -Filter "Name='dotnet.exe'" | Where-O
 
 ## Compatibility Verification
 
-### 🧪 **Built-in Compatibility Check**
+### **Built-in Compatibility Check**
 
 Run the compatibility test to verify your system:
 
@@ -101,7 +101,7 @@ Run the compatibility test to verify your system:
 - ✅ CIM/WMI support
 - ✅ Script syntax validation
 
-### 📊 **Expected Results**
+### **Expected Results**
 
 On a compatible Windows system, you should see:
 ```
@@ -113,14 +113,14 @@ Your system is fully compatible with Castellan PowerShell scripts!
 
 | PowerShell Version | Status | Notes |
 |-------------------|---------|-------|
-| **Windows PowerShell 5.1** | ✅ **Full Support** | Primary target, fully verified |
-| **PowerShell 7.x** | ✅ **Full Support** | Cross-platform, enhanced features |
-| **Windows PowerShell 5.0** | ⚠️ **Limited Support** | May work but not fully verified |
-| **Windows PowerShell 4.0** | ❌ **Not Supported** | Missing required features |
+| **Windows PowerShell 5.1** | **Full Support** | Primary target, fully verified |
+| **PowerShell 7.x** | **Full Support** | Cross-platform, enhanced features |
+| **Windows PowerShell 5.0** | **Limited Support** | May work but not fully verified |
+| **Windows PowerShell 4.0** | **Not Supported** | Missing required features |
 
 ## Troubleshooting
 
-### 🔍 **Common Issues**
+### **Common Issues**
 
 #### **Internet Explorer Dependencies**
 If you see errors about Internet Explorer:
@@ -149,7 +149,7 @@ Set-ExecutionPolicy RemoteSigned -Scope CurrentUser
 Set-ExecutionPolicy Bypass -Scope Process
 ```
 
-### 🛠️ **Validation Steps**
+### **Validation Steps**
 
 1. **Check PowerShell Version**:
    ```powershell
@@ -173,14 +173,14 @@ Set-ExecutionPolicy Bypass -Scope Process
 
 ## Performance Considerations
 
-### ⚡ **Optimizations**
+### **Optimizations**
 
 - **Timeout Management**: 5-second timeouts prevent hanging
 - **Error Suppression**: Silent failures where appropriate
 - **Process Caching**: Efficient process detection methods
 - **Resource Cleanup**: Proper cleanup of temporary resources
 
-### 📈 **Expected Performance**
+### **Expected Performance**
 
 | Operation | Expected Time | Notes |
 |-----------|---------------|-------|
@@ -191,7 +191,7 @@ Set-ExecutionPolicy Bypass -Scope Process
 
 ## Best Practices
 
-### 📋 **Recommendations**
+### **Recommendations**
 
 1. **Always verify compatibility first**:
    ```powershell
@@ -215,7 +215,7 @@ Set-ExecutionPolicy Bypass -Scope Process
 
 ## Support Information
 
-### 🔧 **System Requirements**
+### **System Requirements**
 
 - **OS**: Windows 10/11 (any edition)
 - **PowerShell**: 5.1 or later
@@ -223,7 +223,7 @@ Set-ExecutionPolicy Bypass -Scope Process
 - **Network**: Internet connectivity for downloads
 - **Permissions**: User-level permissions sufficient
 
-### 📞 **Getting Help**
+### **Getting Help**
 
 If you encounter compatibility issues:
 
@@ -232,10 +232,3 @@ If you encounter compatibility issues:
 3. Review logs in the `logs/` directory
 4. Open an issue with verification results and system information
 
----
-
-**Document Version**: 1.1  
-**Last Updated**: January 2025  
-**Verified On**: Windows PowerShell 5.1.26100.4768  
-**Compilation Status**: ✅ **Fixed and Verified**  
-**Status**: ✅ **Fully Compatible**

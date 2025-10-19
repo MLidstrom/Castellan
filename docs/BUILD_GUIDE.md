@@ -1,18 +1,15 @@
 # Castellan Build Guide
 
-**Status**: ✅ **Production Ready**  
-**Last Updated**: September 6, 2025
-
-## 🎯 Overview
+## Overview
 
 This guide provides comprehensive instructions for building Castellan from source code, including all dependencies, configuration requirements, and deployment options.
 
-## 📋 Prerequisites
+## Prerequisites
 
 ### Required Software
 - **[.NET 8.0 SDK](https://dotnet.microsoft.com/download/dotnet/8.0)** or later
 - **[Docker Desktop](https://www.docker.com/get-started/)** (for Qdrant vector database)
-- **[Node.js 18+](https://nodejs.org/)** (for React Admin interface)
+- **[Node.js 18+](https://nodejs.org/)** (for Tailwind Dashboard interface)
 - **[PowerShell 5.1+](https://docs.microsoft.com/powershell/)** (Windows native)
 
 ### AI Provider (Choose One)
@@ -23,7 +20,7 @@ This guide provides comprehensive instructions for building Castellan from sourc
 - **[MaxMind GeoLite2 Databases](https://www.maxmind.com/en/geolite2/signup)** (IP enrichment)
 - **[Git](https://git-scm.com/)** (for source code management)
 
-## 🔧 Build Process
+## Build Process
 
 ### 1. Clone Repository
 ```powershell
@@ -58,10 +55,10 @@ dotnet build -c Release
 dotnet build -c Release --no-restore --verbosity minimal
 ```
 
-### 4. Build React Admin Interface
+### 4. Build Tailwind Dashboard Interface
 ```powershell
 # Navigate to admin interface
-cd castellan-admin
+cd dashboard
 
 # Install dependencies
 npm install
@@ -79,10 +76,10 @@ cd ..
 docker build -t castellan-worker -f src/Castellan.Worker/Dockerfile .
 
 # Build React admin image
-docker build -t castellan-admin -f castellan-admin/Dockerfile ./castellan-admin
+docker build -t dashboard -f dashboard/Dockerfile ./dashboard
 ```
 
-## ⚙️ Configuration
+## Configuration
 
 ### 1. Application Configuration
 ```powershell
@@ -111,7 +108,7 @@ $env:LLM__PROVIDER = "Ollama"
 # $env:LLM__PROVIDER = "OpenAI"
 ```
 
-## 🚀 Deployment Options
+## Deployment Options
 
 ### Option 1: Automated Deployment (Recommended)
 ```powershell
@@ -121,7 +118,7 @@ $env:LLM__PROVIDER = "Ollama"
 # This will:
 # 1. Start Qdrant vector database
 # 2. Build and start Castellan Worker
-# 3. Start React Admin interface
+# 3. Start Tailwind Dashboard interface
 # 4. Verify all services are healthy
 ```
 
@@ -134,14 +131,14 @@ docker run -d --name qdrant -p 6333:6333 qdrant/qdrant
 cd src/Castellan.Worker
 dotnet run -c Release
 
-# 3. Start React Admin (new terminal)
-cd castellan-admin
+# 3. Start Tailwind Dashboard (new terminal)
+cd dashboard
 npm start
 
 # 4. Verify services
 # - Qdrant: http://localhost:6333
 # - Worker API: http://localhost:5000
-# - Admin Interface: http://localhost:8080
+# - Admin Interface: http://localhost:3000
 ```
 
 ### Option 3: Docker Compose Deployment
@@ -168,9 +165,9 @@ services:
       - QDRANT__HOST=qdrant
       - QDRANT__PORT=6333
   
-  castellan-admin:
+  dashboard:
     build:
-      context: ./castellan-admin
+      context: ./dashboard
     ports:
       - "8080:80"
     depends_on:
@@ -182,7 +179,7 @@ services:
 docker-compose up -d
 ```
 
-## 🧪 Testing and Validation
+## Testing and Validation
 
 ### 1. Run Unit Tests
 ```powershell
@@ -217,7 +214,7 @@ curl http://localhost:5000/api/system-status | jq '.data[] | select(.component==
 curl http://localhost:5000/api/system-status | jq '.data[] | select(.component=="Qdrant Connection Pool")'
 ```
 
-## 📊 Build Optimization
+## Build Optimization
 
 ### Performance Builds
 ```powershell
@@ -237,7 +234,7 @@ dotnet publish -c Release -r win-x64 --self-contained true /p:PublishTrimmed=tru
 dotnet publish -c Release -r win-x64 --self-contained true /p:PublishSingleFile=true
 ```
 
-## 🛠️ Troubleshooting
+## Troubleshooting
 
 ### Common Build Issues
 
@@ -288,9 +285,9 @@ Get-Process dotnet | Select-Object CPU, WorkingSet
 Measure-Command { dotnet build -c Release }
 ```
 
-## 📋 Build Verification Checklist
+## Build Verification Checklist
 
-### ✅ Build Success Indicators
+### Build Success Indicators
 - [ ] .NET build completes without errors
 - [ ] All unit tests pass
 - [ ] React admin builds successfully
@@ -298,21 +295,21 @@ Measure-Command { dotnet build -c Release }
 - [ ] Configuration files are properly templated
 - [ ] All required services start successfully
 
-### ✅ Deployment Verification
+### Deployment Verification
 - [ ] Qdrant database is accessible on port 6333
 - [ ] Castellan Worker API responds on port 5000
-- [ ] React Admin interface loads on port 8080
+- [ ] Tailwind Dashboard interface loads on port 8080
 - [ ] System status API returns healthy status for all components
 - [ ] Connection pool shows healthy status
 - [ ] AI/ML services are properly configured and responding
 
-### ✅ Performance Validation
+### Performance Validation
 - [ ] Event processing performs at expected rates (10K+ events/sec)
 - [ ] Memory usage is within expected bounds (<500MB)
 - [ ] Connection pool shows optimal utilization
 - [ ] AI analysis completes within expected timeframes (<4 seconds)
 
-## 🎯 Next Steps
+## Next Steps
 
 After successful build and deployment:
 
@@ -322,7 +319,7 @@ After successful build and deployment:
 4. **Customize Detection Rules**: Adjust security detection parameters
 5. **Monitor Performance**: Use built-in performance dashboards
 
-## 📞 Support
+## Support
 
 If you encounter build issues:
 
@@ -332,4 +329,4 @@ If you encounter build issues:
 
 ---
 
-**Castellan** - Production-ready security monitoring with enterprise-grade build and deployment capabilities. 🏰🛡️
+**Castellan** - Production-ready security monitoring with enterprise-grade build and deployment capabilities. 🏰
