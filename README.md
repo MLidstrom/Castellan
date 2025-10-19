@@ -57,7 +57,7 @@
 </p>
 
 <p align="center">
-  <img alt="Notifications Configuration" src="assets/images/Notifications.png" width="600" />
+  <img alt="Notifications Configuration" src="assets/images/Notifications.png" width="800" />
   <br><em>Centralized notification settings for Microsoft Teams and Slack integration</em>
 </p>
 
