@@ -1,14 +1,17 @@
 using System.Net.Http.Json;
 using System.Text.Json;
+using Castellan.Worker.Abstractions;
 using Castellan.Worker.Configuration;
 using Castellan.Worker.Models;
+using Castellan.Worker.Models.Notifications;
+using Castellan.Worker.Services.Notifications;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
 namespace Castellan.Worker.Services.NotificationChannels;
 
 /// <summary>
-/// Slack notification channel implementation
+/// Slack notification channel implementation with template support
 /// </summary>
 public class SlackNotificationChannel : INotificationChannel
 {
@@ -16,6 +19,8 @@ public class SlackNotificationChannel : INotificationChannel
     private readonly ILogger<SlackNotificationChannel> _logger;
     private readonly SlackNotificationOptions _options;
     private readonly ChannelHealthStatus _healthStatus;
+    private readonly INotificationTemplateStore _templateStore;
+    private readonly ITemplateRenderer _templateRenderer;
 
     public NotificationChannelType Type => NotificationChannelType.Slack;
     public bool IsEnabled => _options.Enabled && !string.IsNullOrEmpty(_options.WebhookUrl);
@@ -23,12 +28,16 @@ public class SlackNotificationChannel : INotificationChannel
     public SlackNotificationChannel(
         HttpClient httpClient,
         ILogger<SlackNotificationChannel> logger,
-        IOptions<SlackNotificationOptions> options)
+        IOptions<SlackNotificationOptions> options,
+        INotificationTemplateStore templateStore,
+        ITemplateRenderer templateRenderer)
     {
         _httpClient = httpClient;
         _logger = logger;
         _options = options.Value;
         _healthStatus = new ChannelHealthStatus { LastCheckTime = DateTime.UtcNow };
+        _templateStore = templateStore;
+        _templateRenderer = templateRenderer;
     }
 
     public async Task<bool> SendAsync(SecurityEvent securityEvent)
@@ -41,7 +50,7 @@ public class SlackNotificationChannel : INotificationChannel
 
         try
         {
-            var message = CreateSlackMessage(securityEvent);
+            var message = await CreateSlackMessageAsync(securityEvent);
             var response = await _httpClient.PostAsJsonAsync(_options.WebhookUrl, message);
 
             if (response.IsSuccessStatusCode)
@@ -104,8 +113,35 @@ public class SlackNotificationChannel : INotificationChannel
         return Task.FromResult(_healthStatus);
     }
 
-    private object CreateSlackMessage(SecurityEvent securityEvent)
+    private async Task<object> CreateSlackMessageAsync(SecurityEvent securityEvent)
     {
+        // Try to use templates first, fall back to legacy if not available
+        string messageText;
+        try
+        {
+            var templateType = TemplateContextFactory.DetermineTemplateType(securityEvent);
+            var template = await _templateStore.GetEnabledTemplateAsync(NotificationPlatform.Slack, templateType);
+
+            if (template != null)
+            {
+                var detailsUrl = $"{_options.CastellanUrl}/security-events/{securityEvent.Id}";
+                var context = TemplateContextFactory.CreateContext(securityEvent, detailsUrl);
+                messageText = _templateRenderer.Render(template, context);
+                _logger.LogDebug("Using template '{TemplateName}' for Slack notification", template.Name);
+            }
+            else
+            {
+                // Fall back to legacy formatting
+                messageText = GetLegacyAlertDescription(securityEvent);
+                _logger.LogDebug("No template found, using legacy Slack notification format");
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Error rendering Slack template, falling back to legacy format");
+            messageText = GetLegacyAlertDescription(securityEvent);
+        }
+
         var color = GetSeverityColor(securityEvent.RiskLevel);
         var channel = GetChannelForSeverity(securityEvent.RiskLevel);
 
@@ -207,7 +243,7 @@ public class SlackNotificationChannel : INotificationChannel
                     pretext = GetAlertPretext(securityEvent.RiskLevel),
                     title = GetAlertTitle(securityEvent),
                     title_link = $"{_options.CastellanUrl}/security-events/{securityEvent.Id}",
-                    text = GetAlertDescription(securityEvent),
+                    text = messageText,
                     fields = fields,
                     footer = "Castellan Security",
                     footer_icon = "https://platform.slack-edge.com/img/default_application_icon.png",
@@ -325,22 +361,22 @@ public class SlackNotificationChannel : INotificationChannel
         };
     }
 
-    private string GetAlertDescription(SecurityEvent securityEvent)
+    private string GetLegacyAlertDescription(SecurityEvent securityEvent)
     {
         var description = "";
-        
+
         if (!string.IsNullOrEmpty(securityEvent.Summary))
         {
             description = $"*Summary:* {securityEvent.Summary}\n";
         }
-        
+
         if (!string.IsNullOrEmpty(securityEvent.OriginalEvent.Message))
         {
             description += securityEvent.OriginalEvent.Message;
         }
 
-        return description.Length > 500 
-            ? description.Substring(0, 497) + "..." 
+        return description.Length > 500
+            ? description.Substring(0, 497) + "..."
             : description;
     }
 }

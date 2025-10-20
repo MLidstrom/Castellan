@@ -34,7 +34,7 @@
 - **Real-time Detection** - EventLogWatcher-powered live Windows Event Log monitoring with sub-second threat correlation
 - **Advanced Correlation** - Attack chain detection, temporal bursts, lateral movement, and privilege escalation patterns
 - **Enterprise Scale** - 12K+ events/sec processing with optimized performance
-- **Smart Notifications** - Rich Teams/Slack alerts with adaptive rate limiting
+- **Smart Notifications** - Customizable Teams/Slack templates (v0.7.0) with rich formatting and adaptive rate limiting
 - **MITRE Integration** - Auto-updated 800+ ATT&CK techniques with threat mapping
 - **Threat Intelligence** - VirusTotal, MalwareBazaar, AlienVault OTX with configuration UI
 - **Malware Detection** - Complete signature-based detection with automatic rule updates and deduplication

@@ -296,6 +296,52 @@ Castellan includes enterprise-grade connection pooling for 15-25% I/O optimizati
 - Intelligent connection lifecycle management
 - Reduced connection establishment overhead
 
+### 8. Configure Notification Templates (Automatic - v0.7.0)
+
+Castellan includes customizable notification templates for Teams and Slack with production-ready defaults that work automatically:
+
+**Default Setup:**
+- 8 default templates (4 types × 2 platforms) created automatically
+- Rich comprehensive formatting with visual separators and organized sections
+- Professional footer branding ("⚡ Powered by CastellanAI Security Platform")
+- 15+ dynamic tags for event data substitution
+- Template validation and live preview
+- JSON persistence at `/data/notification-templates.json`
+
+**Template Management:**
+Access the Configuration page in the web UI (`http://localhost:3000/configuration`) and navigate to the "Notifications" tab → "Message Templates" section to:
+- Edit existing templates with dynamic tag support
+- Preview templates with sample data
+- Validate template syntax in real-time
+- Enable/disable templates
+- View supported tags and formatting options
+
+**Template Types:**
+- **SecurityEvent** - Detailed security alerts with MITRE ATT&CK, risk assessment, and recommended actions
+- **SystemAlert** - System-level alerts with event classification and next steps
+- **HealthWarning** - System health issues with impact assessment and remediation
+- **PerformanceAlert** - Performance degradation warnings with optimization recommendations
+
+**Supported Dynamic Tags:**
+- Event data: `{{DATE}}`, `{{HOST}}`, `{{USER}}`, `{{EVENT_ID}}`, `{{EVENT_TYPE}}`, `{{SEVERITY}}`, `{{RISK_LEVEL}}`, `{{CONFIDENCE}}`
+- Analysis: `{{SUMMARY}}`, `{{MITRE_TECHNIQUES}}`, `{{RECOMMENDED_ACTIONS}}`, `{{CORRELATION_SCORE}}`
+- Networking: `{{IP_ADDRESS}}`, `{{DETAILS_URL}}`
+- Formatting: `{{BOLD:text}}`, `{{LINK:url|text}}`
+
+**Automatic Template Creation:**
+Templates are automatically created on first Worker startup via `TemplateInitializationService`. No manual configuration required.
+
+**Customization:**
+```json
+"NotificationTemplates": {
+  "TemplateStorePath": "data/notification-templates.json",  // Storage location
+  "CreateDefaultTemplates": true                            // Auto-create defaults
+}
+```
+
+**API Access:**
+For programmatic template management, use the REST API at `/api/notification-templates` with full CRUD operations. See `docs/NOTIFICATIONS.md` for complete template documentation.
+
 ## Alternative: Environment Variables
 
 You can also use environment variables instead of modifying appsettings.json:

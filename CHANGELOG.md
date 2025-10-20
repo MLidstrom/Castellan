@@ -216,6 +216,36 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Lock contention**: Reduced via WAL mode
 - **Concurrent operations**: 16 max tasks (up from 8)
 
+### Added - Notification Message Templates (October 15, 2025)
+**Version**: v0.7.0 (October 2025)
+
+- **Customizable Templates**: Production-ready notification templates with dynamic tag/placeholder support
+  - **8 Default Templates**: 4 template types × 2 platforms (Teams and Slack)
+    - Template Types: SecurityEvent, SystemAlert, HealthWarning, PerformanceAlert
+    - Platforms: Microsoft Teams and Slack with platform-specific formatting
+  - **Rich Formatting**: Visual separators (━━━━━), organized sections with emoji headers (📋, 🖥️, 📊, 🎯, ✅)
+  - **Professional Footer**: "⚡ Powered by CastellanAI Security Platform" branding
+  - **Dynamic Tags**: 15+ supported tags for event data substitution
+    - Event data: {{DATE}}, {{HOST}}, {{USER}}, {{EVENT_ID}}, {{EVENT_TYPE}}, {{SEVERITY}}, {{RISK_LEVEL}}, {{CONFIDENCE}}
+    - Analysis: {{SUMMARY}}, {{MITRE_TECHNIQUES}}, {{RECOMMENDED_ACTIONS}}, {{CORRELATION_SCORE}}
+    - Networking: {{IP_ADDRESS}}, {{DETAILS_URL}}
+    - Formatting: {{BOLD:text}}, {{LINK:url|text}}
+  - **Template Management UI**: Configuration page interface for template editing
+    - Navigate to Configuration → Notifications → Message Templates
+    - Live preview with sample data
+    - Real-time syntax validation
+    - Enable/disable templates
+  - **Automatic Initialization**: TemplateInitializationService creates default templates on first startup
+  - **File-Based Persistence**: Templates stored in JSON format at `data/notification-templates.json`
+  - **API Endpoints**: Full CRUD REST API at `/api/notification-templates`
+    - GET/POST/PUT/DELETE operations with Admin authorization
+    - Template validation and preview endpoints
+  - **Files Added**:
+    - `DefaultTemplates.cs` - Factory for rich production-ready templates
+    - `TemplateInitializationService.cs` - IHostedService for automatic template creation
+    - `FileBasedNotificationTemplateStore.cs` - JSON persistence layer
+  - **Frontend Integration**: React components in Configuration.tsx for template management
+
 ### Added - Event Filtering System (October 8, 2025)
 - **Sequential Pattern Filtering**: Intelligent event filtering to reduce false positives
   - `EventIgnorePatternService` with pattern matching for benign event sequences

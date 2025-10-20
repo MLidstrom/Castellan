@@ -94,6 +94,119 @@ Navigate to `http://localhost:3000` for comprehensive notification settings mana
 4. Choose the channel for alerts
 5. **Copy** the webhook URL provided
 
+## Notification Message Templates
+
+**Version**: v0.7.0 (October 2025)
+
+Castellan provides customizable notification templates with dynamic tag/placeholder support, allowing you to fully customize notification formatting for Teams and Slack.
+
+### **8 Production-Ready Templates**
+
+Castellan includes 8 default templates with rich, comprehensive formatting:
+- **4 Template Types**: SecurityEvent, SystemAlert, HealthWarning, PerformanceAlert
+- **2 Platforms**: Teams and Slack (4 types × 2 platforms = 8 templates)
+- **Rich Formatting**: Visual separators (━━━━━), organized sections with emoji headers (📋, 🖥️, 📊, 🎯, ✅)
+- **Professional Footer**: "⚡ Powered by CastellanAI Security Platform"
+
+### **Template Management**
+
+Access notification templates via the admin dashboard:
+1. Navigate to `http://localhost:3000/configuration`
+2. Click on the **Notifications** tab
+3. Expand the **Message Templates** section
+4. Click **Edit** on any template to customize
+
+### **Supported Tags**
+
+Templates support 15+ dynamic tags that are automatically replaced with real event data:
+
+#### **Security Event Tags**
+- `{{DATE}}` - Event date/time (formatted: yyyy-MM-dd HH:mm:ss UTC)
+- `{{HOST}}` - Machine/hostname where event occurred
+- `{{USER}}` - Username associated with the event
+- `{{EVENT_ID}}` - Windows Event ID number
+- `{{EVENT_TYPE}}` - Event type classification (e.g., "Unauthorized Access")
+- `{{SEVERITY}}` - Severity level (Critical, High, Medium, Low)
+- `{{RISK_LEVEL}}` - AI-determined risk level
+- `{{CONFIDENCE}}` - AI confidence score (0-100%)
+- `{{CHANNEL}}` - Event log channel (Security, System, Application, etc.)
+- `{{SUMMARY}}` - AI-generated event summary
+- `{{MITRE_TECHNIQUES}}` - MITRE ATT&CK techniques (comma-separated)
+- `{{RECOMMENDED_ACTIONS}}` - AI-recommended response actions (numbered list)
+- `{{IP_ADDRESS}}` - Source IP address (if available)
+- `{{CORRELATION_SCORE}}` - Correlation score (if event is correlated)
+- `{{DETAILS_URL}}` - Deep link to event details in dashboard
+
+#### **Formatting Tags**
+- `{{BOLD:text}}` - Bold text (platform-specific formatting)
+- `{{LINK:url|text}}` - Hyperlink formatting (e.g., `{{LINK:https://example.com|Click Here}}`)
+
+### **Example Template** (Security Event)
+
+```
+🚨 {{BOLD:SECURITY ALERT}} - {{SEVERITY}} Severity
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+📋 {{BOLD:Event Details}}
+• {{BOLD:Event Type:}} {{EVENT_TYPE}}
+• {{BOLD:Event ID:}} {{EVENT_ID}}
+• {{BOLD:Timestamp:}} {{DATE}}
+
+🖥️  {{BOLD:Affected System}}
+• {{BOLD:Machine:}} {{HOST}}
+• {{BOLD:User Account:}} {{USER}}
+
+📊 {{BOLD:Risk Assessment}}
+{{SUMMARY}}
+
+🎯 {{BOLD:MITRE ATT&CK Framework}}
+{{MITRE_TECHNIQUES}}
+
+✅ {{BOLD:Recommended Response Actions}}
+{{RECOMMENDED_ACTIONS}}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+{{LINK:{{DETAILS_URL}}|🔍 View Full Investigation Details}}
+
+⚡ Powered by CastellanAI Security Platform
+```
+
+### **Template Features**
+
+**Visual Organization**:
+- Visual separators (━━━━━) for clear section boundaries
+- Emoji headers (📋, 🖥️, 📊, 🎯, ✅) for quick visual scanning
+- Organized sections with consistent formatting
+- Professional footer branding
+
+**Platform Support**:
+- **Teams**: Supports Markdown-style bold (**text**) and links
+- **Slack**: Supports Slack's Mrkdwn formatting (*text* for bold)
+
+**Template Validation**:
+- Real-time syntax validation prevents invalid templates
+- Tag extraction shows all used tags
+- Error messages guide template corrections
+
+**Persistence**:
+- Templates stored in JSON format at `data/notification-templates.json`
+- Changes persist across application restarts
+- No restart required when editing templates
+
+### **API Endpoints**
+
+Programmatic template management is available via REST API:
+
+- `GET /api/notification-templates` - List all templates
+- `GET /api/notification-templates/{id}` - Get specific template
+- `POST /api/notification-templates` - Create new template (Admin only)
+- `PUT /api/notification-templates/{id}` - Update template (Admin only)
+- `DELETE /api/notification-templates/{id}` - Delete template (Admin only)
+- `POST /api/notification-templates/validate` - Validate template syntax
+- `POST /api/notification-templates/preview` - Preview rendered template
+
 ### Example Configuration
 
 ```powershell

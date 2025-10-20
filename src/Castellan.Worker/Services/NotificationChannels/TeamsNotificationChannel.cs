@@ -1,14 +1,17 @@
 using System.Net.Http.Json;
 using System.Text.Json;
+using Castellan.Worker.Abstractions;
 using Castellan.Worker.Configuration;
 using Castellan.Worker.Models;
+using Castellan.Worker.Models.Notifications;
+using Castellan.Worker.Services.Notifications;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
 namespace Castellan.Worker.Services.NotificationChannels;
 
 /// <summary>
-/// Microsoft Teams notification channel implementation
+/// Microsoft Teams notification channel implementation with template support
 /// </summary>
 public class TeamsNotificationChannel : INotificationChannel
 {
@@ -16,6 +19,8 @@ public class TeamsNotificationChannel : INotificationChannel
     private readonly ILogger<TeamsNotificationChannel> _logger;
     private readonly TeamsNotificationOptions _options;
     private readonly ChannelHealthStatus _healthStatus;
+    private readonly INotificationTemplateStore _templateStore;
+    private readonly ITemplateRenderer _templateRenderer;
 
     public NotificationChannelType Type => NotificationChannelType.Teams;
     public bool IsEnabled => _options.Enabled && !string.IsNullOrEmpty(_options.WebhookUrl);
@@ -23,12 +28,16 @@ public class TeamsNotificationChannel : INotificationChannel
     public TeamsNotificationChannel(
         HttpClient httpClient,
         ILogger<TeamsNotificationChannel> logger,
-        IOptions<TeamsNotificationOptions> options)
+        IOptions<TeamsNotificationOptions> options,
+        INotificationTemplateStore templateStore,
+        ITemplateRenderer templateRenderer)
     {
         _httpClient = httpClient;
         _logger = logger;
         _options = options.Value;
         _healthStatus = new ChannelHealthStatus { LastCheckTime = DateTime.UtcNow };
+        _templateStore = templateStore;
+        _templateRenderer = templateRenderer;
     }
 
     public async Task<bool> SendAsync(SecurityEvent securityEvent)
@@ -41,7 +50,7 @@ public class TeamsNotificationChannel : INotificationChannel
 
         try
         {
-            var card = CreateAdaptiveCard(securityEvent);
+            var card = await CreateAdaptiveCardAsync(securityEvent);
             var response = await _httpClient.PostAsJsonAsync(_options.WebhookUrl, card);
 
             if (response.IsSuccessStatusCode)
@@ -104,8 +113,35 @@ public class TeamsNotificationChannel : INotificationChannel
         return Task.FromResult(_healthStatus);
     }
 
-    private object CreateAdaptiveCard(SecurityEvent securityEvent)
+    private async Task<object> CreateAdaptiveCardAsync(SecurityEvent securityEvent)
     {
+        // Try to use templates first, fall back to legacy if not available
+        string messageText;
+        try
+        {
+            var templateType = TemplateContextFactory.DetermineTemplateType(securityEvent);
+            var template = await _templateStore.GetEnabledTemplateAsync(NotificationPlatform.Teams, templateType);
+
+            if (template != null)
+            {
+                var detailsUrl = $"{_options.CastellanUrl}/security-events/{securityEvent.Id}";
+                var context = TemplateContextFactory.CreateContext(securityEvent, detailsUrl);
+                messageText = _templateRenderer.Render(template, context);
+                _logger.LogDebug("Using template '{TemplateName}' for Teams notification", template.Name);
+            }
+            else
+            {
+                // Fall back to legacy formatting
+                messageText = GetLegacyAlertDescription(securityEvent);
+                _logger.LogDebug("No template found, using legacy Teams notification format");
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Error rendering Teams template, falling back to legacy format");
+            messageText = GetLegacyAlertDescription(securityEvent);
+        }
+
         var severityColor = securityEvent.RiskLevel.ToLowerInvariant() switch
         {
             "critical" => "attention",
@@ -143,7 +179,7 @@ public class TeamsNotificationChannel : INotificationChannel
                 if (enrichment.TryGetProperty("ip", out var ipProp))
                 {
                     facts.Add(new { title = "Source IP", value = ipProp.GetString() });
-                    
+
                     if (enrichment.TryGetProperty("country", out var countryProp))
                     {
                         facts.Add(new { title = "Location", value = countryProp.GetString() });
@@ -201,7 +237,7 @@ public class TeamsNotificationChannel : INotificationChannel
                             new
                             {
                                 type = "TextBlock",
-                                text = GetAlertDescription(securityEvent),
+                                text = messageText,
                                 wrap = true
                             }
                         },
@@ -272,17 +308,17 @@ public class TeamsNotificationChannel : INotificationChannel
         };
     }
 
-    private string GetAlertDescription(SecurityEvent securityEvent)
+    private string GetLegacyAlertDescription(SecurityEvent securityEvent)
     {
         var description = securityEvent.Summary ?? "";
-        
+
         if (!string.IsNullOrEmpty(securityEvent.OriginalEvent.Message))
         {
             description = $"{securityEvent.Summary}\n\n{securityEvent.OriginalEvent.Message}";
         }
 
-        return description.Length > 500 
-            ? description.Substring(0, 497) + "..." 
+        return description.Length > 500
+            ? description.Substring(0, 497) + "..."
             : description;
     }
 }

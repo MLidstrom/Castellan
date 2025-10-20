@@ -107,6 +107,17 @@
 
 ## **Notifications & Interface**
 - **Teams/Slack Integration** - Real-time security alerts in Microsoft Teams and Slack channels
+- **Customizable Notification Templates (v0.7.0)** - Production-ready message templates with dynamic tag support
+  - **8 Default Templates** - 4 template types (SecurityEvent, SystemAlert, HealthWarning, PerformanceAlert) × 2 platforms (Teams, Slack)
+  - **Rich Formatting** - Visual separators (━━━━━), organized sections with emoji headers (📋, 🖥️, 📊, 🎯, ✅)
+  - **Dynamic Tags** - 15+ supported tags including {{DATE}}, {{HOST}}, {{USER}}, {{EVENT_ID}}, {{SEVERITY}}, {{SUMMARY}}, {{MITRE_TECHNIQUES}}, {{RECOMMENDED_ACTIONS}}
+  - **Formatting Tags** - {{BOLD:text}}, {{LINK:url|text}} for platform-specific formatting
+  - **Template Management UI** - Edit templates via Configuration → Notifications → Message Templates
+  - **Template Validation** - Real-time syntax validation with error messages
+  - **Live Preview** - Preview rendered templates with sample data
+  - **JSON Persistence** - Templates stored at `data/notification-templates.json`
+  - **API Endpoints** - Full CRUD REST API at `/api/notification-templates`
+  - **Auto-Creation** - Templates created automatically on first Worker startup via TemplateInitializationService
 - **Enhanced Performance Dashboard** - Full-featured performance monitoring with real-time metrics, multi-timeframe analytics (1h-7d), and interactive charts
 - **Threat Intelligence Health Dashboard** - Service status monitoring with API rate limiting, cache efficiency, and automated alerting
 - **Primary Tailwind Dashboard (Port 3000)** - Modern security monitoring interface with instant page loads (v0.7.0)
@@ -211,6 +222,14 @@
   - `/api/scheduledscan/status` - Scheduler status with next/last scan times
 - **Consolidated Dashboard API** - Single endpoint for all dashboard data (v0.7.0)
   - `/api/dashboard/consolidated/{timeRange}` - Comprehensive dashboard data including security events, system status, threat scanner metadata, YARA statistics, and recent activity
+- **Notification Template APIs** - Customizable message template management (v0.7.0)
+  - `GET /api/notification-templates` - List all templates
+  - `GET /api/notification-templates/{id}` - Get specific template
+  - `POST /api/notification-templates` - Create new template (Admin only)
+  - `PUT /api/notification-templates/{id}` - Update template (Admin only)
+  - `DELETE /api/notification-templates/{id}` - Delete template (Admin only)
+  - `POST /api/notification-templates/validate` - Validate template syntax
+  - `POST /api/notification-templates/preview` - Preview rendered template with sample data
 
 ## **Enterprise Security**
 - **BCrypt Password Hashing** - Industry-standard password security with configurable work factors

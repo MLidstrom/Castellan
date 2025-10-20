@@ -111,6 +111,26 @@ export const Api = {
   startFullScan: () => request(`/threat-scanner/full-scan?async=true`, { method: 'POST' }),
   cancelScan: () => request(`/threat-scanner/cancel`, { method: 'POST' }),
   getLastScanResult: () => request(`/threat-scanner/last-result`),
+
+  // Notification Templates API methods
+  getNotificationTemplates: () => request(`/notification-templates`),
+  getNotificationTemplatesByPlatform: (platform: 'teams' | 'slack') =>
+    request(`/notification-templates/platform/${platform}`),
+  getNotificationTemplateById: (id: string) => request(`/notification-templates/${id}`),
+  createNotificationTemplate: (template: any) =>
+    request(`/notification-templates`, {
+      method: 'POST',
+      body: JSON.stringify(template)
+    }),
+  updateNotificationTemplate: (id: string, template: any) =>
+    request(`/notification-templates/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(template)
+    }),
+  deleteNotificationTemplate: (id: string) =>
+    request(`/notification-templates/${id}`, { method: 'DELETE' }),
+  createDefaultTemplates: () =>
+    request(`/notification-templates/defaults`, { method: 'POST' }),
 };
 
 

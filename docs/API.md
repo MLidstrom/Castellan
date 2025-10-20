@@ -1237,6 +1237,199 @@ Content-Type: application/json
 }
 ```
 
+## Notification Templates API (v0.7.0)
+
+**Version**: v0.7.0 (October 2025)
+
+Customizable notification templates with dynamic tag/placeholder support for Teams and Slack integrations.
+
+### List Notification Templates
+```http
+GET /api/notification-templates
+Authorization: Bearer {token}
+```
+
+**Response:**
+```json
+{
+  "data": [
+    {
+      "id": "template-uuid-123",
+      "name": "SecurityEvent_Teams",
+      "platform": "Teams",
+      "type": "SecurityEvent",
+      "templateContent": "🚨 {{BOLD:SECURITY ALERT}} - {{SEVERITY}} Severity\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n📋 {{BOLD:Event Details}}\n• {{BOLD:Event Type:}} {{EVENT_TYPE}}\n• {{BOLD:Event ID:}} {{EVENT_ID}}\n• {{BOLD:Timestamp:}} {{DATE}}\n\n🖥️  {{BOLD:Affected System}}\n• {{BOLD:Machine:}} {{HOST}}\n• {{BOLD:User Account:}} {{USER}}\n\n📊 {{BOLD:Risk Assessment}}\n{{SUMMARY}}\n\n🎯 {{BOLD:MITRE ATT&CK Framework}}\n{{MITRE_TECHNIQUES}}\n\n✅ {{BOLD:Recommended Response Actions}}\n{{RECOMMENDED_ACTIONS}}\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n{{LINK:{{DETAILS_URL}}|🔍 View Full Investigation Details}}\n\n⚡ Powered by CastellanAI Security Platform",
+      "isEnabled": true,
+      "createdAt": "2025-10-15T10:00:00Z",
+      "updatedAt": "2025-10-15T10:00:00Z"
+    }
+  ],
+  "total": 8
+}
+```
+
+### Get Notification Template by ID
+```http
+GET /api/notification-templates/{id}
+Authorization: Bearer {token}
+```
+
+**Response:**
+```json
+{
+  "id": "template-uuid-123",
+  "name": "SecurityEvent_Teams",
+  "platform": "Teams",
+  "type": "SecurityEvent",
+  "templateContent": "🚨 {{BOLD:SECURITY ALERT}} - {{SEVERITY}} Severity...",
+  "isEnabled": true,
+  "createdAt": "2025-10-15T10:00:00Z",
+  "updatedAt": "2025-10-15T10:00:00Z"
+}
+```
+
+### Create Notification Template (Admin Only)
+```http
+POST /api/notification-templates
+Authorization: Bearer {token}
+Content-Type: application/json
+
+{
+  "name": "CustomTemplate_Teams",
+  "platform": "Teams",
+  "type": "SecurityEvent",
+  "templateContent": "Custom template with {{DATE}} and {{HOST}} tags",
+  "isEnabled": true
+}
+```
+
+**Validation:**
+- `platform`: Must be "Teams" or "Slack"
+- `type`: Must be "SecurityEvent", "SystemAlert", "HealthWarning", or "PerformanceAlert"
+- `templateContent`: Required, non-empty string with valid tag syntax
+
+### Update Notification Template (Admin Only)
+```http
+PUT /api/notification-templates/{id}
+Authorization: Bearer {token}
+Content-Type: application/json
+
+{
+  "name": "Updated Template Name",
+  "templateContent": "Updated template content with {{BOLD:tags}}",
+  "isEnabled": false
+}
+```
+
+### Delete Notification Template (Admin Only)
+```http
+DELETE /api/notification-templates/{id}
+Authorization: Bearer {token}
+```
+
+**Response:** 204 No Content
+
+### Validate Template Syntax
+```http
+POST /api/notification-templates/validate
+Authorization: Bearer {token}
+Content-Type: application/json
+
+{
+  "templateContent": "Test template with {{DATE}} and {{HOST}} tags",
+  "platform": "Teams"
+}
+```
+
+**Response:**
+```json
+{
+  "isValid": true,
+  "errors": [],
+  "warnings": [],
+  "tags": ["DATE", "HOST"]
+}
+```
+
+**Error Response (Invalid Template):**
+```json
+{
+  "isValid": false,
+  "errors": [
+    "Unclosed tag at position 45: {{BOLD:text",
+    "Unknown tag: {{INVALID_TAG}}"
+  ],
+  "warnings": [
+    "Tag {{OPTIONAL_TAG}} may not have data in all scenarios"
+  ],
+  "tags": ["DATE", "HOST", "BOLD", "INVALID_TAG"]
+}
+```
+
+### Preview Template with Sample Data
+```http
+POST /api/notification-templates/preview
+Authorization: Bearer {token}
+Content-Type: application/json
+
+{
+  "templateContent": "Alert: {{EVENT_TYPE}} on {{HOST}} at {{DATE}}",
+  "platform": "Teams",
+  "sampleData": {
+    "EVENT_TYPE": "Unauthorized Access",
+    "HOST": "SERVER-01",
+    "DATE": "2025-10-15 14:30:00 UTC"
+  }
+}
+```
+
+**Response:**
+```json
+{
+  "renderedContent": "Alert: Unauthorized Access on SERVER-01 at 2025-10-15 14:30:00 UTC",
+  "platform": "Teams"
+}
+```
+
+### Supported Dynamic Tags
+
+Templates support 15+ dynamic tags for event data substitution:
+
+**Event Data Tags:**
+- `{{DATE}}` - Event date/time (formatted: yyyy-MM-dd HH:mm:ss UTC)
+- `{{HOST}}` - Machine/hostname where event occurred
+- `{{USER}}` - Username associated with the event
+- `{{EVENT_ID}}` - Windows Event ID number
+- `{{EVENT_TYPE}}` - Event type classification
+- `{{SEVERITY}}` - Severity level (Critical, High, Medium, Low)
+- `{{RISK_LEVEL}}` - AI-determined risk level
+- `{{CONFIDENCE}}` - AI confidence score (0-100%)
+- `{{CHANNEL}}` - Event log channel (Security, System, etc.)
+
+**Analysis Tags:**
+- `{{SUMMARY}}` - AI-generated event summary
+- `{{MITRE_TECHNIQUES}}` - MITRE ATT&CK techniques (comma-separated)
+- `{{RECOMMENDED_ACTIONS}}` - AI-recommended response actions (numbered list)
+- `{{CORRELATION_SCORE}}` - Correlation score (if event is correlated)
+
+**Networking Tags:**
+- `{{IP_ADDRESS}}` - Source IP address (if available)
+- `{{DETAILS_URL}}` - Deep link to event details in dashboard
+
+**Formatting Tags:**
+- `{{BOLD:text}}` - Bold text (platform-specific formatting)
+- `{{LINK:url|text}}` - Hyperlink formatting
+
+**Features:**
+- **8 Default Templates** - 4 template types × 2 platforms with rich formatting
+- **Dynamic Tag System** - 15+ supported tags for event data substitution
+- **Template Validation** - Real-time syntax validation with error messages
+- **Live Preview** - Preview templates with sample data before saving
+- **Platform-Specific Formatting** - Automatic formatting conversion for Teams/Slack
+- **Automatic Initialization** - Templates created automatically on first Worker startup
+- **File-Based Persistence** - Templates stored in JSON format at `data/notification-templates.json`
+- **Visual Organization** - Rich formatting with visual separators, emoji headers, and professional branding
+
 ## Malware Detection API
 
 ### List Malware Detection Rules

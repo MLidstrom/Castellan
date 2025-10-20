@@ -18,7 +18,13 @@ import {
   RefreshCw,
   Download,
   Plus,
-  Trash2
+  Trash2,
+  CheckCircle,
+  Search,
+  Loader2,
+  ChevronDown,
+  ChevronUp,
+  Edit
 } from 'lucide-react';
 
 // Custom Teams Icon Component
@@ -33,6 +39,8 @@ function SlackIcon({ className = "h-6 w-6" }: { className?: string }) {
 import { useAuth } from '../hooks/useAuth';
 import { useNavigate } from 'react-router-dom';
 import { MalwareConfigComponent } from '../components/MalwareConfigComponent';
+import { API_URL } from '../services/constants';
+import { Api } from '../services/api';
 
 type TabType = 'threat-intelligence' | 'notifications' | 'ip-enrichment' | 'malware' | 'mitre' | 'threat-scanner' | 'performance';
 
@@ -103,6 +111,32 @@ interface IPEnrichmentConfig {
   };
 }
 
+// Notification Template Types
+interface NotificationTemplate {
+  id: string;
+  name: string;
+  platform: 'Teams' | 'Slack';
+  type: 'SecurityEvent' | 'SystemAlert' | 'HealthWarning' | 'PerformanceAlert';
+  templateContent: string;
+  isEnabled: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+// Platform color mapping
+const PLATFORM_COLORS: Record<string, string> = {
+  'Teams': 'bg-blue-100 text-blue-800 border-blue-200 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-800',
+  'Slack': 'bg-purple-100 text-purple-800 border-purple-200 dark:bg-purple-900/30 dark:text-purple-300 dark:border-purple-800',
+};
+
+// Template type color mapping
+const TYPE_COLORS: Record<string, string> = {
+  'SecurityEvent': 'bg-red-100 text-red-800 border-red-200 dark:bg-red-900/30 dark:text-red-300 dark:border-red-800',
+  'SystemAlert': 'bg-yellow-100 text-yellow-800 border-yellow-200 dark:bg-yellow-900/30 dark:text-yellow-300 dark:border-yellow-800',
+  'HealthWarning': 'bg-orange-100 text-orange-800 border-orange-200 dark:bg-orange-900/30 dark:text-orange-300 dark:border-orange-800',
+  'PerformanceAlert': 'bg-green-100 text-green-800 border-green-200 dark:bg-green-900/30 dark:text-green-300 dark:border-green-800',
+};
+
 const tabs = [
   { id: 'threat-intelligence' as TabType, label: 'Threat Intelligence', icon: Shield },
   { id: 'notifications' as TabType, label: 'Notifications', icon: Bell },
@@ -144,7 +178,7 @@ export function ConfigurationPage() {
         'performance': '/performance/config',
       };
 
-      const response = await fetch(`/api${endpoints[activeTab]}`, {
+      const response = await fetch(`${API_URL}${endpoints[activeTab]}`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
@@ -181,8 +215,8 @@ export function ConfigurationPage() {
       if (activeTab === 'notifications') {
         const method = config.id ? 'PUT' : 'POST';
         const url = config.id
-          ? `/api${endpoints[activeTab]}/${config.id}`
-          : `/api${endpoints[activeTab]}`;
+          ? `${API_URL}${endpoints[activeTab]}/${config.id}`
+          : `${API_URL}${endpoints[activeTab]}`;
 
         const response = await fetch(url, {
           method,
@@ -196,7 +230,7 @@ export function ConfigurationPage() {
         return response.json();
       }
 
-      const response = await fetch(`/api${endpoints[activeTab]}`, {
+      const response = await fetch(`${API_URL}${endpoints[activeTab]}`, {
         method: 'PUT',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -1014,6 +1048,9 @@ function NotificationsConfig({
         </div>
       </div>
 
+      {/* Message Templates Section */}
+      <TemplateManagementSection />
+
       {/* Action Buttons */}
       <div className="flex items-center justify-between">
         <button
@@ -1035,6 +1072,449 @@ function NotificationsConfig({
         </button>
       </div>
     </form>
+  );
+}
+
+// Template Editor Modal Component
+function TemplateEditorModal({
+  template,
+  isOpen,
+  onClose,
+  onSave,
+  isNew
+}: {
+  template: NotificationTemplate | null;
+  isOpen: boolean;
+  onClose: () => void;
+  onSave: (template: Partial<NotificationTemplate>) => void;
+  isNew: boolean;
+}) {
+  const [formData, setFormData] = useState<Partial<NotificationTemplate>>({
+    name: '',
+    platform: 'Teams',
+    type: 'SecurityEvent',
+    templateContent: '',
+    isEnabled: true,
+  });
+
+  useEffect(() => {
+    if (template && isOpen) {
+      setFormData({
+        name: template.name,
+        platform: template.platform,
+        type: template.type,
+        templateContent: template.templateContent,
+        isEnabled: template.isEnabled,
+      });
+    } else if (isNew && isOpen) {
+      setFormData({
+        name: '',
+        platform: 'Teams',
+        type: 'SecurityEvent',
+        templateContent: '',
+        isEnabled: true,
+      });
+    }
+  }, [template, isOpen, isNew]);
+
+  if (!isOpen) return null;
+
+  const handleSave = () => {
+    onSave(formData);
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+        <div className="p-6 border-b border-gray-200 dark:border-gray-700">
+          <div className="flex items-center justify-between">
+            <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
+              {isNew ? 'Create Template' : 'Edit Template'}
+            </h2>
+            <button
+              onClick={onClose}
+              className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+            >
+              <X className="h-6 w-6" />
+            </button>
+          </div>
+        </div>
+
+        <div className="p-6 space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              Template Name
+            </label>
+            <input
+              type="text"
+              value={formData.name || ''}
+              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+              placeholder="e.g., Security Alert Template"
+            />
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                Platform
+              </label>
+              <select
+                value={formData.platform || 'Teams'}
+                onChange={(e) => setFormData({ ...formData, platform: e.target.value as any })}
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+              >
+                <option value="Teams">Teams</option>
+                <option value="Slack">Slack</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                Type
+              </label>
+              <select
+                value={formData.type || 'SecurityEvent'}
+                onChange={(e) => setFormData({ ...formData, type: e.target.value as any })}
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+              >
+                <option value="SecurityEvent">Security Event</option>
+                <option value="SystemAlert">System Alert</option>
+                <option value="HealthWarning">Health Warning</option>
+                <option value="PerformanceAlert">Performance Alert</option>
+              </select>
+            </div>
+          </div>
+
+          <div>
+            <label className="flex items-center space-x-2">
+              <input
+                type="checkbox"
+                checked={formData.isEnabled || false}
+                onChange={(e) => setFormData({ ...formData, isEnabled: e.target.checked })}
+                className="w-4 h-4 text-blue-600 border-gray-300 rounded"
+              />
+              <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                Enabled
+              </span>
+            </label>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              Template Content
+            </label>
+            <textarea
+              value={formData.templateContent || ''}
+              onChange={(e) => setFormData({ ...formData, templateContent: e.target.value })}
+              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white font-mono text-sm"
+              rows={12}
+              placeholder="Enter template content with {{TAGS}}..."
+            />
+            <div className="text-xs text-gray-600 dark:text-gray-400 mt-2 space-y-1 bg-gray-50 dark:bg-gray-900/30 p-3 rounded border border-gray-200 dark:border-gray-700">
+              <div className="font-semibold text-gray-700 dark:text-gray-300 mb-2">📝 Available Template Variables</div>
+              <div className="grid grid-cols-2 gap-x-4 gap-y-1">
+                <div><span className="font-mono text-blue-600 dark:text-blue-400">{'{'}{'{'} DATE {'}'}{'}'}</span> - Event timestamp</div>
+                <div><span className="font-mono text-blue-600 dark:text-blue-400">{'{'}{'{'} HOST {'}'}{'}'}</span> - Machine hostname</div>
+                <div><span className="font-mono text-blue-600 dark:text-blue-400">{'{'}{'{'} USER {'}'}{'}'}</span> - User account</div>
+                <div><span className="font-mono text-blue-600 dark:text-blue-400">{'{'}{'{'} EVENT_ID {'}'}{'}'}</span> - Event identifier</div>
+                <div><span className="font-mono text-blue-600 dark:text-blue-400">{'{'}{'{'} SEVERITY {'}'}{'}'}</span> - Risk severity</div>
+                <div><span className="font-mono text-blue-600 dark:text-blue-400">{'{'}{'{'} EVENT_TYPE {'}'}{'}'}</span> - Event category</div>
+                <div><span className="font-mono text-blue-600 dark:text-blue-400">{'{'}{'{'} MACHINE_NAME {'}'}{'}'}</span> - System name</div>
+                <div><span className="font-mono text-blue-600 dark:text-blue-400">{'{'}{'{'} TIMESTAMP {'}'}{'}'}</span> - Alert timestamp</div>
+                <div><span className="font-mono text-blue-600 dark:text-blue-400">{'{'}{'{'} ALERT_ID {'}'}{'}'}</span> - Alert identifier</div>
+                <div><span className="font-mono text-blue-600 dark:text-blue-400">{'{'}{'{'} DETAILS_URL {'}'}{'}'}</span> - Dashboard link</div>
+              </div>
+              <div className="mt-2 pt-2 border-t border-gray-300 dark:border-gray-600">
+                <div><span className="font-mono text-blue-600 dark:text-blue-400">{'{'}{'{'} SUMMARY {'}'}{'}'}</span> - Detailed event description</div>
+                <div><span className="font-mono text-blue-600 dark:text-blue-400">{'{'}{'{'} MITRE_TECHNIQUES {'}'}{'}'}</span> - MITRE ATT&CK mappings</div>
+                <div><span className="font-mono text-blue-600 dark:text-blue-400">{'{'}{'{'} RECOMMENDED_ACTIONS {'}'}{'}'}</span> - Response guidance</div>
+              </div>
+              <div className="mt-2 pt-2 border-t border-gray-300 dark:border-gray-600 font-semibold text-gray-700 dark:text-gray-300">🎨 Formatting Tags</div>
+              <div className="space-y-1">
+                <div><span className="font-mono text-green-600 dark:text-green-400">{'{'}{'{'} BOLD:text {'}'}{'}'}</span> - Bold formatting</div>
+                <div><span className="font-mono text-green-600 dark:text-green-400">{'{'}{'{'} LINK:{'{'}{'{'} DETAILS_URL {'}'}{'}'} | Click Here {'}'}{'}'}</span> - Hyperlink with label</div>
+              </div>
+            </div>
+          </div>
+
+          <div className="flex justify-end space-x-3 pt-4">
+            <button
+              onClick={onClose}
+              className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={handleSave}
+              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+            >
+              {isNew ? 'Create Template' : 'Save Changes'}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Template Management Section Component
+function TemplateManagementSection() {
+  const { token } = useAuth();
+  const queryClient = useQueryClient();
+  const [isExpanded, setIsExpanded] = useState(false);
+  const [search, setSearch] = useState('');
+  const [platformFilter, setPlatformFilter] = useState('');
+  const [selectedTemplate, setSelectedTemplate] = useState<NotificationTemplate | null>(null);
+  const [editorOpen, setEditorOpen] = useState(false);
+  const [isNewTemplate, setIsNewTemplate] = useState(false);
+
+  // Query for templates
+  const templatesQuery = useQuery({
+    queryKey: ['notification-templates'],
+    queryFn: Api.getNotificationTemplates,
+    enabled: !!token && isExpanded,
+    staleTime: 5 * 60 * 1000,
+    gcTime: 30 * 60 * 1000,
+  });
+
+  // Create mutation
+  const createMutation = useMutation({
+    mutationFn: (template: Partial<NotificationTemplate>) => Api.createNotificationTemplate(template),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['notification-templates'] });
+      setEditorOpen(false);
+    },
+  });
+
+  // Update mutation
+  const updateMutation = useMutation({
+    mutationFn: ({ id, template }: { id: string; template: Partial<NotificationTemplate> }) =>
+      Api.updateNotificationTemplate(id, template),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['notification-templates'] });
+      setEditorOpen(false);
+    },
+  });
+
+  // Delete mutation
+  const deleteMutation = useMutation({
+    mutationFn: (id: string) => Api.deleteNotificationTemplate(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['notification-templates'] });
+    },
+  });
+
+  // Toggle enabled mutation
+  const toggleMutation = useMutation({
+    mutationFn: ({ id, template }: { id: string; template: Partial<NotificationTemplate> }) =>
+      Api.updateNotificationTemplate(id, template),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['notification-templates'] });
+    },
+  });
+
+  // Create defaults mutation
+  const createDefaultsMutation = useMutation({
+    mutationFn: Api.createDefaultTemplates,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['notification-templates'] });
+    },
+  });
+
+  const templates = (templatesQuery.data as NotificationTemplate[]) || [];
+
+  // Filter templates
+  const filteredTemplates = templates.filter(t => {
+    if (platformFilter && t.platform !== platformFilter) return false;
+    if (search && !t.name.toLowerCase().includes(search.toLowerCase()) &&
+        !(t.templateContent || '').toLowerCase().includes(search.toLowerCase())) return false;
+    return true;
+  });
+
+  const handleCreateNew = () => {
+    setSelectedTemplate(null);
+    setIsNewTemplate(true);
+    setEditorOpen(true);
+  };
+
+  const handleEdit = (template: NotificationTemplate) => {
+    setSelectedTemplate(template);
+    setIsNewTemplate(false);
+    setEditorOpen(true);
+  };
+
+  const handleSave = (template: Partial<NotificationTemplate>) => {
+    if (isNewTemplate) {
+      createMutation.mutate(template);
+    } else if (selectedTemplate) {
+      updateMutation.mutate({ id: selectedTemplate.id, template });
+    }
+  };
+
+  const handleDelete = (template: NotificationTemplate) => {
+    if (confirm(`Delete template "${template.name}"?`)) {
+      deleteMutation.mutate(template.id);
+    }
+  };
+
+  const handleToggle = (template: NotificationTemplate) => {
+    toggleMutation.mutate({
+      id: template.id,
+      template: { ...template, isEnabled: !template.isEnabled }
+    });
+  };
+
+  return (
+    <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-6">
+      <div className="flex items-center justify-between mb-4 cursor-pointer" onClick={() => setIsExpanded(!isExpanded)}>
+        <h2 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+          <Bell className="h-5 w-5" />
+          Message Templates
+          <span className="text-sm font-normal text-gray-500 dark:text-gray-400">
+            ({templates.length} templates)
+          </span>
+        </h2>
+        <button type="button" className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
+          {isExpanded ? <ChevronUp className="h-5 w-5" /> : <ChevronDown className="h-5 w-5" />}
+        </button>
+      </div>
+
+      {isExpanded && (
+        <div className="space-y-4 pt-4 border-t border-gray-200 dark:border-gray-700">
+          {/* Search and Filter */}
+          <div className="flex flex-col sm:flex-row gap-3">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+              <input
+                type="text"
+                placeholder="Search templates..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm"
+              />
+            </div>
+            <select
+              value={platformFilter}
+              onChange={(e) => setPlatformFilter(e.target.value)}
+              className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm"
+            >
+              <option value="">All Platforms</option>
+              <option value="Teams">Teams</option>
+              <option value="Slack">Slack</option>
+            </select>
+            {templates.length > 0 && (
+              <button
+                type="button"
+                onClick={handleCreateNew}
+                className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm whitespace-nowrap"
+              >
+                <Plus className="h-4 w-4" />
+                New Template
+              </button>
+            )}
+          </div>
+
+          {/* Templates List */}
+          {templatesQuery.isLoading && (
+            <div className="flex items-center justify-center py-8">
+              <Loader2 className="h-6 w-6 animate-spin text-blue-600" />
+              <span className="ml-2 text-gray-600 dark:text-gray-300">Loading templates...</span>
+            </div>
+          )}
+
+          {!templatesQuery.isLoading && templates.length === 0 && (
+            <div className="text-center py-8">
+              <Bell className="h-12 w-12 text-gray-400 mx-auto mb-3" />
+              <p className="text-gray-600 dark:text-gray-300 mb-4">No templates found</p>
+              <button
+                onClick={() => createDefaultsMutation.mutate()}
+                disabled={createDefaultsMutation.isPending}
+                className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50"
+              >
+                {createDefaultsMutation.isPending ? 'Creating...' : 'Create Default Templates'}
+              </button>
+            </div>
+          )}
+
+          {!templatesQuery.isLoading && filteredTemplates.length > 0 && (
+            <div className="space-y-3">
+              {filteredTemplates.map((template) => (
+                <div
+                  key={template.id}
+                  className="bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg p-4"
+                >
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1">
+                      <div className="flex items-center space-x-2 mb-2">
+                        <span className={`px-2 py-1 rounded-full text-xs font-medium border ${PLATFORM_COLORS[template.platform]}`}>
+                          {template.platform}
+                        </span>
+                        <span className={`px-2 py-1 rounded-full text-xs font-medium border ${TYPE_COLORS[template.type]}`}>
+                          {template.type}
+                        </span>
+                        {template.isEnabled ? (
+                          <CheckCircle className="h-4 w-4 text-green-500" />
+                        ) : (
+                          <AlertCircle className="h-4 w-4 text-gray-400" />
+                        )}
+                      </div>
+                      <h4 className="font-medium text-gray-900 dark:text-white mb-1">
+                        {template.name}
+                      </h4>
+                      <p className="text-xs text-gray-600 dark:text-gray-400 font-mono bg-white dark:bg-gray-800 p-2 rounded">
+                        {(template.templateContent || '').substring(0, 80)}...
+                      </p>
+                    </div>
+                    <div className="flex space-x-2 ml-4">
+                      <button
+                        type="button"
+                        onClick={() => handleEdit(template)}
+                        className="p-1 text-gray-600 hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400"
+                        title="Edit"
+                      >
+                        <Edit className="h-4 w-4" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleToggle(template)}
+                        className="p-1 text-gray-600 hover:text-green-600 dark:text-gray-400 dark:hover:text-green-400"
+                        title={template.isEnabled ? 'Disable' : 'Enable'}
+                      >
+                        <CheckCircle className={`h-4 w-4 ${template.isEnabled ? 'text-green-500' : 'text-gray-400'}`} />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleDelete(template)}
+                        className="p-1 text-gray-600 hover:text-red-600 dark:text-gray-400 dark:hover:text-red-400"
+                        title="Delete"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {!templatesQuery.isLoading && templates.length > 0 && filteredTemplates.length === 0 && (
+            <div className="text-center py-8">
+              <p className="text-gray-600 dark:text-gray-300">No templates match your filters</p>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Editor Modal */}
+      <TemplateEditorModal
+        template={selectedTemplate}
+        isOpen={editorOpen}
+        onClose={() => setEditorOpen(false)}
+        onSave={handleSave}
+        isNew={isNewTemplate}
+      />
+    </div>
   );
 }
 
@@ -1272,7 +1752,7 @@ function ThreatScannerConfig() {
     queryKey: ['threat-scanner-config'],
     queryFn: async () => {
       console.log('[ThreatScanner] Fetching config from API...');
-      const response = await fetch('/api/scheduledscan/config', {
+      const response = await fetch(`${API_URL}/scheduledscan/config`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       if (!response.ok) throw new Error('Failed to fetch scanner config');
@@ -1314,7 +1794,7 @@ function ThreatScannerConfig() {
   const statusQuery = useQuery({
     queryKey: ['threat-scanner-status'],
     queryFn: async () => {
-      const response = await fetch('/api/scheduledscan/status', {
+      const response = await fetch(`${API_URL}/scheduledscan/status`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       if (!response.ok) throw new Error('Failed to fetch scanner status');
@@ -1349,7 +1829,7 @@ function ThreatScannerConfig() {
 
       console.log('[ThreatScanner] Sending to backend:', backendConfig);
 
-      const response = await fetch('/api/scheduledscan/config', {
+      const response = await fetch(`${API_URL}/scheduledscan/config`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -1835,7 +2315,7 @@ function MitreConfig({ onSaveSuccess }: { onSaveSuccess?: () => void }) {
   const statisticsQuery = useQuery({
     queryKey: ['mitre-statistics'],
     queryFn: async () => {
-      const response = await fetch('/api/mitre/statistics', {
+      const response = await fetch(`${API_URL}/mitre/statistics`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       if (!response.ok) throw new Error('Failed to fetch statistics');
@@ -1849,7 +2329,7 @@ function MitreConfig({ onSaveSuccess }: { onSaveSuccess?: () => void }) {
   const configQuery = useQuery({
     queryKey: ['mitre-config'],
     queryFn: async () => {
-      const response = await fetch('/api/mitre/config', {
+      const response = await fetch(`${API_URL}/mitre/config`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       if (!response.ok) throw new Error('Failed to fetch MITRE config');
@@ -1862,7 +2342,7 @@ function MitreConfig({ onSaveSuccess }: { onSaveSuccess?: () => void }) {
   // Save configuration mutation
   const saveMutation = useMutation({
     mutationFn: async (config: any) => {
-      const response = await fetch('/api/mitre/config', {
+      const response = await fetch(`${API_URL}/mitre/config`, {
         method: 'PUT',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -1924,7 +2404,7 @@ function MitreConfig({ onSaveSuccess }: { onSaveSuccess?: () => void }) {
   const importMutation = useMutation({
     mutationKey: ['mitre-import'],
     mutationFn: async () => {
-      const response = await fetch('/api/mitre/import', {
+      const response = await fetch(`${API_URL}/mitre/import`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,

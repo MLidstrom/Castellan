@@ -3,7 +3,10 @@ using Microsoft.Extensions.Configuration;
 using Castellan.Worker.Services;
 using Castellan.Worker.Services.Interfaces;
 using Castellan.Worker.Services.NotificationChannels;
+using Castellan.Worker.Services.Notifications;
 using Castellan.Worker.Configuration;
+using Castellan.Worker.Models.Notifications;
+using Castellan.Worker.Abstractions;
 
 namespace Castellan.Worker.Extensions;
 
@@ -34,6 +37,16 @@ public static class NotificationServiceExtensions
 
         // Register notification configuration store
         services.AddSingleton<INotificationConfigurationStore, FileBasedNotificationConfigurationStore>();
+
+        // Configure notification template options
+        services.Configure<NotificationTemplateConfig>(configuration.GetSection("NotificationTemplates"));
+
+        // Register notification template services
+        services.AddSingleton<ITemplateRenderer, TemplateRenderer>();
+        services.AddSingleton<INotificationTemplateStore, FileBasedNotificationTemplateStore>();
+
+        // Register template initialization service to ensure templates exist on startup
+        services.AddHostedService<TemplateInitializationService>();
 
         return services;
     }

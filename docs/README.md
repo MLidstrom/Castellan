@@ -67,7 +67,7 @@ Welcome to the complete documentation for **Castellan**, the AI-powered Windows 
 - **Export Capabilities** - CSV/JSON/PDF export for security data and reports
 - **AI-Powered Analysis** - LLM threat classification with vector search
 - **Enterprise Scale** - 12K+ events/sec with connection pooling and caching
-- **Real-time Notifications** - Teams/Slack with adaptive rate limiting
+- **Real-time Notifications** - Teams/Slack with customizable message templates (v0.7.0) and adaptive rate limiting
 - **Threat Intelligence** - VirusTotal/MalwareBazaar/OTX integration
 - **Modern Dashboard** - Tailwind CSS dashboard (port 3000) with real-time updates
 
