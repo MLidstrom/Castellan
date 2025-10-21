@@ -16,6 +16,9 @@
 
 ---
 
+**Castellan** - a *governor or warden of a castle or fort*, responsible for its defense and administration. The term originates from Medieval Latin *castellanus*, meaning *keeper of a castle*.
+🔗 [Source: Merriam-Webster Dictionary](https://www.merriam-webster.com/dictionary/castellan)
+
 **CastellanAI** is an enterprise-grade security monitoring platform that transforms event logs into actionable security intelligence using AI-powered analysis, vector search, and real-time threat correlation.
 
 **Enterprise Features**: Thousands of events/sec processing • Vector similarity search • Advanced correlation engine • Real-time Teams/Slack alerts • 800+ MITRE ATT&CK techniques • VirusTotal/MalwareBazaar integration • Complete malware detection with auto-updates • Human-in-the-loop action execution with rollback • Trend forecasting • Timeline visualization • Export capabilities • Centralized configuration management • Single consolidated database architecture
