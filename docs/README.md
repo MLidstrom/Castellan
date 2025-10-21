@@ -60,7 +60,8 @@ Welcome to the complete documentation for **Castellan**, the AI-powered Windows 
 - **Threat Intelligence Configuration** - Service management
 
 ### Production-Ready Components
-- **Conversational AI Chat** - Natural language security queries with context-aware responses
+- **Conversational AI Chat** - Natural language security queries with context-aware responses and human-in-the-loop action execution
+- **Action Execution System** - Execute security actions (BlockIP, IsolateHost, QuarantineFile, AddToWatchlist, CreateTicket) with full rollback capability
 - **Native YARA Integration** - dnYara 2.1.0 with real malware scanning
 - **Timeline Visualization** - Interactive security event analysis with Tailwind Dashboard UI
 - **Advanced Search & Filtering** - Multi-criteria search with MITRE technique filtering

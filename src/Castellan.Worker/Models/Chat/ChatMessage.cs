@@ -143,6 +143,11 @@ public class SuggestedAction
     /// Confidence that this action is appropriate (0.0 to 1.0)
     /// </summary>
     public float Confidence { get; set; }
+
+    /// <summary>
+    /// ID of the persisted ActionExecution record (0 if not yet persisted)
+    /// </summary>
+    public int ExecutionId { get; set; }
 }
 
 /// <summary>

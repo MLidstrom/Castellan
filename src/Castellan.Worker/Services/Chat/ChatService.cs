@@ -388,38 +388,223 @@ System Metrics (Last 24 hours):
 
         if (intent.Type == IntentType.Investigate && context.SimilarEvents.Count > 0)
         {
-            actions.Add(new SuggestedAction
-            {
-                Type = "investigate",
-                Label = "View Event Details",
-                Description = "View full details of the most relevant event",
-                Parameters = new Dictionary<string, object>
-                {
-                    ["eventId"] = context.SimilarEvents.First().Id
-                },
-                Icon = "search",
-                Confidence = 0.9f
-            });
+            // Investigate action removed - not a valid security action type
         }
 
         if (context.RecentCriticalEvents.Count > 0)
         {
-            actions.Add(new SuggestedAction
-            {
-                Type = "review",
-                Label = "Review Critical Events",
-                Description = "Review all critical events from the last 24 hours",
-                Parameters = new Dictionary<string, object>
-                {
-                    ["timeRange"] = "24h",
-                    ["riskLevel"] = "Critical"
-                },
-                Icon = "alert-triangle",
-                Confidence = 0.8f
-            });
+            // Review action removed - not a valid security action type
         }
 
         return actions;
+    }
+
+    private List<SuggestedAction> GenerateKeywordBasedActions(string userMessage, ChatContext context)
+    {
+        var actions = new List<SuggestedAction>();
+        var lowerMessage = userMessage.ToLower();
+
+        // Pattern 1: Block IP - detect IP addresses with blocking keywords
+        var ipPattern = @"\b(?:\d{1,3}\.){3}\d{1,3}\b";
+        var blockKeywords = new[] { "block", "ban", "blacklist", "stop", "prevent" };
+
+        var ipMatches = System.Text.RegularExpressions.Regex.Matches(userMessage, ipPattern);
+        var hasBlockKeyword = blockKeywords.Any(k => lowerMessage.Contains(k));
+
+        if (ipMatches.Count > 0 && hasBlockKeyword)
+        {
+            foreach (System.Text.RegularExpressions.Match match in ipMatches)
+            {
+                actions.Add(new SuggestedAction
+                {
+                    Type = "block_ip",
+                    Label = $"Block IP {match.Value}",
+                    Description = $"Add {match.Value} to firewall blocklist to prevent future connections",
+                    Parameters = new Dictionary<string, object>
+                    {
+                        ["IpAddress"] = match.Value,
+                        ["Reason"] = "User-requested block via chat",
+                        ["DurationHours"] = 0
+                    },
+                    Icon = "ban",
+                    Confidence = 0.85f
+                });
+            }
+        }
+
+        // Pattern 2: Quarantine File - detect file paths with quarantine keywords
+        var filePathPattern = @"[A-Za-z]:\\(?:[^\\\/:*?""<>|\r\n]+\\)*[^\\\/:*?""<>|\r\n]*";
+        var quarantineKeywords = new[] { "quarantine", "isolate file", "remove file", "malware", "infected" };
+
+        var fileMatches = System.Text.RegularExpressions.Regex.Matches(userMessage, filePathPattern);
+        var hasQuarantineKeyword = quarantineKeywords.Any(k => lowerMessage.Contains(k));
+
+        if (fileMatches.Count > 0 && hasQuarantineKeyword)
+        {
+            foreach (System.Text.RegularExpressions.Match match in fileMatches)
+            {
+                actions.Add(new SuggestedAction
+                {
+                    Type = "quarantine_file",
+                    Label = $"Quarantine File",
+                    Description = $"Move {System.IO.Path.GetFileName(match.Value)} to quarantine and prevent execution",
+                    Parameters = new Dictionary<string, object>
+                    {
+                        ["FilePath"] = match.Value,
+                        ["Reason"] = "Suspected malware - user-requested quarantine"
+                    },
+                    Icon = "file-x",
+                    Confidence = 0.9f
+                });
+            }
+        }
+
+        // Pattern 3: Isolate Host - detect hostnames with isolation keywords
+        var hostPattern = @"\b(?:[A-Z0-9](?:[A-Z0-9-]{0,61}[A-Z0-9])?\.)+[A-Z]{2,}\b";
+        var isolateKeywords = new[] { "isolate", "disconnect", "quarantine host", "contain", "network isolation" };
+
+        var hostMatches = System.Text.RegularExpressions.Regex.Matches(userMessage, hostPattern, System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+        var hasIsolateKeyword = isolateKeywords.Any(k => lowerMessage.Contains(k));
+
+        // Also check for machine names from context events
+        var machineNames = context.SimilarEvents
+            .Select(e => e.OriginalEvent.Host)
+            .Concat(context.RecentCriticalEvents.Select(e => e.OriginalEvent.Host))
+            .Where(h => !string.IsNullOrEmpty(h) && lowerMessage.Contains(h.ToLower()))
+            .Distinct()
+            .Take(2);
+
+        if (hasIsolateKeyword)
+        {
+            // Add actions for matched hostnames
+            foreach (System.Text.RegularExpressions.Match match in hostMatches)
+            {
+                actions.Add(new SuggestedAction
+                {
+                    Type = "isolate_host",
+                    Label = $"Isolate Host {match.Value}",
+                    Description = $"Disconnect {match.Value} from the network to contain potential threat",
+                    Parameters = new Dictionary<string, object>
+                    {
+                        ["Hostname"] = match.Value,
+                        ["Reason"] = "User-requested isolation",
+                        ["DisableAllAdapters"] = true
+                    },
+                    Icon = "pause-circle",
+                    Confidence = 0.8f
+                });
+            }
+
+            // Add actions for machines mentioned in context
+            foreach (var machine in machineNames)
+            {
+                if (!actions.Any(a => a.Parameters.ContainsKey("hostname") && a.Parameters["hostname"].ToString() == machine))
+                {
+                    actions.Add(new SuggestedAction
+                    {
+                        Type = "isolate_host",
+                        Label = $"Isolate Host {machine}",
+                        Description = $"Disconnect {machine} from the network to contain potential threat",
+                        Parameters = new Dictionary<string, object>
+                        {
+                            ["Hostname"] = machine,
+                            ["Reason"] = "Related to security events in conversation",
+                            ["DisableAllAdapters"] = true
+                        },
+                        Icon = "pause-circle",
+                        Confidence = 0.85f
+                    });
+                }
+            }
+        }
+
+        // Pattern 4: Create Ticket - detect incident/ticket keywords
+        var ticketKeywords = new[] { "ticket", "incident", "breach", "report", "escalate", "investigation" };
+        var hasTicketKeyword = ticketKeywords.Any(k => lowerMessage.Contains(k));
+
+        if (hasTicketKeyword && (context.RecentCriticalEvents.Count > 0 || context.SimilarEvents.Count > 0))
+        {
+            var severity = context.RecentCriticalEvents.Count > 0 ? "critical" : "high";
+            var eventCount = context.RecentCriticalEvents.Count + context.SimilarEvents.Count;
+
+            actions.Add(new SuggestedAction
+            {
+                Type = "create_ticket",
+                Label = "Create Security Incident Ticket",
+                Description = $"Create a tracking ticket for investigation of {eventCount} related security events",
+                Parameters = new Dictionary<string, object>
+                {
+                    ["Title"] = $"Security Investigation: {userMessage.Substring(0, Math.Min(50, userMessage.Length))}",
+                    ["Description"] = $"Investigation ticket for {eventCount} related security events",
+                    ["Priority"] = severity,
+                    ["Category"] = "Security Incident"
+                },
+                Icon = "ticket",
+                Confidence = 0.75f
+            });
+        }
+
+        // Pattern 5: Add to Watchlist - detect monitoring/watch keywords
+        var watchlistKeywords = new[] { "watch", "monitor", "track", "watchlist", "keep eye", "observe" };
+        var hasWatchlistKeyword = watchlistKeywords.Any(k => lowerMessage.Contains(k));
+
+        if (hasWatchlistKeyword)
+        {
+            // Add IPs to watchlist
+            if (ipMatches.Count > 0)
+            {
+                foreach (System.Text.RegularExpressions.Match match in ipMatches.Take(2))
+                {
+                    actions.Add(new SuggestedAction
+                    {
+                        Type = "add_to_watchlist",
+                        Label = $"Watch IP {match.Value}",
+                        Description = $"Add {match.Value} to watchlist for continuous monitoring",
+                        Parameters = new Dictionary<string, object>
+                        {
+                            ["EntityType"] = "IpAddress",
+                            ["EntityValue"] = match.Value,
+                            ["Severity"] = "Medium",
+                            ["Reason"] = "Suspicious activity - requires monitoring",
+                            ["DurationHours"] = 0
+                        },
+                        Icon = "eye",
+                        Confidence = 0.7f
+                    });
+                }
+            }
+
+            // Add users from context events to watchlist
+            var users = context.SimilarEvents
+                .Select(e => e.OriginalEvent.User)
+                .Where(u => !string.IsNullOrEmpty(u) && u != "SYSTEM")
+                .Distinct()
+                .Take(2);
+
+            foreach (var user in users)
+            {
+                actions.Add(new SuggestedAction
+                {
+                    Type = "add_to_watchlist",
+                    Label = $"Watch User {user}",
+                    Description = $"Add {user} to watchlist for activity monitoring",
+                    Parameters = new Dictionary<string, object>
+                    {
+                        ["EntityType"] = "Username",
+                        ["EntityValue"] = user,
+                        ["Severity"] = "Medium",
+                        ["Reason"] = "Related to security events in conversation",
+                        ["DurationHours"] = 0
+                    },
+                    Icon = "eye",
+                    Confidence = 0.7f
+                });
+            }
+        }
+
+        // Limit to top 4 actions to avoid overwhelming the user
+        _logger.LogInformation($"GenerateKeywordBasedActions returning {actions.Count} actions");
+        return actions.Take(4).ToList();
     }
 
     private List<Visualization> GenerateVisualizations(ChatIntent intent, ChatContext context)
@@ -612,13 +797,16 @@ FIRST, determine if this is a security question or a conversational message:
         // Generate citations from context
         var citations = GenerateCitations(context, 5);
 
+        // Generate keyword-based suggested actions from user message
+        var suggestedActions = GenerateKeywordBasedActions(userMessage, context);
+
         return new ChatMessage
         {
             Role = MessageRole.Assistant,
             Content = responseText,
             Timestamp = DateTime.UtcNow,
             Citations = citations,
-            SuggestedActions = new List<SuggestedAction>(),
+            SuggestedActions = suggestedActions,
             Visualizations = new List<Visualization>()
         };
     }
@@ -671,7 +859,10 @@ FIRST, determine if this is a security question or a conversational message:
             "credential", "authentication", "authorization",
             "exploit", "payload", "ransomware", "trojan",
             "status", "monitor", "dashboard", "report",
-            "show", "find", "search", "list", "display"
+            "show", "find", "search", "list", "display",
+            "block", "ban", "blacklist", "whitelist", "quarantine",
+            "isolate", "terminate", "kill", "stop", "prevent",
+            "allow", "permit", "enable", "disable"
         };
 
         // Check if message contains security-related keywords

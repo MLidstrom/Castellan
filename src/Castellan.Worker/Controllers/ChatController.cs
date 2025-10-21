@@ -18,15 +18,18 @@ public class ChatController : ControllerBase
 {
     private readonly IChatService _chatService;
     private readonly IConversationManager _conversationManager;
+    private readonly IActionRollbackService _actionService;
     private readonly ILogger<ChatController> _logger;
 
     public ChatController(
         IChatService chatService,
         IConversationManager conversationManager,
+        IActionRollbackService actionService,
         ILogger<ChatController> logger)
     {
         _chatService = chatService;
         _conversationManager = conversationManager;
+        _actionService = actionService;
         _logger = logger;
         _logger.LogInformation("ChatController instantiated successfully with ChatService: {ChatServiceType}", chatService?.GetType().Name ?? "NULL");
     }
@@ -60,6 +63,48 @@ public class ChatController : ControllerBase
             if (!response.Success)
             {
                 return StatusCode(StatusCodes.Status500InternalServerError, response);
+            }
+
+            // Persist suggested actions to database
+            if (response.Message?.SuggestedActions != null && response.Message.SuggestedActions.Count > 0)
+            {
+                try
+                {
+                    var persistedActions = new List<SuggestedAction>();
+                    foreach (var action in response.Message.SuggestedActions)
+                    {
+                        // Map action type string to enum (snake_case to PascalCase)
+                        if (!TryMapActionType(action.Type, out var actionType))
+                        {
+                            _logger.LogWarning("Invalid or unsupported action type '{ActionType}', skipping", action.Type);
+                            continue;
+                        }
+
+                        var execution = await _actionService.SuggestActionAsync(
+                            response.ConversationId,
+                            response.Message.Id ?? Guid.NewGuid().ToString(),
+                            actionType,
+                            action.Parameters ?? new Dictionary<string, object>(),
+                            ct);
+
+                        // Update action with persisted execution ID
+                        action.ExecutionId = execution.Id;
+                        persistedActions.Add(action);
+                    }
+
+                    response.Message.SuggestedActions = persistedActions;
+                    _logger.LogInformation(
+                        "Persisted {Count} suggested actions for conversation {ConversationId}",
+                        persistedActions.Count,
+                        response.ConversationId);
+                }
+                catch (Exception ex)
+                {
+                    // Log error but don't fail the request - actions are suggestions only
+                    _logger.LogError(ex,
+                        "Failed to persist suggested actions for conversation {ConversationId}",
+                        response.ConversationId);
+                }
             }
 
             return Ok(response);
@@ -393,9 +438,29 @@ public class ChatController : ControllerBase
                 ?? User.FindFirst("sub")?.Value
                 ?? "authenticated";
         }
-        
+
         // Return default user ID for unauthenticated requests (debugging mode)
         return "anonymous";
+    }
+
+    /// <summary>
+    /// Maps action type string (snake_case) to ActionType enum (PascalCase).
+    /// </summary>
+    /// <param name="typeString">Action type string (e.g., "block_ip")</param>
+    /// <param name="actionType">Mapped ActionType enum value</param>
+    /// <returns>True if mapping successful, false otherwise</returns>
+    private bool TryMapActionType(string typeString, out ActionType actionType)
+    {
+        var mapping = new Dictionary<string, ActionType>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["block_ip"] = ActionType.BlockIP,
+            ["isolate_host"] = ActionType.IsolateHost,
+            ["quarantine_file"] = ActionType.QuarantineFile,
+            ["add_to_watchlist"] = ActionType.AddToWatchlist,
+            ["create_ticket"] = ActionType.CreateTicket
+        };
+
+        return mapping.TryGetValue(typeString, out actionType);
     }
 }
 

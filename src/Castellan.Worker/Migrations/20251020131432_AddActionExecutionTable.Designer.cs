@@ -3,6 +3,7 @@ using System;
 using Castellan.Worker.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -10,9 +11,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Castellan.Worker.Migrations
 {
     [DbContext(typeof(CastellanDbContext))]
-    partial class CastellanDbContextModelSnapshot : ModelSnapshot
+    [Migration("20251020131432_AddActionExecutionTable")]
+    partial class AddActionExecutionTable
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "8.0.0");
@@ -591,7 +594,7 @@ namespace Castellan.Worker.Migrations
                         new
                         {
                             Id = 1,
-                            CreatedAt = new DateTime(2025, 10, 21, 11, 39, 24, 684, DateTimeKind.Utc).AddTicks(7706),
+                            CreatedAt = new DateTime(2025, 10, 20, 13, 14, 31, 535, DateTimeKind.Utc).AddTicks(994),
                             Description = "Adversaries may inject code into processes in order to evade process-based defenses as well as possibly elevate privileges.",
                             Name = "Process Injection",
                             Platform = "Windows, macOS, Linux",
@@ -601,7 +604,7 @@ namespace Castellan.Worker.Migrations
                         new
                         {
                             Id = 2,
-                            CreatedAt = new DateTime(2025, 10, 21, 11, 39, 24, 684, DateTimeKind.Utc).AddTicks(7709),
+                            CreatedAt = new DateTime(2025, 10, 20, 13, 14, 31, 535, DateTimeKind.Utc).AddTicks(997),
                             Description = "Adversaries may abuse command and script interpreters to execute commands, scripts, or binaries.",
                             Name = "Command and Scripting Interpreter",
                             Platform = "Windows, macOS, Linux",
@@ -611,7 +614,7 @@ namespace Castellan.Worker.Migrations
                         new
                         {
                             Id = 3,
-                            CreatedAt = new DateTime(2025, 10, 21, 11, 39, 24, 684, DateTimeKind.Utc).AddTicks(7711),
+                            CreatedAt = new DateTime(2025, 10, 20, 13, 14, 31, 535, DateTimeKind.Utc).AddTicks(999),
                             Description = "Adversaries may enumerate files and directories or may search in specific locations of a host or network share for certain information within a file system.",
                             Name = "File and Directory Discovery",
                             Platform = "Windows, macOS, Linux",
@@ -1526,7 +1529,7 @@ namespace Castellan.Worker.Migrations
                             Id = 1,
                             Description = "Current database schema version",
                             Key = "DatabaseVersion",
-                            UpdatedAt = new DateTime(2025, 10, 21, 11, 39, 24, 684, DateTimeKind.Utc).AddTicks(8056),
+                            UpdatedAt = new DateTime(2025, 10, 20, 13, 14, 31, 535, DateTimeKind.Utc).AddTicks(1315),
                             Value = "1.0.0"
                         },
                         new
@@ -1534,15 +1537,15 @@ namespace Castellan.Worker.Migrations
                             Id = 2,
                             Description = "Last date MITRE ATT&CK data was updated",
                             Key = "LastMitreUpdate",
-                            UpdatedAt = new DateTime(2025, 10, 21, 11, 39, 24, 684, DateTimeKind.Utc).AddTicks(8153),
-                            Value = "2025-10-21"
+                            UpdatedAt = new DateTime(2025, 10, 20, 13, 14, 31, 535, DateTimeKind.Utc).AddTicks(1405),
+                            Value = "2025-10-20"
                         },
                         new
                         {
                             Id = 3,
                             Description = "Last date YARA rules were fetched and updated",
                             Key = "LastMalwareRulesUpdate",
-                            UpdatedAt = new DateTime(2025, 10, 21, 11, 39, 24, 684, DateTimeKind.Utc).AddTicks(8154),
+                            UpdatedAt = new DateTime(2025, 10, 20, 13, 14, 31, 535, DateTimeKind.Utc).AddTicks(1407),
                             Value = "1970-01-01"
                         });
                 });

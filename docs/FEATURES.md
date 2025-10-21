@@ -1,12 +1,26 @@
 # Castellan Features
 
-## **Conversational AI Chat** (v0.7.0)
+## **Conversational AI Chat** (v0.8.0)
 - **Natural Language Queries** - Ask questions about your security data in plain English
 - **Context-Aware Responses** - AI understands security context and provides relevant insights
 - **Markdown Formatting** - Rich text responses with code blocks, lists, and tables
 - **Real-time Analysis** - Query security events, patterns, and threats conversationally
 - **Security Intelligence** - Get threat summaries, risk assessments, and recommendations
 - **Interactive Interface** - Chat-based UI available in Tailwind Dashboard
+- **Human-in-the-Loop Action Execution** - Execute security actions directly from chat with confirmation dialogs
+- **Multi-Turn Conversations** - Database-backed conversation history with archiving and ratings
+- **Smart Features** - Citations to security events, suggested actions, follow-up questions
+
+## **Action Execution System** (v0.8.0)
+- **Human-in-the-Loop Security Actions** - Execute security actions with full rollback capability
+- **Action Types** - BlockIP, IsolateHost, QuarantineFile, AddToWatchlist, CreateTicket
+- **Lifecycle Management** - Suggested → Pending → Executed → RolledBack/Failed/Expired
+- **State Capture** - Automatic before/after state snapshots for reliable rollback operations
+- **Execution Logs** - Detailed audit trail with timestamps and user attribution
+- **Confirmation Dialogs** - User confirmation required before action execution
+- **Rollback Windows** - Configurable undo periods (1-72 hours) per action type
+- **Action History** - Complete action lifecycle tracking with filtering and search
+- **Database Integration** - Full persistence with foreign key relationships and transaction support
 
 ## **Intelligent Log Analysis**
 - **EventLogWatcher Real-time Collection** - Interrupt-driven Windows Event Log monitoring with sub-second latency

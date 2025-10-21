@@ -296,47 +296,37 @@ public class ConversationManager : IConversationManager
         try
         {
             await using var db = await _dbContextFactory.CreateDbContextAsync(ct);
-            using var transaction = await db.Database.BeginTransactionAsync(ct);
 
-            try
+            var conversation = await db.Conversations
+                .FirstOrDefaultAsync(c => c.Id == conversationId, ct);
+
+            if (conversation == null)
             {
-                var conversation = await db.Conversations
-                    .FirstOrDefaultAsync(c => c.Id == conversationId, ct);
-
-                if (conversation == null)
-                {
-                    throw new InvalidOperationException($"Conversation {conversationId} not found");
-                }
-
-                var messageList = messages.ToList();
-                foreach (var message in messageList)
-                {
-                    message.ConversationId = conversationId;
-                    db.ChatMessages.Add(message);
-
-                    // Auto-generate title from first user message
-                    if (conversation.Title == "New Conversation" && message.Role == MessageRole.User)
-                    {
-                        conversation.Title = GenerateConversationTitle(message.Content);
-                    }
-                }
-
-                // Update conversation timestamp
-                conversation.UpdatedAt = DateTime.UtcNow;
-
-                await db.SaveChangesAsync(ct);
-                await transaction.CommitAsync(ct);
-
-                _logger.LogDebug(
-                    "Added {Count} messages to conversation {ConversationId}",
-                    messageList.Count,
-                    conversationId);
+                throw new InvalidOperationException($"Conversation {conversationId} not found");
             }
-            catch
+
+            var messageList = messages.ToList();
+            foreach (var message in messageList)
             {
-                await transaction.RollbackAsync(ct);
-                throw;
+                message.ConversationId = conversationId;
+                db.ChatMessages.Add(message);
+
+                // Auto-generate title from first user message
+                if (conversation.Title == "New Conversation" && message.Role == MessageRole.User)
+                {
+                    conversation.Title = GenerateConversationTitle(message.Content);
+                }
             }
+
+            // Update conversation timestamp
+            conversation.UpdatedAt = DateTime.UtcNow;
+
+            await db.SaveChangesAsync(ct);
+
+            _logger.LogDebug(
+                "Added {Count} messages to conversation {ConversationId}",
+                messageList.Count,
+                conversationId);
         }
         catch (Exception ex)
         {

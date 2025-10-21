@@ -1,16 +1,28 @@
 import { useState } from 'react';
 import ReactMarkdown from 'react-markdown';
 import { format } from 'date-fns';
-import { Copy, CheckCircle, AlertCircle, Shield, FileText, ExternalLink } from 'lucide-react';
+import { Copy, CheckCircle, Shield, ExternalLink } from 'lucide-react';
 import type { ChatMessage as ChatMessageType, Citation, SuggestedAction } from '../../services/chatApi';
+import type { ActionExecution } from '../../services/actionsApi';
+import { ActionButton } from './ActionButton';
 
 interface ChatMessageProps {
   message: ChatMessageType;
-  onActionClick?: (action: SuggestedAction) => void;
+  conversationId?: string;
+  actionExecutions?: Map<string, ActionExecution>;
+  onActionExecute?: (action: SuggestedAction, messageId: string) => Promise<void>;
+  onActionRollback?: (executionId: number, key: string, reason?: string) => Promise<void>;
   onCitationClick?: (citation: Citation) => void;
 }
 
-export function ChatMessage({ message, onActionClick, onCitationClick }: ChatMessageProps) {
+export function ChatMessage({
+  message,
+  conversationId,
+  actionExecutions,
+  onActionExecute,
+  onActionRollback,
+  onCitationClick
+}: ChatMessageProps) {
   const [copied, setCopied] = useState(false);
   const isUser = message.role === 'user';
 
@@ -18,21 +30,6 @@ export function ChatMessage({ message, onActionClick, onCitationClick }: ChatMes
     await navigator.clipboard.writeText(message.content);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
-  };
-
-  const getSeverityColor = (severity: string) => {
-    switch (severity) {
-      case 'critical':
-        return 'bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200 border-red-300 dark:border-red-700';
-      case 'high':
-        return 'bg-orange-100 dark:bg-orange-900 text-orange-800 dark:text-orange-200 border-orange-300 dark:border-orange-700';
-      case 'medium':
-        return 'bg-yellow-100 dark:bg-yellow-900 text-yellow-800 dark:text-yellow-200 border-yellow-300 dark:border-yellow-700';
-      case 'low':
-        return 'bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 border-green-300 dark:border-green-700';
-      default:
-        return 'bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200 border-gray-300 dark:border-gray-600';
-    }
   };
 
   return (
@@ -165,32 +162,29 @@ export function ChatMessage({ message, onActionClick, onCitationClick }: ChatMes
         )}
 
         {/* Suggested Actions */}
-        {message.suggestedActions && message.suggestedActions.length > 0 && (
+        {message.suggestedActions && message.suggestedActions.length > 0 && conversationId && (
           <div className="mt-3 space-y-2">
             <div className="text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1">Suggested Actions:</div>
             {message.suggestedActions.map((action, idx) => {
-              const Icon = action.type === 'block_ip' ? Shield : action.type === 'create_ticket' ? FileText : AlertCircle;
-              const severityColor = getSeverityColor(action.parameters.severity || 'medium');
+              const key = `${message.id}-${action.type}`;
+              const execution = actionExecutions?.get(key);
 
               return (
-                <button
+                <ActionButton
                   key={idx}
-                  onClick={() => onActionClick?.(action)}
-                  className={`w-full text-left p-3 rounded-lg border transition-all hover:shadow-md ${severityColor}`}
-                >
-                  <div className="flex items-start gap-3">
-                    <Icon className="w-5 h-5 mt-0.5" />
-                    <div className="flex-1 min-w-0">
-                      <div className="text-sm font-semibold">{action.label}</div>
-                      <div className="text-xs opacity-80 mt-0.5">{action.description}</div>
-                      {action.confidence && (
-                        <div className="text-xs mt-1 opacity-70">
-                          Confidence: {Math.round(action.confidence * 100)}%
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </button>
+                  action={action}
+                  execution={execution}
+                  conversationId={conversationId}
+                  messageId={message.id}
+                  onExecute={async (act) => {
+                    if (onActionExecute) {
+                      await onActionExecute(act, message.id);
+                    }
+                  }}
+                  onRollback={execution && onActionRollback ? async (executionId, reason) => {
+                    await onActionRollback(executionId, key, reason);
+                  } : undefined}
+                />
               );
             })}
           </div>

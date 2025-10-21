@@ -75,6 +75,7 @@ builder.Services.AddCastellanMonitoring(builder.Configuration);
 builder.Services.AddCastellanPipeline(builder.Configuration);
 builder.Services.AddCastellanSignalR();
 builder.Services.AddCastellanChat(builder.Configuration); // Phase 3 Week 8: Conversational AI
+builder.Services.AddCastellanActions(builder.Configuration); // Phase 3 Week 9+: Action execution with undo/rollback
 
 // Add Web API services with JSON configuration
 builder.Services.AddControllers()

@@ -559,6 +559,116 @@ If you're still experiencing issues after trying these solutions:
    - System information (OS version, .NET version, etc.)
 4. **Join [GitHub Discussions](https://github.com/MLidstrom/castellan/discussions)** for community support
 
+## Action Execution System Issues
+
+### "Action X not found" Error
+
+**Symptom**: When trying to execute an action, you get "Action X not found" error
+
+**Possible Causes & Solutions**:
+
+1. **Missing Referenced Records**: Action execution requires Conversation and ChatMessage records to exist
+   ```powershell
+   # Check if referenced records exist
+   sqlite3 "src\Castellan.Worker\data\castellan.db" "SELECT Id FROM Conversations WHERE Id = 'conversation-id';"
+   sqlite3 "src\Castellan.Worker\data\castellan.db" "SELECT Id FROM ChatMessages WHERE Id = 'message-id';"
+   ```
+
+2. **Database Path Mismatch**: Actions are saved to `src\Castellan.Worker\data\castellan.db`, not `data\castellan.db`
+   ```powershell
+   # Check the correct database
+   sqlite3 "src\Castellan.Worker\data\castellan.db" "SELECT Id, Status FROM ActionExecutions WHERE Id = X;"
+   ```
+
+3. **Foreign Key Constraints**: Ensure all referenced records exist before executing actions
+
+### "Invalid action data: Validation failed" Error
+
+**Symptom**: When suggesting actions, you get validation errors
+
+**Solutions**:
+
+1. **Check Parameter Names**: Action parameters must use PascalCase (e.g., `IpAddress`, not `ipAddress`)
+   ```json
+   // Correct
+   {
+     "IpAddress": "192.168.1.100",
+     "Reason": "Test",
+     "DurationHours": 0
+   }
+   
+   // Incorrect
+   {
+     "ipAddress": "192.168.1.100",
+     "reason": "Test",
+     "durationHours": 0
+   }
+   ```
+
+2. **Verify Action Type**: Use valid action types: `BlockIP`, `IsolateHost`, `QuarantineFile`, `AddToWatchlist`, `CreateTicket`
+
+### Action Execution Not Working
+
+**Symptom**: Actions are suggested but execution fails or doesn't create firewall rules
+
+**Solutions**:
+
+1. **Check Action Status**: Verify the action is in "Pending" status before execution
+   ```powershell
+   sqlite3 "src\Castellan.Worker\data\castellan.db" "SELECT Id, Status FROM ActionExecutions WHERE Id = X;"
+   ```
+
+2. **Verify Database Migrations**: Ensure ActionExecutions table exists with proper schema
+   ```powershell
+   sqlite3 "src\Castellan.Worker\data\castellan.db" "PRAGMA table_info(ActionExecutions);"
+   ```
+
+3. **Check Foreign Key References**: Ensure Conversation and ChatMessage records exist
+   ```powershell
+   # Create missing referenced records if needed
+   sqlite3 "src\Castellan.Worker\data\castellan.db" "INSERT INTO Conversations (Id, UserId, Title, CreatedAt, UpdatedAt, IsArchived, Tags) VALUES ('conv-id', 'user', 'Test', '2025-10-21T14:00:00', '2025-10-21T14:00:00', 0, '[]');"
+   ```
+
+### Firewall Rules Not Created
+
+**Symptom**: IP blocking actions execute successfully but no firewall rules are created
+
+**Solutions**:
+
+1. **Check Windows Firewall**: Verify the rule was created with the expected name
+   ```powershell
+   netsh advfirewall firewall show rule name="CastellanAI_Block_192_168_1_100"
+   ```
+
+2. **Check Action Execution Logs**: Review the execution log for errors
+   ```powershell
+   sqlite3 "src\Castellan.Worker\data\castellan.db" "SELECT ExecutionLog FROM ActionExecutions WHERE Id = X;"
+   ```
+
+3. **Verify BlockIP Action Handler**: Ensure the BlockIPActionHandler is properly registered and working
+
+### Rollback Not Working
+
+**Symptom**: Actions can be executed but rollback fails
+
+**Solutions**:
+
+1. **Check Rollback Window**: Ensure the action is within the rollback time window
+   ```powershell
+   # Check if action is within rollback window (default 24 hours)
+   sqlite3 "src\Castellan.Worker\data\castellan.db" "SELECT ExecutedAt, RolledBackAt FROM ActionExecutions WHERE Id = X;"
+   ```
+
+2. **Verify Action Status**: Ensure the action is in "Executed" status before rollback
+   ```powershell
+   sqlite3 "src\Castellan.Worker\data\castellan.db" "SELECT Status FROM ActionExecutions WHERE Id = X;"
+   ```
+
+3. **Check Before/After State**: Verify the action has proper state snapshots for rollback
+   ```powershell
+   sqlite3 "src\Castellan.Worker\data\castellan.db" "SELECT BeforeState, AfterState FROM ActionExecutions WHERE Id = X;"
+   ```
+
 ## Common Error Messages
 
 ### "Collection does not exist"

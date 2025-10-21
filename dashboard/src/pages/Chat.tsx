@@ -4,12 +4,14 @@ import { useAuth } from '../hooks/useAuth';
 import { useNavigate } from 'react-router-dom';
 import { SignalRStatus } from '../components/SignalRStatus';
 import { ChatAPI, ChatMessage, ChatRequest, Conversation, Citation, SuggestedAction } from '../services/chatApi';
+import { ActionsAPI, ActionExecution, ActionType, SuggestActionRequest } from '../services/actionsApi';
 import { ChatMessage as ChatMessageComponent } from '../components/chat/ChatMessage';
 import { ThinkingIndicator } from '../components/chat/ThinkingIndicator';
 import { ChatInput } from '../components/chat/ChatInput';
 import { SmartSuggestions } from '../components/chat/SmartSuggestions';
 import { ConversationSidebar } from '../components/chat/ConversationSidebar';
-import { MessageCircle } from 'lucide-react';
+import { ActionHistory } from '../components/chat/ActionHistory';
+import { MessageCircle, History } from 'lucide-react';
 
 export function ChatPage() {
   const { token, loading } = useAuth();
@@ -18,6 +20,8 @@ export function ChatPage() {
 
   const [selectedConversationId, setSelectedConversationId] = useState<string | null>(null);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [actionExecutions, setActionExecutions] = useState<Map<string, ActionExecution>>(new Map());
+  const [showActionHistory, setShowActionHistory] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -173,10 +177,200 @@ export function ChatPage() {
     }
   };
 
-  const handleActionClick = (action: SuggestedAction) => {
-    // TODO: Implement action execution (Week 10)
-    console.log('Action clicked:', action);
-    alert(`Action "${action.label}" will be implemented in Week 10`);
+  // Map action type strings to ActionType enum
+  const mapActionType = (actionType: string): ActionType => {
+    switch (actionType.toLowerCase()) {
+      case 'block_ip':
+      case 'blockip':
+        return ActionType.BlockIP;
+      case 'isolate_host':
+      case 'isolatehost':
+        return ActionType.IsolateHost;
+      case 'quarantine_file':
+      case 'quarantinefile':
+        return ActionType.QuarantineFile;
+      case 'add_to_watchlist':
+      case 'addtowatchlist':
+        return ActionType.AddToWatchlist;
+      case 'create_ticket':
+      case 'createticket':
+        return ActionType.CreateTicket;
+      default:
+        throw new Error(`Unknown action type: ${actionType}`);
+    }
+  };
+
+  // Map action parameters to correct property names for backend
+  const mapActionParameters = (actionType: string, parameters: any): any => {
+    const lowerType = actionType.toLowerCase();
+    
+    switch (lowerType) {
+      case 'block_ip':
+      case 'blockip':
+        return {
+          IpAddress: parameters.ipAddress || parameters.IpAddress,
+          Reason: parameters.reason || parameters.Reason,
+          DurationHours: parameters.durationHours || parameters.DurationHours || 0
+        };
+      
+      case 'quarantine_file':
+      case 'quarantinefile':
+        return {
+          FilePath: parameters.filePath || parameters.FilePath,
+          Reason: parameters.reason || parameters.Reason,
+          FileHash: parameters.fileHash || parameters.FileHash || null,
+          EventId: parameters.eventId || parameters.EventId || null,
+          YaraRuleName: parameters.yaraRuleName || parameters.YaraRuleName || null
+        };
+      
+      case 'isolate_host':
+      case 'isolatehost':
+        return {
+          Hostname: parameters.hostname || parameters.Hostname,
+          Reason: parameters.reason || parameters.Reason,
+          DisableAllAdapters: parameters.disableAllAdapters !== undefined ? parameters.disableAllAdapters : parameters.DisableAllAdapters !== undefined ? parameters.DisableAllAdapters : true,
+          EventId: parameters.eventId || parameters.EventId || null
+        };
+      
+      case 'add_to_watchlist':
+      case 'addtowatchlist':
+        return {
+          EntityType: parameters.entityType || parameters.EntityType || parameters.targetType || 'IpAddress',
+          EntityValue: parameters.entityValue || parameters.EntityValue || parameters.targetValue,
+          Severity: parameters.severity || parameters.Severity || 'Medium',
+          Reason: parameters.reason || parameters.Reason,
+          DurationHours: parameters.durationHours || parameters.DurationHours || 0,
+          EventId: parameters.eventId || parameters.EventId || null
+        };
+      
+      case 'create_ticket':
+      case 'createticket':
+        return {
+          Title: parameters.title || parameters.Title,
+          Description: parameters.description || parameters.Description,
+          Priority: parameters.priority || parameters.Priority || parameters.severity || 'Medium',
+          Category: parameters.category || parameters.Category || 'Security Incident',
+          AssignedTo: parameters.assignedTo || parameters.AssignedTo || null,
+          RelatedEventIds: parameters.relatedEventIds || parameters.RelatedEventIds || [],
+          TicketSystem: parameters.ticketSystem || parameters.TicketSystem || null
+        };
+      
+      default:
+        // Return parameters as-is for unknown types
+        return parameters;
+    }
+  };
+
+  const handleActionClick = async (action: SuggestedAction, messageId: string) => {
+    if (!selectedConversationId) {
+      alert('No conversation selected');
+      return;
+    }
+
+    try {
+      // Suggest the action (create pending execution)
+      // Map parameters to correct property names for backend
+      const mappedActionData = mapActionParameters(action.type, action.parameters || {});
+      
+      const request: SuggestActionRequest = {
+        conversationId: selectedConversationId,
+        chatMessageId: messageId,
+        type: mapActionType(action.type),
+        actionData: mappedActionData,
+      };
+      const execution = await ActionsAPI.suggestAction(request);
+
+      // Track the execution
+      setActionExecutions(prev => {
+        const newMap = new Map(prev);
+        const key = `${messageId}-${action.type}`;
+        newMap.set(key, execution);
+        return newMap;
+      });
+
+    } catch (error: any) {
+      console.error('Failed to suggest action:', error);
+      alert(`Failed to suggest action: ${error.message || 'Unknown error'}`);
+    }
+  };
+
+  const handleExecuteAction = async (action: SuggestedAction, messageId: string) => {
+    const key = `${messageId}-${action.type}`;
+
+    // If action already has an executionId (persisted from chat response), use it directly
+    // Note: Check for > 0 because 0 is the default/unset value
+    if (action.executionId && action.executionId > 0) {
+      await executeActionById(action.executionId, key);
+      return;
+    }
+
+    // Otherwise, check if we've already created an execution in state
+    const execution = actionExecutions.get(key);
+
+    if (!execution) {
+      // Create the action first, then execute
+      await handleActionClick(action, messageId);
+      // Wait a bit for the suggestion to complete, then execute
+      setTimeout(async () => {
+        const updatedExecution = actionExecutions.get(key);
+        if (updatedExecution) {
+          await executeActionById(updatedExecution.id, key);
+        }
+      }, 500);
+      return;
+    }
+
+    await executeActionById(execution.id, key);
+  };
+
+  const executeActionById = async (executionId: number, key: string) => {
+    try {
+      const updatedExecution = await ActionsAPI.executeAction(executionId);
+
+      // Update the execution state
+      setActionExecutions(prev => {
+        const newMap = new Map(prev);
+        newMap.set(key, updatedExecution);
+        return newMap;
+      });
+
+      console.log('Action executed:', updatedExecution);
+    } catch (error: any) {
+      console.error('Failed to execute action:', error);
+      alert(`Failed to execute action: ${error.message || 'Unknown error'}`);
+    }
+  };
+
+  const handleExecuteActionById = async (executionId: number) => {
+    try {
+      await ActionsAPI.executeAction(executionId);
+      
+      // Refresh action history
+      if (selectedConversationId) {
+        // The ActionHistory component will automatically refetch due to React Query
+      }
+    } catch (error: any) {
+      console.error('Failed to execute action:', error);
+      alert(`Failed to execute action: ${error.message || 'Unknown error'}`);
+    }
+  };
+
+  const handleRollbackAction = async (executionId: number, key: string, reason?: string) => {
+    try {
+      const updatedExecution = await ActionsAPI.rollbackAction(executionId, { reason });
+
+      // Update the execution state
+      setActionExecutions(prev => {
+        const newMap = new Map(prev);
+        newMap.set(key, updatedExecution);
+        return newMap;
+      });
+
+      console.log('Action rolled back:', updatedExecution);
+    } catch (error: any) {
+      console.error('Failed to rollback action:', error);
+      alert(`Failed to rollback action: ${error.message || 'Unknown error'}`);
+    }
   };
 
   const conversations = conversationsQuery.data || [];
@@ -213,7 +407,23 @@ export function ChatPage() {
                 Ask questions about your security events
               </p>
             </div>
-            <SignalRStatus />
+            <div className="flex items-center gap-4">
+              {selectedConversationId && (
+                <button
+                  onClick={() => setShowActionHistory(!showActionHistory)}
+                  className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors ${
+                    showActionHistory
+                      ? 'bg-blue-600 text-white hover:bg-blue-700'
+                      : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
+                  }`}
+                  title="View action history"
+                >
+                  <History className="w-4 h-4" />
+                  <span className="text-sm font-medium">Actions</span>
+                </button>
+              )}
+              <SignalRStatus />
+            </div>
           </div>
         </div>
 
@@ -243,8 +453,11 @@ export function ChatPage() {
             <ChatMessageComponent
               key={message.id}
               message={message}
+              conversationId={selectedConversationId || undefined}
+              actionExecutions={actionExecutions}
+              onActionExecute={handleExecuteAction}
+              onActionRollback={handleRollbackAction}
               onCitationClick={handleCitationClick}
-              onActionClick={handleActionClick}
             />
           ))}
 
@@ -268,6 +481,16 @@ export function ChatPage() {
           maxLength={2000}
         />
       </div>
+
+      {/* Action History Panel */}
+            {showActionHistory && selectedConversationId && (
+              <ActionHistory
+                conversationId={selectedConversationId}
+                onClose={() => setShowActionHistory(false)}
+                onExecute={handleExecuteActionById}
+                onRollback={handleRollbackAction}
+              />
+            )}
     </div>
   );
 }

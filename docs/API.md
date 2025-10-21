@@ -95,6 +95,227 @@ GET /api/system-status
 GET /api/system-status/{componentId}
 ```
 
+## Action Execution API
+
+### Suggest Action
+Suggest a security action for execution.
+
+```http
+POST /api/actions/suggest
+Content-Type: application/json
+Authorization: Bearer {token}
+
+{
+  "conversationId": "uuid",
+  "chatMessageId": "uuid",
+  "type": "BlockIP",
+  "actionData": {
+    "IpAddress": "192.168.1.100",
+    "Reason": "Malicious activity detected",
+    "DurationHours": 24
+  }
+}
+```
+
+**Response:**
+```json
+{
+  "id": 15,
+  "conversationId": "uuid",
+  "chatMessageId": "uuid",
+  "type": "blockIP",
+  "actionData": "{\"IpAddress\":\"192.168.1.100\",\"Reason\":\"Malicious activity detected\",\"DurationHours\":24}",
+  "status": "pending",
+  "suggestedAt": "2025-10-21T14:22:42.000Z",
+  "executionLog": []
+}
+```
+
+### Execute Action
+Execute a pending action.
+
+```http
+POST /api/actions/{id}/execute
+Authorization: Bearer {token}
+```
+
+**Response:**
+```json
+{
+  "id": 15,
+  "conversationId": "uuid",
+  "chatMessageId": "uuid",
+  "type": "blockIP",
+  "actionData": "{\"IpAddress\":\"192.168.1.100\",\"Reason\":\"Malicious activity detected\",\"DurationHours\":24}",
+  "status": "executed",
+  "suggestedAt": "2025-10-21T14:22:42.000Z",
+  "executedAt": "2025-10-21T14:30:47.000Z",
+  "executedBy": "admin",
+  "executionLog": [
+    {
+      "timestamp": "2025-10-21T14:30:47.000Z",
+      "message": "Action executed successfully"
+    }
+  ]
+}
+```
+
+### Rollback Action
+Rollback an executed action.
+
+```http
+POST /api/actions/{id}/rollback
+Content-Type: application/json
+Authorization: Bearer {token}
+
+{
+  "reason": "False positive - legitimate traffic"
+}
+```
+
+**Response:**
+```json
+{
+  "id": 15,
+  "conversationId": "uuid",
+  "chatMessageId": "uuid",
+  "type": "blockIP",
+  "actionData": "{\"IpAddress\":\"192.168.1.100\",\"Reason\":\"Malicious activity detected\",\"DurationHours\":24}",
+  "status": "rolledBack",
+  "suggestedAt": "2025-10-21T14:22:42.000Z",
+  "executedAt": "2025-10-21T14:30:47.000Z",
+  "executedBy": "admin",
+  "rolledBackAt": "2025-10-21T14:35:00.000Z",
+  "rolledBackBy": "admin",
+  "rollbackReason": "False positive - legitimate traffic",
+  "executionLog": [
+    {
+      "timestamp": "2025-10-21T14:30:47.000Z",
+      "message": "Action executed successfully"
+    },
+    {
+      "timestamp": "2025-10-21T14:35:00.000Z",
+      "message": "Action rolled back successfully"
+    }
+  ]
+}
+```
+
+### Get Action History
+Get action execution history for a conversation.
+
+```http
+GET /api/actions/history/{conversationId}
+Authorization: Bearer {token}
+```
+
+**Response:**
+```json
+{
+  "actions": [
+    {
+      "id": 15,
+      "type": "blockIP",
+      "status": "executed",
+      "suggestedAt": "2025-10-21T14:22:42.000Z",
+      "executedAt": "2025-10-21T14:30:47.000Z",
+      "executedBy": "admin"
+    }
+  ]
+}
+```
+
+### Get Pending Actions
+Get pending actions for a conversation.
+
+```http
+GET /api/actions/pending/{conversationId}
+Authorization: Bearer {token}
+```
+
+### Action Types
+
+#### BlockIP
+Block an IP address in Windows Firewall.
+
+```json
+{
+  "type": "BlockIP",
+  "actionData": {
+    "IpAddress": "192.168.1.100",
+    "Reason": "Malicious activity detected",
+    "DurationHours": 24,
+    "EventId": "optional-event-id"
+  }
+}
+```
+
+#### IsolateHost
+Isolate a host by disabling network adapters.
+
+```json
+{
+  "type": "IsolateHost",
+  "actionData": {
+    "Hostname": "workstation-01",
+    "Reason": "Malware detected",
+    "DisableAllAdapters": true,
+    "EventId": "optional-event-id"
+  }
+}
+```
+
+#### QuarantineFile
+Quarantine a suspicious file.
+
+```json
+{
+  "type": "QuarantineFile",
+  "actionData": {
+    "FilePath": "C:\\temp\\suspicious.exe",
+    "Reason": "YARA rule match",
+    "FileHash": "sha256-hash",
+    "EventId": "optional-event-id",
+    "YaraRuleName": "malware-rule"
+  }
+}
+```
+
+#### AddToWatchlist
+Add an entity to the security watchlist.
+
+```json
+{
+  "type": "AddToWatchlist",
+  "actionData": {
+    "EntityType": "IpAddress",
+    "EntityValue": "192.168.1.100",
+    "Severity": "High",
+    "Reason": "Repeated suspicious activity",
+    "DurationHours": 72,
+    "EventId": "optional-event-id"
+  }
+}
+```
+
+#### CreateTicket
+Create a security incident ticket.
+
+```json
+{
+  "type": "CreateTicket",
+  "actionData": {
+    "Title": "Security Incident: Malware Detected",
+    "Description": "Detailed incident description",
+    "Priority": "High",
+    "Category": "Security Incident",
+    "AssignedTo": "security-team",
+    "RelatedEventIds": ["event-1", "event-2"],
+    "TicketSystem": "jira"
+  }
+}
+```
+
 ## Security Events API
 ## Dashboard Consolidated Data
 

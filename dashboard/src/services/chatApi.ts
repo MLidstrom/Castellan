@@ -27,6 +27,7 @@ export interface SuggestedAction {
   parameters: Record<string, any>;
   icon?: string;
   confidence: number;
+  executionId?: number; // ID of persisted ActionExecution record
 }
 
 export interface Visualization {

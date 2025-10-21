@@ -10,15 +10,15 @@
 [![AI](https://img.shields.io/badge/AI-Powered-orange.svg)](https://openai.com/)
 [![MITRE](https://img.shields.io/badge/MITRE-ATT%26CK-darkred.svg)](https://attack.mitre.org/)
 
-**AI-Powered Windows Security Monitoring**
+**AI-Powered Security Monitoring**
 
 </div>
 
 ---
 
-**CastellanAI** is a **100% open source**, enterprise-grade security monitoring platform that transforms Windows event logs into actionable security intelligence using AI-powered analysis, vector search, and real-time threat correlation.
+**CastellanAI** is an enterprise-grade security monitoring platform that transforms event logs into actionable security intelligence using AI-powered analysis, vector search, and real-time threat correlation.
 
-**Enterprise Features**: 12K+ events/sec processing • Vector similarity search • Advanced correlation engine • Real-time Teams/Slack alerts • 800+ MITRE ATT&CK techniques • VirusTotal/MalwareBazaar integration • Complete YARA malware detection with auto-updates • Trend forecasting • Timeline visualization • Export capabilities • Centralized configuration management • Single consolidated database architecture
+**Enterprise Features**: Thousands of events/sec processing • Vector similarity search • Advanced correlation engine • Real-time Teams/Slack alerts • 800+ MITRE ATT&CK techniques • VirusTotal/MalwareBazaar integration • Complete malware detection with auto-updates • Human-in-the-loop action execution with rollback • Trend forecasting • Timeline visualization • Export capabilities • Centralized configuration management • Single consolidated database architecture
 
 **2-Minute Setup**: 3 required fields → `.\scripts\start.ps1` → Open `http://localhost:3000` → Start monitoring
 
@@ -29,12 +29,13 @@
 
 ## Key Features
 
-- **Conversational AI Chat** - Natural language security queries with context-aware responses and Markdown formatting
+- **Conversational AI Chat** - Natural language security queries with context-aware responses, Markdown formatting, and human-in-the-loop action execution
+- **Action Execution System** - Execute security actions (BlockIP, IsolateHost, QuarantineFile, AddToWatchlist, CreateTicket) with full rollback capability
 - **AI-Powered Analysis** - LLM-based threat classification with vector similarity search
 - **Real-time Detection** - EventLogWatcher-powered live Windows Event Log monitoring with sub-second threat correlation
 - **Advanced Correlation** - Attack chain detection, temporal bursts, lateral movement, and privilege escalation patterns
-- **Enterprise Scale** - 12K+ events/sec processing with optimized performance
-- **Smart Notifications** - Customizable Teams/Slack templates (v0.7.0) with rich formatting and adaptive rate limiting
+- **Enterprise Scale** - Thousands of events/sec processing with optimized performance
+- **Smart Notifications** - Customizable Teams/Slack templates with rich formatting and adaptive rate limiting
 - **MITRE Integration** - Auto-updated 800+ ATT&CK techniques with threat mapping
 - **Threat Intelligence** - VirusTotal, MalwareBazaar, AlienVault OTX with configuration UI
 - **Malware Detection** - Complete signature-based detection with automatic rule updates and deduplication
