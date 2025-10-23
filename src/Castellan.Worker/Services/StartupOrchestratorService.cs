@@ -387,7 +387,9 @@ public class StartupOrchestratorService : BackgroundService
 
     private void StopAllProcesses()
     {
-        foreach (var process in _managedProcesses)
+        // Create a copy to avoid "Collection was modified" exception during enumeration
+        var processesToStop = _managedProcesses.ToList();
+        foreach (var process in processesToStop)
         {
             var processId = process.Id;
             try
