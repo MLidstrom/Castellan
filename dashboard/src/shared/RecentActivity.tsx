@@ -1,14 +1,6 @@
 import { Shield } from 'lucide-react';
 import { Link } from 'react-router-dom';
-
-interface SecurityEvent {
-  id: string;
-  timestamp?: Date | string;
-  eventType?: string;
-  riskLevel?: string;
-  source?: string;
-  machine?: string;
-}
+import { SecurityEvent } from '../components/SecurityEventDetailModal';
 
 function severityBadge(riskLevel: string | undefined) {
   const level = (riskLevel || 'MEDIUM').toUpperCase();
@@ -26,7 +18,15 @@ function severityBadge(riskLevel: string | undefined) {
   }
 }
 
-export function RecentActivity({ events, isLoading }: { events: SecurityEvent[]; isLoading?: boolean; }) {
+export function RecentActivity({
+  events,
+  isLoading,
+  onEventClick
+}: {
+  events: SecurityEvent[];
+  isLoading?: boolean;
+  onEventClick?: (event: SecurityEvent) => void;
+}) {
   if (isLoading) {
     return (
       <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6">
@@ -63,9 +63,9 @@ export function RecentActivity({ events, isLoading }: { events: SecurityEvent[];
             const riskLevel = (event.riskLevel || 'MEDIUM').toUpperCase();
 
             return (
-              <Link
+              <div
                 key={event.id}
-                to={`/security-events/${event.id}`}
+                onClick={() => onEventClick?.(event)}
                 className="block rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-4 cursor-pointer hover:shadow-lg hover:border-blue-300 dark:hover:border-blue-600 transition-all duration-200"
               >
                 <div className="flex items-start justify-between gap-3">
@@ -101,7 +101,7 @@ export function RecentActivity({ events, isLoading }: { events: SecurityEvent[];
                     </div>
                   </div>
                 </div>
-              </Link>
+              </div>
             );
           })
         )}

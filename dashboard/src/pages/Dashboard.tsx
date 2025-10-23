@@ -1,10 +1,11 @@
-import { useEffect, useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { MetricCard } from '../shared/MetricCard';
 import { RecentActivity } from '../shared/RecentActivity';
 import { ThreatDistribution } from '../shared/ThreatDistribution';
 import { LoadingSpinner } from '../components/LoadingSpinner';
 import { SignalRStatus } from '../components/SignalRStatus';
+import { SecurityEventDetailModal, SecurityEvent } from '../components/SecurityEventDetailModal';
 import { AlertTriangle, Shield, Search, TrendingUp, Server, Zap, Scan } from 'lucide-react';
 import { Api } from '../services/api';
 import { useAuth } from '../hooks/useAuth';
@@ -16,6 +17,8 @@ export function DashboardPage() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { hub } = useSignalR();
+  const [selectedEvent, setSelectedEvent] = useState<SecurityEvent | null>(null);
+  const [detailModalOpen, setDetailModalOpen] = useState(false);
 
   useEffect(() => {
     if (!loading && !token) {
@@ -150,11 +153,25 @@ export function DashboardPage() {
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           <div className="lg:col-span-2">
-            <RecentActivity events={normalized.recentActivity ?? []} isLoading={dashboardQuery.isLoading} />
+            <RecentActivity
+              events={normalized.recentActivity ?? []}
+              isLoading={dashboardQuery.isLoading}
+              onEventClick={(event) => {
+                setSelectedEvent(event);
+                setDetailModalOpen(true);
+              }}
+            />
           </div>
           <ThreatDistribution data={normalized.threatDistribution ?? []} isLoading={dashboardQuery.isLoading} />
         </div>
       </div>
+
+      {/* Security Event Detail Modal */}
+      <SecurityEventDetailModal
+        event={selectedEvent}
+        isOpen={detailModalOpen}
+        onClose={() => setDetailModalOpen(false)}
+      />
     </div>
   );
 }

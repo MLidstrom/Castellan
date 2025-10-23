@@ -30,6 +30,34 @@
   <br><em>CastellanAI platform overview - AI-powered security monitoring in action</em>
 </p>
 
+## Disclaimer
+
+**This is an open source, experimental security monitoring platform intended for research, education, and testing purposes.**
+
+### Usage Guidelines
+- **Not for Production**: This software is not recommended for production environments without thorough testing and customization
+- **No Warranty**: This software is provided "as is" without any warranties or guarantees of security effectiveness
+- **User Responsibility**: Users are solely responsible for:
+  - Testing and validating all security features before deployment
+  - Ensuring compliance with their organization's security policies
+  - Implementing appropriate backup and disaster recovery procedures
+  - Monitoring and maintaining the system in their environment
+
+### Security Considerations
+- **Experimental Features**: Some features may be experimental or in development
+- **Regular Updates**: Security threats evolve rapidly - ensure you keep the system updated
+- **Professional Review**: Have qualified security professionals review your implementation
+- **Compliance**: Verify compliance with applicable regulations and standards
+
+### Liability Limitation
+**The authors and contributors of CastellanAI disclaim all liability for any damages, losses, or security incidents that may occur from the use of this software.**
+
+### Production Recommendations
+For production deployments, consider:
+- **CastellanAI Pro** - Commercial enterprise version with professional support, SLA guarantees, and production-ready features
+- Professional security consulting
+- Comprehensive testing and validation
+- Regular security audits and penetration testing
 ## Key Features
 
 - **Conversational AI Chat** - Natural language security queries with context-aware responses, Markdown formatting, and human-in-the-loop action execution
