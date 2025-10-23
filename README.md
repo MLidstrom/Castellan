@@ -154,6 +154,8 @@ For production deployments, consider:
 ### Quick Reference
 | Topic | Description |
 |-------|-------------|
+| **[Release Notes v1.0.0](RELEASE_NOTES_v1.0.0.md)** | What's new in v1.0.0 - first official production release |
+| **[Known Issues](KNOWN_ISSUES.md)** | Current limitations, known issues, and workarounds |
 | **[Quick Start Guide](docs/GETTING_STARTED.md)** | Complete installation and setup instructions |
 | **[Features](docs/FEATURES.md)** | Comprehensive feature overview and capabilities |
 | **[YARA Detection](docs/MALWARE_DETECTION.md)** | Signature-based malware detection and rule management |

@@ -7,9 +7,118 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.0.0] - 2025-10-23
+
+**Status**: PRODUCTION RELEASE - First Official Production Release
+
+### Highlights
+
+**CastellanAI v1.0.0** marks the **first official production release** of our AI-powered Windows security monitoring platform. This release represents the culmination of intensive development through v0.1.0 - v0.9.0, delivering a complete, enterprise-ready security monitoring solution with groundbreaking conversational AI capabilities.
+
+### Major Features
+
+- **Conversational AI Chat Interface** (v0.8.0 - v0.9.0): Natural language security analysis at `/chat`
+  - 7 intent types: Query, Investigate, Hunt, Compliance, Explain, Action, Conversational
+  - RAG context retrieval with vector search, critical events, and correlation patterns
+  - Multi-turn conversations with database-backed conversation history
+  - Citations with clickable links to security events
+  - Suggested actions with confirmation dialogs
+  - Follow-up question recommendations
+  - Markdown rendering with syntax highlighting
+
+- **Human-in-the-Loop Action Execution** (v0.9.0): Execute security actions with full audit trail
+  - Action types: Block IP, Isolate Host, Quarantine File, Add to Watchlist, Create Ticket
+  - Undo/Rollback capability with 24-hour window for reversible actions
+  - Action History panel tracking all executed actions with before/after states
+  - Confirmation dialogs with impact warnings
+  - Visual indicators for reversible vs non-reversible actions
+
+- **Citation Linking** (v0.9.0): Click citations in AI responses to view full event details
+  - Citations displayed under AI responses with event details
+  - Clickable citation cards navigate to `/security-events/{id}`
+  - Relevance scores shown as percentages
+  - ExternalLink icons for visual clarity
+
+- **Shared Modal Components** (v1.0.0): Consistent UX across Dashboard and Security Events
+  - Created `SecurityEventDetailModal.tsx` as shared component
+  - RecentActivity items on Dashboard now open modal dialog
+  - Same detailed view as Security Events page
+  - Includes all event fields (risk level, MITRE, scores, IPs, etc.)
+
+- **Comprehensive Disclaimer** (v1.0.0): Production deployment guidelines
+  - Clear usage guidelines for open source experimental platform
+  - Security considerations and professional review recommendations
+  - Liability limitation and warranty disclaimer
+  - Production deployment recommendations
+
+### Technical Improvements
+
+- **AI Intelligence Upgrades** (v0.7.0 - v0.8.0):
+  - Embedding cache with 30-70% fewer API calls
+  - Polly resilience patterns (retry, circuit breaker, timeout)
+  - Strict JSON validation with 97%+ parse success
+  - Hybrid search (70% vector + 30% metadata)
+  - OpenTelemetry tracing with Jaeger/Zipkin support
+  - Multi-model ensemble with 20-30% accuracy improvement
+  - Automated evaluation framework
+
+- **Performance Optimizations**:
+  - React Query snapshot caching (30min memory, 24h localStorage, <50ms page loads)
+  - Dashboard instant load with skeleton screens
+  - Database connection pooling (100 max connections, WAL mode)
+  - Worker performance optimization (5-9x throughput improvement)
+  - Malware scanning optimization (4-8x concurrent throughput)
+
+- **Security Enhancements**:
+  - BCrypt password hashing for secure password storage
+  - JWT token blacklisting with server-side token invalidation
+  - Refresh token system with secure token rotation
+  - Audit trail for all security actions
+  - Admin user configuration via environment variables
+
+### Architecture
+
+- **24-Hour Rolling Window**: Automatic event cleanup maintains 24-hour scope for AI analysis
+- **Single Database**: Consolidated `/data/castellan.db` for all components
+- **Malware Detection**: 70 active YARA rules with automatic updates and deduplication
+- **React Dashboard**: Modern UI with Tailwind CSS and real-time SignalR updates
+- **Conversational AI**: Complete chat backend and frontend at `/chat`
+
+### Known Issues & Limitations
+
+- **24-Hour Event Retention**: Security events older than 24 hours are automatically deleted
+- **Single-User Mode**: One admin user configured via environment variables
+- **Windows-Only**: Currently supports Windows Event Log monitoring only
+- **Qdrant Dependency**: Vector search requires Qdrant Docker container
+
+See [KNOWN_ISSUES.md](KNOWN_ISSUES.md) for complete details and workarounds.
+
+### Migration from v0.9.0
+
+**Breaking Changes**: None
+
+**Steps**:
+1. No database migrations required
+2. No configuration changes required
+3. Update dashboard: `npm install` and `npm run build`
+4. Restart services: `.\scripts\stop.ps1` then `.\scripts\start.ps1`
+
+### What's Next (v1.1.0)
+
+**Open Source Roadmap**:
+- Export to PDF (chat conversations as incident reports)
+- Streaming responses (token-by-token)
+- Rate limiting (10 messages/minute)
+- Virtual scrolling for long conversations
+- Enhanced input validation
+
+**Pro Version**: Multi-user RBAC, extended retention, compliance reporting, PostgreSQL, multi-tenancy, professional support
+
+See [RELEASE_NOTES_v1.0.0.md](RELEASE_NOTES_v1.0.0.md) for complete release notes.
+
 ## [0.7.0] - 2025-10-15
 
-**Status**: ✅ COMPLETE - Performance & Caching Overhaul with Worker Optimization and Threat Scanner System
+**Status**: COMPLETE - Performance & Caching Overhaul with Worker Optimization and Threat Scanner System
 
 ### Major Features
 - **Worker Performance Optimization**: 5-9x throughput improvement through Sprint 1-3 optimizations
@@ -625,7 +734,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [2.0.2] - 2025-09-15
 
 ### Fixed
-- **✅ SignalR Connection Persistence**: Resolved critical issue where real-time connection disconnected on page navigation
+- **SignalR Connection Persistence**: Resolved critical issue where real-time connection disconnected on page navigation
   - **Root Cause**: SignalR connection was component-scoped in Dashboard, got destroyed on Tailwind Dashboard page changes
   - **Solution**: Implemented global SignalR context provider at application level
   - **Impact**: Real-time updates now persist seamlessly across all menu navigation
@@ -652,10 +761,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Removed
 - **Frontend Caching Features**: Cache Inspector Tool, localStorage persistence, and optimized cache TTLs were removed during development phase
-## [0.5.0-alpha] - 2025-09-12 *(✅ PHASE 1 COMPLETE - Advanced Search Frontend)*
+## [0.5.0-alpha] - 2025-09-12 *(PHASE 1 COMPLETE - Advanced Search Frontend)*
 
 ### Added
-- **✅ Advanced Search & Filtering Frontend**: Complete UI implementation for enhanced security event search
+- **Advanced Search & Filtering Frontend**: Complete UI implementation for enhanced security event search
   - **AdvancedSearchDrawer Component**: Comprehensive search interface with accordion-style filter sections
     - Multi-criteria filtering: date ranges, risk levels, event types, MITRE ATT&CK techniques
     - Full-text search with exact match and fuzzy search options
@@ -701,10 +810,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Saved Searches**: Bookmark and manage frequently used search configurations
 - **Advanced Correlation**: Machine learning-based event correlation
 
-## [0.4.0] - 2025-09-11 *(✅ COMPLETE - Phase 3 UI/UX Completion)*
+## [0.4.0] - 2025-09-11 *(COMPLETE - Phase 3 UI/UX Completion)*
 
 ### Added
-- **✅ Configuration Backend API**: Complete threat intelligence settings management
+- **Configuration Backend API**: Complete threat intelligence settings management
   - **Backend API**: ThreatIntelligenceConfigController with RESTful endpoints
     - `GET /api/settings/threat-intelligence` - Retrieve current configuration with defaults
     - `PUT /api/settings/threat-intelligence` - Update configuration with validation
@@ -717,7 +826,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added *(Phase 3 Latest Completions - September 11, 2025)*
 
-- **✅ Security Event Timeline Visualization**: Complete timeline interface for event analysis
+- **Security Event Timeline Visualization**: Complete timeline interface for event analysis
   - **Frontend Components**: TimelinePanel, TimelineChart, and TimelineToolbar React components
     - Interactive granularity control (minute, hour, day, week, month)
     - Date range filtering with datetime-local pickers
@@ -734,7 +843,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     - Consistent design with existing admin interface components
     - TypeScript support with full type safety and error handling
 
-- **✅ Export Service & API**: Complete data export functionality for security events
+- **Export Service & API**: Complete data export functionality for security events
   - **Backend Export Service**: IExportService and ExportService implementation
     - CSV export with configurable field selection and filtering
     - JSON export with structured data formatting
@@ -750,7 +859,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     - Comprehensive error handling and validation
     - Memory-efficient streaming for large data exports
 
-- **✅ Frontend Configuration UI**: Complete Tailwind Dashboard interface for threat intelligence settings
+- **Frontend Configuration UI**: Complete Tailwind Dashboard interface for threat intelligence settings
   - **Configuration Components**: Comprehensive form-based configuration management
     - Three-panel layout: VirusTotal, MalwareBazaar, AlienVault OTX providers
     - Provider toggle switches with conditional field display
@@ -767,7 +876,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     - Optimistic UI updates with error rollback handling
     - Consistent Material-UI design with existing interface components
 
-- **✅ Malware Detection System**: Complete signature-based malware detection platform
+- **Malware Detection System**: Complete signature-based malware detection platform
   - **Rule Management API**: Full REST API for malware detection rule CRUD operations
     - `GET/POST/PUT/DELETE /api/malware-rules` - Complete rule management
     - Rule filtering by category, tag, MITRE technique, and enabled status
@@ -793,7 +902,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     - Integration with security event pipeline for automated threat detection
   - **Dependencies**: Added dnYara and dnYara.NativePack for .NET YARA integration
 
-- **✅ Performance Monitoring Enhancement**: Extended system monitoring capabilities
+- **Performance Monitoring Enhancement**: Extended system monitoring capabilities
   - Performance alert service with configurable thresholds
   - Enhanced metrics collection for malware detection rule execution
   - Additional performance indicators for malware detection workflows
@@ -812,7 +921,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [0.3.2] - 2025-09-08
 
 ### Added
-- **✅ Enhanced Performance Metrics Dashboard**: Complete full-stack monitoring implementation
+- **Enhanced Performance Metrics Dashboard**: Complete full-stack monitoring implementation
   - **Backend API**: PerformanceController with 7 comprehensive API endpoints
     - `/api/performance/dashboard-summary` - Overall system health and metrics summary
     - `/api/performance/metrics` - Historical performance data with time range support (1h-7d)
@@ -833,7 +942,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     - Memory caching with variable TTL (5-30 seconds) for performance optimization
     - Comprehensive data models (30+ classes) for all performance aspects
 
-- **✅ Threat Intelligence Health Monitoring Dashboard**: Service status monitoring system
+- **Threat Intelligence Health Monitoring Dashboard**: Service status monitoring system
   - **Backend API**: ThreatIntelligenceHealthController for comprehensive service health
     - `/api/threat-intelligence-health` - Complete health status of all TI services
     - Service monitoring for VirusTotal, MalwareBazaar, and AlienVault OTX
@@ -852,7 +961,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     - Service availability simulation with 90% success rates
     - Comprehensive service metrics including API key status validation
 
-- **🔄 Dashboard Integration**: Seamless integration with main dashboard
+- **Dashboard Integration**: Seamless integration with main dashboard
   - Updated main Dashboard.tsx to include both new dashboard components
   - Proper service registration in Program.cs dependency injection container
   - Material-UI design system consistency across all dashboard components
@@ -860,21 +969,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Error handling with retry mechanisms and graceful degradation
 
 ### Fixed
-- **📋 Dashboard Security Events Count**: Fixed incorrect total events display in dashboard KPI cards
+- **Dashboard Security Events Count**: Fixed incorrect total events display in dashboard KPI cards
   - Root cause: Dashboard used paginated data array length (`data.length` = 10) instead of API total field (`total` = 2168+)
   - Impact: Dashboard now shows accurate total security events count matching Security Events page
   - Files: `dashboard/src/components/Dashboard.tsx` (Lines 242-244, 313)
   - Technical fix: Modified API response parsing to extract both `events` array and `total` count
   - Result: Consistent event counts across dashboard and detail pages
 
-- **🔧 Tailwind Dashboard Interface**: Fixed missing RealtimeSystemMetrics component compilation failure
+- **Tailwind Dashboard Interface**: Fixed missing RealtimeSystemMetrics component compilation failure
   - Root cause: Missing `RealtimeSystemMetrics.tsx` component referenced in Dashboard
   - Impact: Tailwind Dashboard now compiles successfully and displays real-time system metrics
   - Files: `dashboard/src/components/RealtimeSystemMetrics.tsx`
   - Features: Real-time health overview, component metrics, auto-refresh every 10 seconds
   - Result: Full dashboard functionality restored with Material UI integration
 
-- **📊 System Status Dashboard**: Enhanced real-time monitoring capabilities
+- **System Status Dashboard**: Enhanced real-time monitoring capabilities
   - Added comprehensive system metrics visualization
   - Integrated response time, uptime, and error rate monitoring
   - System resource tracking (CPU, memory usage) when available
@@ -902,31 +1011,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.3.0] - 2025-09-06
 
-### September 2025 Critical Fixes ✅
+### September 2025 Critical Fixes
 
 #### Fixed
-- **🔧 Worker API Stability**: Fixed critical `SemaphoreFullException` causing immediate crashes
+- **Worker API Stability**: Fixed critical `SemaphoreFullException` causing immediate crashes
   - Root cause: Mismatched semaphore acquisition/release logic in Pipeline.cs
   - Impact: Worker API now runs stable in background without crashes
   - Files: `src/Castellan.Worker/Pipeline.cs` (Lines 98-122, 389-469)
   - Result: Services can run for extended periods without interruption
 
-- **📊 MITRE ATT&CK DataProvider**: Resolved "dataProvider error" in Tailwind Dashboard interface
+- **MITRE ATT&CK DataProvider**: Resolved "dataProvider error" in Tailwind Dashboard interface
   - Root cause: MITRE endpoints return `{ techniques: [...] }` format, dataProvider expected arrays
   - Impact: MITRE ATT&CK Techniques page now displays 50+ techniques properly
   - Files: `dashboard/src/dataProvider/castellanDataProvider.ts` (Lines 86-109)
   - Result: Full MITRE integration functional in web interface
 
-- **🔐 Authentication Error Handling**: Enhanced login experience and error messaging
+- **Authentication Error Handling**: Enhanced login experience and error messaging
   - Root cause: Confusing "No tokens found" errors on initial page load
   - Impact: Cleaner login flow with better backend unavailability messages
   - Files: Tailwind Dashboard auth provider components
   - Result: Improved user experience during authentication
 
 #### Enhanced
-- **🚀 Background Service Management**: Reliable PowerShell job-based service startup
-- **📋 MITRE Data Import**: Successfully imported 823 MITRE ATT&CK techniques
-- **🔍 Service Monitoring**: Enhanced status verification and health checking
+- **Background Service Management**: Reliable PowerShell job-based service startup
+- **MITRE Data Import**: Successfully imported 823 MITRE ATT&CK techniques
+- **Service Monitoring**: Enhanced status verification and health checking
 
 #### Documentation
 - Added comprehensive fix documentation in `SEPTEMBER_2025_FIXES.md`
@@ -934,7 +1043,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Enhanced README.md with recent fixes summary
 - Added verification steps and service management improvements
 
-### Connection Pool Architecture ✅
+### Connection Pool Architecture
 
 #### Added
 - **Qdrant Connection Pool**: Enterprise-grade connection pool architecture for 15-25% I/O optimization
@@ -1073,7 +1182,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Added pragma directives for planned semaphore throttling infrastructure
   - Ensures professional, warning-free development experience
 
-### Architecture & Configuration ✅
+### Architecture & Configuration
 
 #### Added
 - **Service Lifetime Audit**: Comprehensive review and documentation of all DI registrations
@@ -1086,7 +1195,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Error Responses**: Standardized error response format across all endpoints
 - **Request Logging**: Added request/response logging with performance metrics
 
-### Security Enhancements ✅
+### Security Enhancements
 
 #### Added
 - **BCrypt Password Hashing**: Secure password storage with salt generation
@@ -1162,10 +1271,10 @@ The following new configuration options are available for performance tuning:
 **Breaking Changes**: None - all new settings have sensible defaults and are backward compatible.
 
 **Performance Impact**: 
-- Parallel Processing: 20% improvement achieved (12,000+ EPS) ✅
-- Intelligent Caching: 30-50% improvement ✅ 
-- Horizontal Scaling: Architecture with fault tolerance ✅
-- Connection Pooling: 15-25% I/O optimization ✅
+- Parallel Processing: 20% improvement achieved (12,000+ EPS)
+- Intelligent Caching: 30-50% improvement
+- Horizontal Scaling: Architecture with fault tolerance
+- Connection Pooling: 15-25% I/O optimization
 - Vector Batch Processing: Expected 3-5x improvement for vector operations
 - Target: 50,000+ events per second with advanced optimizations
 

@@ -6,6 +6,8 @@ Welcome to the complete documentation for **Castellan**, the AI-powered Windows 
 
 | Category | Document | Description |
 |----------|-----------|-------------|
+| **v1.0.0 Release** | [../RELEASE_NOTES_v1.0.0.md](../RELEASE_NOTES_v1.0.0.md) | What's new in v1.0.0 - first official production release |
+| **Known Issues** | [../KNOWN_ISSUES.md](../KNOWN_ISSUES.md) | Current limitations, known issues, and workarounds |
 | **Getting Started** | [GETTING_STARTED.md](GETTING_STARTED.md) | Complete installation and setup guide |
 | **Core Features** | [FEATURES.md](FEATURES.md) | Comprehensive feature overview |
 | **Architecture** | [ARCHITECTURE.md](ARCHITECTURE.md) | System architecture and security design |
