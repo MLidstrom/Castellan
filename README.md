@@ -1,6 +1,6 @@
 <div align="center">
 
-# 🏰 CastellanAI
+<img src="assets/images/castellanai_logo_medium.png" alt="CastellanAI Logo" width="600" />
 
 ![GitHub Tag](https://img.shields.io/github/v/tag/MLidstrom/Castellan)
 [![Open Source](https://img.shields.io/badge/Open%20Source-100%25-brightgreen.svg?logo=github)](#-open-source--enterprise-grade)
