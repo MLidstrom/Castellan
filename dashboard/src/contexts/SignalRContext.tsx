@@ -17,12 +17,9 @@ export function SignalRProvider({ children }: { children: ReactNode }) {
   const { token, loading } = useAuth();
   const navigate = useNavigate();
 
-  // ✅ FIX 1.1a: Use useMemo to recreate hub only when token changes
-  const hub = useMemo(() => new SignalRService(), [token]); // Recreate when token changes
+  const hub = useMemo(() => new SignalRService(), [token]);
 
   const [isConnected, setIsConnected] = useState(false);
-
-  // ✅ FIX 1.1b: Use useRef for navigate to avoid it as dependency
   const navigateRef = useRef(navigate);
   useEffect(() => {
     navigateRef.current = navigate;
@@ -97,7 +94,6 @@ export function SignalRProvider({ children }: { children: ReactNode }) {
     // Fetch config then connect
     fetchConfig().then(() => connect());
 
-    // ✅ FIX 1.1d: Setup event handlers
     const onReconnected = () => {
       if (mounted) {
         console.log('[SignalR] Reconnected');
@@ -121,7 +117,7 @@ export function SignalRProvider({ children }: { children: ReactNode }) {
     hub.onReconnecting(onReconnecting);
     hub.onClose(onClose);
 
-    // ✅ FIX 1.1e: Increase polling interval to 10s (performance improvement)
+    // Verify connection state every 10 seconds
     const interval = setInterval(() => {
       if (mounted) {
         const state = hub.getConnectionState();
@@ -136,7 +132,7 @@ export function SignalRProvider({ children }: { children: ReactNode }) {
       clearInterval(interval);
       hub.stop().catch(() => undefined);
     };
-  }, [token, loading, hub]); // ✅ Now safe - hub recreated only when token changes
+  }, [token, loading, hub]);
 
   return (
     <SignalRContext.Provider value={{ hub, isConnected }}>
