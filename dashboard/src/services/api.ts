@@ -1,20 +1,90 @@
 import { API_URL } from './constants';
 import { AuthService } from './auth';
+import { navigationService } from './navigation';
+
+/**
+ * ✅ FIX 5.2: CSRF Token Support
+ *
+ * Retrieves CSRF token from cookie or meta tag.
+ * Backend requirements:
+ * - Set CSRF token in cookie: Set-Cookie: XSRF-TOKEN=<token>
+ * - OR include meta tag: <meta name="csrf-token" content="<token>">
+ * - Validate X-XSRF-TOKEN header on state-changing requests (POST, PUT, PATCH, DELETE)
+ */
+function getCsrfToken(): string | null {
+  // Try to get from cookie first (standard for SPA backends)
+  const cookieMatch = document.cookie.match(/XSRF-TOKEN=([^;]+)/);
+  if (cookieMatch) {
+    return decodeURIComponent(cookieMatch[1]);
+  }
+
+  // Fallback to meta tag (common in server-rendered apps)
+  const metaTag = document.querySelector<HTMLMetaElement>('meta[name="csrf-token"]');
+  if (metaTag) {
+    return metaTag.content;
+  }
+
+  return null;
+}
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const token = AuthService.getToken();
-  const headers: Record<string, string> = { 'Content-Type': 'application/json', ...(init?.headers as any || {}) };
-  if (token) headers.Authorization = `Bearer ${token}`;
-  const res = await fetch(`${API_URL}${path}`, { ...init, headers });
 
-  // Handle 401 Unauthorized - clear token and redirect to login
-  if (res.status === 401) {
-    AuthService.logout();
-    window.location.href = '/login';
-    throw new Error('Unauthorized - redirecting to login');
+  // ✅ FIX 1.2a: Safe header merging with proper types
+  const baseHeaders: Record<string, string> = {
+    'Content-Type': 'application/json'
+  };
+
+  // ✅ FIX 1.2b: Convert init.headers to Record<string, string> safely
+  let customHeaders: Record<string, string> = {};
+  if (init?.headers) {
+    if (init.headers instanceof Headers) {
+      init.headers.forEach((value, key) => {
+        customHeaders[key] = value;
+      });
+    } else if (Array.isArray(init.headers)) {
+      init.headers.forEach(([key, value]) => {
+        customHeaders[key] = value;
+      });
+    } else {
+      customHeaders = init.headers as Record<string, string>;
+    }
   }
 
-  if (!res.ok) throw new Error(`API ${res.status}: ${await res.text()}`);
+  const headers: Record<string, string> = {
+    ...baseHeaders,
+    ...customHeaders
+  };
+
+  if (token) {
+    headers.Authorization = `Bearer ${token}`;
+  }
+
+  // ✅ FIX 5.2: Add CSRF token for state-changing requests
+  const method = (init?.method || 'GET').toUpperCase();
+  const isStateMutating = ['POST', 'PUT', 'PATCH', 'DELETE'].includes(method);
+  if (isStateMutating) {
+    const csrfToken = getCsrfToken();
+    if (csrfToken) {
+      headers['X-XSRF-TOKEN'] = csrfToken;
+    }
+  }
+
+  const res = await fetch(`${API_URL}${path}`, { ...init, headers });
+
+  // ✅ FIX 3.3: Handle 401 Unauthorized or 403 Forbidden - use navigation service
+  if (res.status === 401 || res.status === 403) {
+    console.log(`[API] Authentication failed (${res.status}), redirecting to login`);
+    AuthService.logout();
+    navigationService.toLogin(); // ✅ Use navigation service instead of window.location
+    throw new Error(`Authentication failed (${res.status}) - redirecting to login`);
+  }
+
+  if (!res.ok) {
+    const errorText = await res.text();
+    throw new Error(`API ${res.status}: ${errorText}`);
+  }
+
   return res.json();
 }
 

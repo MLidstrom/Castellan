@@ -57,6 +57,9 @@ builder.Logging.AddSerilog();
 // Configure connection pools
 builder.Services.Configure<ConnectionPoolOptions>(builder.Configuration.GetSection("ConnectionPools"));
 
+// Configure SignalR options for frontend
+builder.Services.Configure<SignalROptions>(builder.Configuration.GetSection(SignalROptions.SectionName));
+
 // Register configuration validators
 builder.Services.AddSingleton<IValidateOptions<AuthenticationOptions>, AuthenticationOptionsValidator>();
 builder.Services.AddSingleton<IValidateOptions<QdrantOptions>, QdrantOptionsValidator>();

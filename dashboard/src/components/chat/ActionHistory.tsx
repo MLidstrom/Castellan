@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { History, X, RefreshCw } from 'lucide-react';
-import { ActionsAPI, ActionStatus } from '../../services/actionsApi';
+import { ActionsAPI } from '../../services/actionsApi';
 import { ActionHistoryItem } from './ActionHistoryItem';
 
 interface ActionHistoryProps {

@@ -1,31 +1,7 @@
 import { Shield, X, Clock, User, Monitor, Globe } from 'lucide-react';
+import type { SecurityEvent, RiskLevel } from '../types';
 
-type Severity = 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW' | 'UNKNOWN';
-
-export interface SecurityEvent {
-  id: string;
-  eventType?: string;
-  timestamp?: string | Date;
-  source?: string;
-  eventId?: number;
-  level?: string;
-  riskLevel?: string;
-  severity?: string;
-  riskScore?: number;
-  machine?: string;
-  user?: string;
-  message?: string;
-  mitreAttack?: string[];
-  correlationScore?: number;
-  burstScore?: number;
-  anomalyScore?: number;
-  confidence?: number;
-  status?: string;
-  assignedTo?: string | null;
-  notes?: string | null;
-  ipAddresses?: string[];
-  enrichedIPs?: any[];
-}
+type Severity = RiskLevel | 'UNKNOWN';
 
 function severityBadge(sev: Severity | undefined) {
   switch (sev) {

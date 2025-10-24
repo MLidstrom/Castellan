@@ -4,26 +4,40 @@ import { AuthService } from './auth';
 
 export class SignalRService {
   private connection: HubConnection | null = null;
+  private retryIntervals: number[] = [0, 2000, 5000]; // Default intervals
+
+  setRetryIntervals(intervals: number[]) {
+    this.retryIntervals = intervals;
+  }
 
   async start(): Promise<void> {
     const token = AuthService.getToken() || '';
     const hubUrl = `${SIGNALR_BASE_URL}/${SIGNALR_HUB_PATH}`;
-    console.log('[SignalR] starting, hubUrl =', hubUrl, 'tokenPresent =', !!token);
     this.connection = new HubConnectionBuilder()
       .withUrl(hubUrl, { accessTokenFactory: () => token })
-      .withAutomaticReconnect()
-      .configureLogging(LogLevel.Information)
+      .withAutomaticReconnect({
+        nextRetryDelayInMilliseconds: (retryContext) => {
+          // Use configured intervals
+          const count = retryContext.previousRetryCount;
+          if (count < this.retryIntervals.length) {
+            return this.retryIntervals[count];
+          }
+          // After exhausting intervals, keep using the last one
+          return this.retryIntervals[this.retryIntervals.length - 1];
+        }
+      })
+      .configureLogging(LogLevel.Warning) // Only show warnings and errors
       .build();
-    // Register default handlers for server-side calls
+
+    // Register handler for server-side 'connected' acknowledgment
     this.connection.on('connected', () => {
-      console.log('[SignalR] server acknowledged connection');
+      // Backend acknowledges connection - no action needed
     });
 
     try {
       await this.connection.start();
-      console.log('[SignalR] connected');
     } catch (e) {
-      console.warn('[SignalR] connection failed', e);
+      console.warn('[SignalR] Connection failed', e);
       throw e;
     }
   }
@@ -33,7 +47,6 @@ export class SignalRService {
   }
 
   on(event: string, cb: (...args: any[]) => void) {
-    console.log('[SignalR] register handler for', event);
     this.connection?.on(event, cb);
   }
 

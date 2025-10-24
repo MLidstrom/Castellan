@@ -16,6 +16,7 @@ import {
   Loader,
 } from 'lucide-react';
 import type { ActionExecution } from '../../services/actionsApi';
+import { ActionStatus } from '../../services/actionsApi';
 
 interface ActionHistoryItemProps {
   action: ActionExecution;
@@ -119,8 +120,8 @@ export function ActionHistoryItem({ action, onExecute, onRollback }: ActionHisto
   const statusDisplay = getStatusDisplay();
   const StatusIcon = statusDisplay.icon;
 
-  const canExecute = (action.status === 'Pending' || action.status === 'pending') && onExecute;
-  const canRollback = (action.status === 'Executed' || action.status === 'executed') && onRollback;
+  const canExecute = action.status === ActionStatus.Pending && onExecute;
+  const canRollback = action.status === ActionStatus.Executed && onRollback;
 
 
   // Parse action data

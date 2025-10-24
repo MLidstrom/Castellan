@@ -1,16 +1,17 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, useCallback } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { MetricCard } from '../shared/MetricCard';
 import { RecentActivity } from '../shared/RecentActivity';
 import { ThreatDistribution } from '../shared/ThreatDistribution';
 import { LoadingSpinner } from '../components/LoadingSpinner';
 import { SignalRStatus } from '../components/SignalRStatus';
-import { SecurityEventDetailModal, SecurityEvent } from '../components/SecurityEventDetailModal';
+import { SecurityEventDetailModal } from '../components/SecurityEventDetailModal';
 import { AlertTriangle, Shield, Search, TrendingUp, Server, Zap, Scan } from 'lucide-react';
 import { Api } from '../services/api';
 import { useAuth } from '../hooks/useAuth';
 import { useNavigate } from 'react-router-dom';
 import { useSignalR } from '../contexts/SignalRContext';
+import type { SecurityEvent } from '../types';
 
 export function DashboardPage() {
   const { token, loading } = useAuth();
@@ -110,14 +111,24 @@ export function DashboardPage() {
     };
   }, [dashboardQuery.data]);
 
-  // Debug once to inspect shape
+  // ✅ FIX 2.3: Wrap debug logging in DEV check
   useEffect(() => {
-    if (dashboardQuery.data) {
+    if (import.meta.env.DEV && dashboardQuery.data) {
       console.group('[Dashboard] Consolidated data');
       console.log(dashboardQuery.data);
       console.groupEnd();
     }
   }, [dashboardQuery.data]);
+
+  // ✅ FIX 4.4: Memoize event handlers to prevent unnecessary child re-renders
+  const handleEventClick = useCallback((event: SecurityEvent) => {
+    setSelectedEvent(event);
+    setDetailModalOpen(true);
+  }, []);
+
+  const handleModalClose = useCallback(() => {
+    setDetailModalOpen(false);
+  }, []);
 
   if (dashboardQuery.isLoading) {
     return <LoadingSpinner />;
@@ -156,10 +167,7 @@ export function DashboardPage() {
             <RecentActivity
               events={normalized.recentActivity ?? []}
               isLoading={dashboardQuery.isLoading}
-              onEventClick={(event) => {
-                setSelectedEvent(event);
-                setDetailModalOpen(true);
-              }}
+              onEventClick={handleEventClick}
             />
           </div>
           <ThreatDistribution data={normalized.threatDistribution ?? []} isLoading={dashboardQuery.isLoading} />
@@ -170,7 +178,7 @@ export function DashboardPage() {
       <SecurityEventDetailModal
         event={selectedEvent}
         isOpen={detailModalOpen}
-        onClose={() => setDetailModalOpen(false)}
+        onClose={handleModalClose}
       />
     </div>
   );

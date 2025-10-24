@@ -1,6 +1,13 @@
+import { memo } from 'react';
 import { Shield } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import { SecurityEvent } from '../components/SecurityEventDetailModal';
+import type { SecurityEvent } from '../types';
+
+interface RecentActivityProps {
+  events: SecurityEvent[];
+  isLoading?: boolean;
+  onEventClick?: (event: SecurityEvent) => void;
+}
 
 function severityBadge(riskLevel: string | undefined) {
   const level = (riskLevel || 'MEDIUM').toUpperCase();
@@ -18,15 +25,12 @@ function severityBadge(riskLevel: string | undefined) {
   }
 }
 
-export function RecentActivity({
+// ✅ FIX 4.2: Memoize RecentActivity to prevent unnecessary re-renders
+export const RecentActivity = memo(function RecentActivity({
   events,
   isLoading,
   onEventClick
-}: {
-  events: SecurityEvent[];
-  isLoading?: boolean;
-  onEventClick?: (event: SecurityEvent) => void;
-}) {
+}: RecentActivityProps) {
   if (isLoading) {
     return (
       <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6">
@@ -108,4 +112,4 @@ export function RecentActivity({
       </div>
     </div>
   );
-}
+});

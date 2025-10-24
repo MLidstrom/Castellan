@@ -3,7 +3,8 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Api } from '../services/api';
 import { MetricCard } from '../shared/MetricCard';
 import { SignalRStatus } from '../components/SignalRStatus';
-import { SecurityEventDetailModal, SecurityEvent } from '../components/SecurityEventDetailModal';
+import { SecurityEventDetailModal } from '../components/SecurityEventDetailModal';
+import type { SecurityEvent } from '../types';
 import { AlertTriangle, Shield, Activity } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 import { useNavigate } from 'react-router-dom';
@@ -182,7 +183,7 @@ export function SecurityEventsPage() {
                         <span className="text-xs font-medium text-blue-600 dark:text-blue-400">{status}</span>
                       )}
                       <span className="text-xs text-gray-400 dark:text-gray-500 font-mono ml-auto">
-                        {e.id.substring(0, 8)}...
+                        {String(e.id).substring(0, 8)}...
                       </span>
                     </div>
                     
@@ -210,7 +211,7 @@ export function SecurityEventsPage() {
                       <div className="mb-3">
                         <span className="text-xs text-gray-500 dark:text-gray-400 mr-2">MITRE:</span>
                         <div className="inline-flex flex-wrap gap-1">
-                          {e.mitreAttack.map((technique, idx) => (
+                          {e.mitreAttack.map((technique: string, idx: number) => (
                             <span
                               key={idx}
                               className="text-xs px-2 py-1 bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200 rounded"
@@ -252,7 +253,7 @@ export function SecurityEventsPage() {
                     {e.ipAddresses && e.ipAddresses.length > 0 && (
                       <div className="mt-2 text-xs">
                         <span className="text-gray-500 dark:text-gray-400 mr-2">IPs:</span>
-                        {e.ipAddresses.slice(0, 3).map((ip, idx) => (
+                        {e.ipAddresses.slice(0, 3).map((ip: string, idx: number) => (
                           <span key={idx} className="text-gray-700 dark:text-gray-300 font-mono mr-2">{ip}</span>
                         ))}
                         {e.ipAddresses.length > 3 && (

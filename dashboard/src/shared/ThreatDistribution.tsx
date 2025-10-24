@@ -1,6 +1,13 @@
+import { memo } from 'react';
 import { Shield } from 'lucide-react';
 
-export function ThreatDistribution({ data, isLoading }: { data: Array<{ severity: string; count: number }>; isLoading?: boolean; }) {
+interface ThreatDistributionProps {
+  data: Array<{ severity: string; count: number }>;
+  isLoading?: boolean;
+}
+
+// ✅ FIX 4.3: Memoize ThreatDistribution to prevent unnecessary re-renders
+export const ThreatDistribution = memo(function ThreatDistribution({ data, isLoading }: ThreatDistributionProps) {
   if (isLoading) {
     return (
       <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6">
@@ -67,6 +74,6 @@ export function ThreatDistribution({ data, isLoading }: { data: Array<{ severity
       </div>
     </div>
   );
-}
+});
 
 

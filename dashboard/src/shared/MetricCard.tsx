@@ -1,3 +1,4 @@
+import { memo } from 'react';
 import { LucideIcon } from 'lucide-react';
 
 interface MetricCardProps {
@@ -17,7 +18,8 @@ const colorVariants = {
   gray:  { bg: 'bg-gray-50 dark:bg-gray-800', border: 'border-gray-200 dark:border-gray-700', icon: 'text-gray-600 dark:text-gray-400', text: 'text-gray-900 dark:text-gray-100', change: 'text-gray-600 dark:text-gray-400' },
 };
 
-export function MetricCard({ title, value, change, icon: Icon, color, description }: MetricCardProps) {
+// ✅ FIX 4.1: Memoize MetricCard to prevent unnecessary re-renders
+export const MetricCard = memo(function MetricCard({ title, value, change, icon: Icon, color, description }: MetricCardProps) {
   const colors = colorVariants[color];
   return (
     <div className={`rounded-xl border p-6 transition-all duration-200 hover:shadow-md ${colors.bg} ${colors.border}`}>
@@ -41,6 +43,6 @@ export function MetricCard({ title, value, change, icon: Icon, color, descriptio
       {description && (<p className="mt-3 text-sm text-gray-600 dark:text-gray-400">{description}</p>)}
     </div>
   );
-}
+});
 
 
